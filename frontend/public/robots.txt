@@ -1,0 +1,11 @@
+User-agent: *
+# Disallow private/dashboard routes
+Disallow: /dashboard/
+Disallow: /api/auth/
+Disallow: /(dashboard)/
+
+# Allow everything else
+Allow: /
+
+# Sitemap location (update domain)
+Sitemap: https://yourdomain.com/sitemap.xml
