@@ -1,0 +1,672 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               Int       @id @default(autoincrement())
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  firstName        String?
+  lastName         String?
+  email            String    @unique
+  password         String
+  refreshToken     String?
+  resetToken       String?
+  resetTokenExpiry DateTime?
+  member           Member?
+  files            File[]
+  logoId           Int?
+  logo             File?     @relation("user_logos", fields: [logoId], references: [id], onDelete: SetNull)
+  activityLogs     ActivityLog[]
+
+  @@map("users")
+}
+
+model Organization {
+  id                 Int                 @id @default(autoincrement())
+  name               String              @default("Untitled")
+  description        String?
+  category           BUSINESS_CATEGORY   @default(OTHER)
+  bots               Bot[]
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+  channels           Channel[]
+  members            Member[]
+  products           Product[]
+  orders             Order[]
+  schema             ProductSchema?
+  files              File[]
+  customers          Customer[]
+  onboardingProgress OnboardingProgress?
+  logoId             Int?
+  logo               File?               @relation("organization_logos", fields: [logoId], references: [id], onDelete: SetNull)
+  activityLogs       ActivityLog[]
+  posts              Post[]
+  instagramAccounts  InstagramAccount[]
+  customerAiNotes    CustomerAiNote[]
+  subscription       Subscription?
+  @@map("organizations")
+}
+
+enum BUSINESS_CATEGORY {
+  FASHION
+  ELECTRONICS
+  COSMETICS
+  SERVICES
+  FOOD
+  BOOKS
+  HOME
+  SPORTS
+  AUTOMOTIVE
+  OTHER
+}
+
+model OnboardingProgress {
+  id                  Int              @id @default(autoincrement())
+  organizationId      Int              @unique
+  organization        Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  percentage          Int              @default(20)
+  isCategorySelected  Boolean          @default(false)
+  isSchemaConfigured  Boolean          @default(false)
+  isFirstProductAdded Boolean          @default(false)
+  isBotConnected      Boolean          @default(false)
+  nextStep            OnboardingStep   @default(SELECT_CATEGORY)
+  status              OnboardingStatus @default(INCOMPLETE)
+
+  @@map("onboarding_progress")
+}
+
+enum OnboardingStep {
+  SELECT_CATEGORY
+  CONFIGURE_SCHEMA
+  ADD_FIRST_PRODUCT
+  CONNECT_BOT
+}
+
+enum OnboardingStatus {
+  INCOMPLETE
+  COMPLETED
+}
+
+model Product {
+  id             Int           @id @default(autoincrement())
+  name           String
+  price          Float
+  currency       Currency      @default(USD)
+  images         File[]
+  posts          Post[]
+  quantity       Int           @default(1)
+  schemaId       Int
+  schema         ProductSchema @relation(fields: [schemaId], references: [id])
+  fields         FieldValue[]
+  organizationId Int
+  organization   Organization  @relation(fields: [organizationId], references: [id])
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt()
+  orders         Order[]       @relation("ordered_products")
+  orderItems     OrderItem[]
+  status         ProductStatus @default(DRAFT)
+  deletedAt      DateTime?
+  isDeleted      Boolean       @default(false)
+
+  @@index([name])
+  @@index([isDeleted])
+  @@index([organizationId, createdAt])
+  @@map("products")
+}
+
+enum ProductStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum Currency {
+  USD
+  EUR
+  UZS
+  RUB
+  KZT
+  GBP
+  JPY
+}
+
+model ProductSchema {
+  id             Int          @id @default(autoincrement())
+  name           String
+  fields         Field[]
+  products       Product[]
+  organizationId Int          @unique
+  organization   Organization @relation(fields: [organizationId], references: [id])
+
+  @@map("product_schemas")
+}
+
+model Field {
+  id          Int           @id @default(autoincrement())
+  schemaId    Int
+  schema      ProductSchema @relation(fields: [schemaId], references: [id])
+  name        String
+  type        FieldType
+  required    Boolean
+  order       Int           @default(0)
+  options     String[]      @default([]) // For ENUM field types
+  fieldValues FieldValue[]
+
+  @@map("schema_fields")
+}
+
+model FieldValue {
+  id        Int     @id @default(autoincrement())
+  productId Int
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  fieldId Int
+  field   Field @relation(fields: [fieldId], references: [id], onDelete: Cascade)
+
+  // qiymatni universal saqlash uchun:
+  valueText   String?
+  valueNumber Float?
+  valueBool   Boolean?
+  valueDate   DateTime?
+  valueJson   Json? // ENUM, FILE, IMAGE va boshqalar uchun
+
+  @@unique([productId, fieldId]) // har bir product uchun field bir marta bo'lishi kerak
+  @@index([valueText])
+  @@index([productId])
+  @@map("field_values")
+}
+
+enum FieldType {
+  TEXT
+  NUMBER
+  DATE
+  BOOLEAN
+  ENUM
+}
+
+model File {
+  id           Int        @id @default(autoincrement())
+  key          String     @unique // relative path: "public/uploads/abc.png"
+  originalName String
+  size         Int
+  mimeType     String
+  type         FileType   @default(OTHER)
+  status       FileStatus @default(READY)
+  createdAt    DateTime   @default(now())
+
+  // Relations
+  uploaderId        Int?
+  uploader          User?          @relation(fields: [uploaderId], references: [id])
+  productId         Int?
+  product           Product?       @relation(fields: [productId], references: [id])
+  organizationId    Int?
+  organization      Organization?  @relation(fields: [organizationId], references: [id])
+  userLogos         User[]         @relation("user_logos")
+  organizationLogos Organization[] @relation("organization_logos")
+  botLogos          Bot[]          @relation("bot_logos")
+  channelLogos      Channel[]      @relation("channel_logos")
+
+  @@index([originalName])
+  @@index([organizationId, createdAt])
+  @@map("files")
+}
+
+enum FileType {
+  IMAGE
+  VIDEO
+  AUDIO
+  DOCUMENT
+  OTHER
+}
+
+enum FileStatus {
+  PENDING
+  READY
+  FAILED
+}
+
+model Member {
+  id             Int          @id @default(autoincrement())
+  organizationId Int
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  userId         Int          @unique
+  user           User         @relation(fields: [userId], references: [id])
+  role           MemberRole   @default(ADMIN)
+  status         MemberStatus @default(INACTIVE)
+  createdAt      DateTime     @default(now())
+
+  @@unique([userId, organizationId])
+  @@map("members")
+}
+
+enum MemberStatus {
+  INACTIVE
+  ACTIVE
+}
+
+enum MemberRole {
+  ADMIN
+  SELLER
+}
+
+model Bot {
+  id             Int          @id @default(autoincrement())
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  token          String       @unique
+  status         BotStatus    @default(INACTIVE)
+  telegramId     String
+  name           String
+  username       String
+  isDefault      Boolean      @default(false)
+  organizationId Int
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  customers      Customer[]
+  channels       Channel[]
+  messages       Message[] // yangi qo‘shilgan (1:N)
+  activatedAt    DateTime?
+  deactivatedAt  DateTime?
+  logoId         Int?
+  logo           File?        @relation("bot_logos", fields: [logoId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, name])
+  @@index([organizationId, username])
+  @@map("bots")
+}
+
+enum BotStatus {
+  ACTIVE
+  INACTIVE
+}
+
+model Customer {
+  id             Int             @id @default(autoincrement())
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  telegramId     String
+  name           String
+  username       String?
+  organizationId Int
+  messages       Message[]
+  botId          Int
+  bot            Bot             @relation(fields: [botId], references: [id])
+  organization   Organization    @relation(fields: [organizationId], references: [id])
+  orders         Order[]
+  lang           String? // "uz" | "ru" | "en"
+  aiNote         CustomerAiNote?
+
+  @@unique([telegramId, organizationId, botId])
+  @@index([telegramId])
+  @@index([organizationId, createdAt])
+  @@index([username])
+  @@index([name])
+  @@map("customers")
+}
+
+model Message {
+  id         String     @id @default(cuid())
+  createdAt  DateTime   @default(now())
+  sender     SenderType
+  content    String
+  customerId Int
+  customer   Customer   @relation(fields: [customerId], references: [id])
+  botId      Int
+  bot        Bot        @relation(fields: [botId], references: [id])
+  isInquiry  Boolean    @default(false)
+
+  @@index([botId, createdAt])
+  @@map("messages")
+}
+
+model Order {
+  id                 Int           @id @default(autoincrement())
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+  status             OrderStatus   @default(NEW)
+  paymentStatus      PaymentStatus @default(PENDING)
+  customerId         Int?
+  customer           Customer?     @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  details            Json?
+  organizationId     Int
+  organization       Organization  @relation(fields: [organizationId], references: [id])
+  totalPrice         Float         @default(0)
+  trackingNumber     String?
+  discountAmount     Float?
+  discountPercentage Float?
+  notes              String?
+  products           Product[]     @relation("ordered_products")
+  orderItems         OrderItem[]
+  currency           String        @default("USD")
+  followUpSentAt     DateTime?
+
+  @@index([organizationId, status, createdAt(sort: Desc)], name: "idx_orders_org_status_created")
+  @@index([customerId], name: "idx_orders_customer_id")
+  @@index([status], name: "idx_orders_status")
+  @@index([organizationId, createdAt], name: "idx_orders_org_created")
+  @@map("orders")
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+model AnalyticsDailyAggregate {
+  id              Int      @id @default(autoincrement())
+  organizationId  Int
+  day             DateTime
+  revenue         Float    @default(0)
+  orders          Int      @default(0)
+  conversations   Int      @default(0)
+  inquiries       Int      @default(0)
+  newCustomers    Int      @default(0)
+  ordersCompleted Int      @default(0)
+  createdAt       DateTime @default(now())
+
+  @@unique([organizationId, day], name: "organizationId_day_unique")
+  @@index([organizationId, day], name: "idx_analytics_org_day")
+  @@map("analytics_daily_aggregates")
+}
+
+model OrderItem {
+  id        Int     @id @default(autoincrement())
+  orderId   Int
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId Int
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  quantity  Int     @default(1)
+  price     Float // Price at the time of order (in case product price changes later)
+
+  @@unique([orderId, productId])
+  @@index([orderId], name: "idx_order_items_order_id")
+  @@index([productId], name: "idx_order_items_product_id")
+  @@map("order_items")
+}
+
+model Channel {
+  id             Int              @id @default(autoincrement())
+  telegramId     String           @unique
+  username       String           @unique
+  description    String?
+  title          String
+  status         ConnectionStatus @default(PENDING)
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  connectedBotId Int?
+  connectedBot   Bot?             @relation(fields: [connectedBotId], references: [id], onDelete: SetNull)
+  organizationId Int              @unique
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  posts          Post[]
+  logoId         Int?
+  logo           File?            @relation("channel_logos", fields: [logoId], references: [id], onDelete: SetNull)
+
+  @@unique([telegramId, username, organizationId])
+  @@map("channels")
+}
+
+enum ConnectionStatus {
+  PENDING
+  NOT_FOUND
+  NOT_ADMIN
+  NO_REQUIRED_PERMISSIONS
+  DONE
+  FAIL
+}
+
+model Post {
+  id          Int        @id @default(autoincrement())
+  productId   Int
+  product     Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+  content     String
+  channelId   Int
+  channel     Channel    @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  status      PostStatus @default(DRAFT)
+  organizationId Int
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  metaData    Json?
+  telegramId  String?
+  scheduledAt DateTime?
+  sentAt      DateTime?
+  failLog     String?
+
+  @@index([content])
+  @@index([channelId, status])
+  @@index([telegramId])
+  @@map("posts")
+}
+
+enum PostStatus {
+  DRAFT
+  SCHEDULED
+  SENT
+  FAILED
+}
+
+enum CompanyType {
+  CLOTHING
+  FOOD
+  FURNITURE
+  ELECTRONICS
+  COSMETICS
+  TOYS
+  BOOKS
+  SPORTS
+  HEALTH
+  OTHER
+}
+
+enum SenderType {
+  USER
+  BOT
+}
+
+enum OrderStatus {
+  NEW
+  PENDING
+  CONFIRMED
+  SHIPPED
+  DELIVERED
+  CANCELLED
+  REFUNDED
+}
+
+// Activity Log
+model ActivityLog {
+  id             Int           @id @default(autoincrement())
+  createdAt      DateTime      @default(now())
+  userId         Int?
+  user           User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  organizationId Int
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  entityType     EntityType
+  entityId       Int?
+  action         ActionType
+  message_en     String
+  message_uz     String
+  message_ru     String
+  meta           Json?
+
+  @@index([organizationId, createdAt])
+  @@map("activity_logs")
+}
+
+enum EntityType {
+  PRODUCT
+  ORDER
+  CUSTOMER
+  BOT
+  CHANNEL
+  SCHEMA
+  POST
+}
+
+enum ActionType {
+  CREATE
+  UPDATE
+  DELETE
+  STATUS_CHANGE
+  PUBLISH
+}
+
+model InstagramAccount {
+  id                  Int       @id @default(autoincrement())
+  organizationId      Int
+  organization        Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  instagramUserId     String    @unique
+  instagramUsername   String?
+  accessTokenEncrypted String
+  refreshTokenEncrypted String?
+  tokenExpiresAt      DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  @@unique([organizationId, instagramUserId])
+  @@index([organizationId])
+  @@index([instagramUserId])
+  @@map("instagram_accounts")
+}
+
+model CustomerAiNote {
+  id                 Int              @id @default(autoincrement())
+  customerId         Int              @unique
+  customer           Customer         @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  organizationId     Int
+  organization       Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  purchaseHistory    Json?
+  productInterests   Json?
+  favoriteCategories Json?
+  frequentQuestions  Json?
+  priceSensitivity   PriceSensitivity @default(MEDIUM)
+  buyingBehavior     Json?
+  aiSummary          String?
+  salesOpportunities Json?
+  aiTags             String[]         @default([])
+  lastAnalyzedAt     DateTime?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  @@index([organizationId])
+  @@map("customer_ai_notes")
+}
+
+enum PriceSensitivity {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+// ─── Billing ───────────────────────────────────────────────────────────────
+
+enum PlanTier {
+  FREE
+  STARTER
+  GROWTH
+  SCALE
+}
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+}
+
+enum InvoiceStatus {
+  DRAFT
+  OPEN
+  PAID
+  VOID
+}
+
+enum PaymentProvider {
+  PAYME
+  CLICK
+  BANK_TRANSFER
+  MANUAL
+}
+
+model SubscriptionPlan {
+  id               Int            @id @default(autoincrement())
+  tier             PlanTier       @unique
+  name             String
+  priceUsd         Float
+  convoLimit       Int            // -1 = unlimited
+  productLimit     Int            // -1 = unlimited
+  botLimit         Int            // -1 = unlimited
+  teamMemberLimit  Int            // -1 = unlimited
+  overagePriceUsd  Float          @default(0)
+  overageCap       Int            @default(0) // max overage convos before hard throttle
+  isActive         Boolean        @default(true)
+  subscriptions    Subscription[]
+
+  @@map("subscription_plans")
+}
+
+model Subscription {
+  id                 Int                  @id @default(autoincrement())
+  organizationId     Int                  @unique
+  organization       Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  planId             Int
+  plan               SubscriptionPlan     @relation(fields: [planId], references: [id])
+  status             SubscriptionStatus   @default(TRIALING)
+  currentPeriodStart DateTime
+  currentPeriodEnd   DateTime
+  trialEndsAt        DateTime?
+  cancelAtPeriodEnd  Boolean              @default(false)
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  invoices           Invoice[]
+  usageSnapshots     MonthlyUsageSnapshot[]
+
+  @@map("subscriptions")
+}
+
+model MonthlyUsageSnapshot {
+  id             Int          @id @default(autoincrement())
+  subscriptionId Int
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  periodStart    DateTime
+  periodEnd      DateTime
+  aiConvos       Int          @default(0)
+  productsHwm    Int          @default(0)
+  botsHwm        Int          @default(0)
+  overageConvos  Int          @default(0)
+  overageCharge  Float        @default(0)
+  createdAt      DateTime     @default(now())
+
+  @@unique([subscriptionId, periodStart])
+  @@index([subscriptionId, periodStart])
+  @@map("monthly_usage_snapshots")
+}
+
+model Invoice {
+  id               Int              @id @default(autoincrement())
+  invoiceNumber    String           @unique
+  subscriptionId   Int
+  subscription     Subscription     @relation(fields: [subscriptionId], references: [id])
+  amountUsd        Float
+  overageAmountUsd Float            @default(0)
+  status           InvoiceStatus    @default(DRAFT)
+  provider         PaymentProvider?
+  providerTxId     String?
+  paidAt           DateTime?
+  dueDate          DateTime
+  periodStart      DateTime
+  periodEnd        DateTime
+  paymentUrl       String?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+
+  @@index([subscriptionId, status])
+  @@map("invoices")
+}
