@@ -3,14 +3,14 @@
 # Stage 1: Dependencies
 FROM node:20-alpine AS deps
 WORKDIR /app
-RUN corepack enable
+RUN corepack enable && corepack prepare pnpm@9.15.4 --activate
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile
 
 # Stage 2: Build
 FROM node:20-alpine AS build
 WORKDIR /app
-RUN corepack enable
+RUN corepack enable && corepack prepare pnpm@9.15.4 --activate
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 # API base URL is baked in at build time for the client bundle
