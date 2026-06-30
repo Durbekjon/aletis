@@ -11,25 +11,34 @@ import {
   UseGuards,
   HttpCode,
   HttpStatus,
+  UseInterceptors,
+  UploadedFile,
+  BadRequestException,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { memoryStorage } from 'multer';
 import {
   ApiTags,
   ApiOperation,
   ApiResponse,
   ApiParam,
   ApiQuery,
+  ApiConsumes,
+  ApiBody,
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '@auth/guards/jwt-auth.guard';
 import { CurrentUser } from '@auth/decorators/current-user.decorator';
 import type { JwtPayload } from '@auth/strategies/jwt.strategy';
 import { ProductsService } from './products.service';
+import { ProductImportService } from './product-import.service';
 import {
   CreateProductDto,
   UpdateProductDto,
   ProductResponseDto,
   ProductPaginatedResponseDto,
   BulkDeleteProductsDto,
+  ImportProductsResponseDto,
 } from './dto';
 import { PaginationDto } from '@/shared/dto';
 
@@ -38,7 +47,10 @@ import { PaginationDto } from '@/shared/dto';
 @UseGuards(JwtAuthGuard)
 @Controller('products')
 export class ProductsController {
-  constructor(private readonly productsService: ProductsService) {}
+  constructor(
+    private readonly productsService: ProductsService,
+    private readonly productImportService: ProductImportService,
+  ) {}
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
@@ -238,6 +250,41 @@ export class ProductsController {
     @CurrentUser() user: JwtPayload,
   ): Promise<void> {
     return this.productsService.deleteProduct(productId, Number(user.userId));
+  }
+
+  @Post('import')
+  @HttpCode(HttpStatus.OK)
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: memoryStorage(),
+      limits: { fileSize: 10 * 1024 * 1024 },
+    }),
+  )
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({ summary: 'Import products from CSV or Excel file' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: { type: 'string', format: 'binary' },
+      },
+    },
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Import result summary',
+    type: ImportProductsResponseDto,
+  })
+  async importProducts(
+    @UploadedFile() file: Express.Multer.File,
+    @CurrentUser() user: JwtPayload,
+  ): Promise<ImportProductsResponseDto> {
+    if (!file) throw new BadRequestException('Fayl yuklanmadi');
+    return this.productImportService.importFromBuffer(
+      file.buffer,
+      file.mimetype,
+      Number(user.userId),
+    );
   }
 
   @Delete()

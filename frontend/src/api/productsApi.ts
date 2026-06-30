@@ -43,6 +43,13 @@ export interface UpdateProductRequest {
   quantity?: number
 }
 
+export interface ImportProductsResult {
+  imported: number;
+  skipped: number;
+  createdFields: string[];
+  errors: { row: number; message: string }[];
+}
+
 export const productsApi = {
   async getProducts(params?: PaginationQuery): Promise<PaginatedResponse<BackendProduct>> {
     const response = await axiosInstance.get('/v1/products', { params })
@@ -72,7 +79,16 @@ export const productsApi = {
     await axiosInstance.delete('/v1/products', {
       data: { ids: productIds }
     })
-  }
+  },
+
+  async importProducts(file: File): Promise<ImportProductsResult> {
+    const form = new FormData();
+    form.append('file', file);
+    const response = await axiosInstance.post('/v1/products/import', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response.data;
+  },
 }
 
 export const productSchemasApi = {

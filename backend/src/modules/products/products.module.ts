@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ProductsController } from './products.controller';
 import { ProductsService } from './products.service';
+import { ProductImportService } from './product-import.service';
 import { PrismaModule } from '@/core/prisma/prisma.module';
 import { RedisModule } from '@/core/redis/redis.module';
 import { FileDeleteModule } from '@/core/file-delete/file-delete.module';
@@ -20,7 +21,7 @@ import { UsageModule } from '../usage/usage.module';
     UsageModule,
   ],
   controllers: [ProductsController],
-  providers: [ProductsService],
+  providers: [ProductsService, ProductImportService],
   exports: [ProductsService],
 })
 export class ProductsModule {}

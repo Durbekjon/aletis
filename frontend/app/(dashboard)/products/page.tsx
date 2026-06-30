@@ -48,6 +48,7 @@ import {
   useDeleteProductMutation,
   useProductsQuery,
 } from '@/src/hooks/useProductsQuery';
+import { ImportProductsDialog } from '@/components/product/import-products-dialog';
 import {
   AlertCircle,
   AlertTriangle,
@@ -58,6 +59,7 @@ import {
   RefreshCw,
   Search,
   Trash2,
+  Upload,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
@@ -84,6 +86,7 @@ export default function ProductsPage() {
   const isLoading = productsQuery.isLoading || productsQuery.isFetching;
   const error = productsQuery.error;
 
+  const [importOpen, setImportOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmMode, setConfirmMode] = useState<'single' | 'bulk'>('single');
@@ -239,6 +242,10 @@ export default function ProductsPage() {
           >
             {t('common.refresh')}
           </RefreshButton>
+          <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}>
+            <Upload className="h-4 w-4 mr-2" />
+            Import
+          </Button>
           <Button asChild className="lp-glow-btn">
             <Link href="/products/new">
               <Plus className="h-4 w-4 mr-2" />
@@ -497,6 +504,8 @@ export default function ProductsPage() {
           )}
         </CardContent>
       </Card>
+      <ImportProductsDialog open={importOpen} onOpenChange={setImportOpen} />
+
       <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <DialogContent>
           <DialogHeader>

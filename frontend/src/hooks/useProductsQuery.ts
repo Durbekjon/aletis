@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { toast } from 'sonner'
-import productsApi, { productSchemasApi, type PaginationQuery, type CreateProductRequest, type UpdateProductRequest } from '@/src/api/productsApi'
+import productsApi, { productSchemasApi, type PaginationQuery, type CreateProductRequest, type UpdateProductRequest, type ImportProductsResult } from '@/src/api/productsApi'
 import { type Product, type ProductSchema, mapBackendProductToFrontend, mapBackendProductSchemaToFrontend } from '@/lib/types/product'
 
 // Products hooks
@@ -98,6 +98,23 @@ export function useBulkDeleteProductsMutation() {
     },
     onError: (error: any) => {
       toast.error(error?.response?.data?.message || 'Failed to delete products')
+    },
+  })
+}
+
+export function useImportProductsMutation() {
+  const queryClient = useQueryClient()
+
+  return useMutation<ImportProductsResult, any, File>({
+    mutationFn: (file: File) => productsApi.importProducts(file),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['products'] })
+      if (data.imported > 0) {
+        toast.success(`${data.imported} ta mahsulot import qilindi`)
+      }
+    },
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.message || 'Import amalga oshmadi')
     },
   })
 }

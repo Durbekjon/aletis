@@ -207,7 +207,8 @@ export class CustomerIntelligenceService {
           ...interests.map((i: any) => (i.name || '').toLowerCase()),
           ...interests.map((i: any) => (i.category || '').toLowerCase()),
           ...categories.map((c) => c.toLowerCase()),
-        ];
+        ].filter(Boolean);
+        if (!allKeywords.length) return false;
         return productKeywords.some((kw) =>
           allKeywords.some((ak) => ak.includes(kw) || kw.includes(ak)),
         );
