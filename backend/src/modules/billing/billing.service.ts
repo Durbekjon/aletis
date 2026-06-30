@@ -3,6 +3,7 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  OnModuleInit,
 } from '@nestjs/common';
 import { PrismaService } from '@core/prisma/prisma.service';
 import {
@@ -12,11 +13,84 @@ import {
   SubscriptionStatus,
 } from '@prisma/client';
 
+const DEFAULT_PLANS = [
+  {
+    tier: PlanTier.FREE,
+    name: 'Free',
+    priceUsd: 0,
+    convoLimit: 100,
+    productLimit: 50,
+    botLimit: 1,
+    teamMemberLimit: 1,
+    overagePriceUsd: 0,
+    overageCap: 0,
+  },
+  {
+    tier: PlanTier.STARTER,
+    name: 'Starter',
+    priceUsd: 19,
+    convoLimit: 500,
+    productLimit: 500,
+    botLimit: 1,
+    teamMemberLimit: 3,
+    overagePriceUsd: 0.04,
+    overageCap: 1425,
+  },
+  {
+    tier: PlanTier.GROWTH,
+    name: 'Growth',
+    priceUsd: 49,
+    convoLimit: 2000,
+    productLimit: 2000,
+    botLimit: 3,
+    teamMemberLimit: 10,
+    overagePriceUsd: 0.04,
+    overageCap: 3675,
+  },
+  {
+    tier: PlanTier.SCALE,
+    name: 'Scale',
+    priceUsd: 129,
+    convoLimit: 8000,
+    productLimit: -1,
+    botLimit: -1,
+    teamMemberLimit: -1,
+    overagePriceUsd: 0.04,
+    overageCap: 9675,
+  },
+];
+
 @Injectable()
-export class BillingService {
+export class BillingService implements OnModuleInit {
   private readonly logger = new Logger(BillingService.name);
 
   constructor(private readonly prisma: PrismaService) {}
+
+  async onModuleInit() {
+    await this.ensurePlansSeeded();
+  }
+
+  /**
+   * Idempotently ensures subscription plans exist. Runs on startup so a fresh
+   * deploy never depends on the seed script being run manually.
+   */
+  private async ensurePlansSeeded() {
+    try {
+      const count = await this.prisma.subscriptionPlan.count();
+      if (count >= DEFAULT_PLANS.length) return;
+
+      for (const plan of DEFAULT_PLANS) {
+        await this.prisma.subscriptionPlan.upsert({
+          where: { tier: plan.tier },
+          update: {},
+          create: plan,
+        });
+      }
+      this.logger.log('Subscription plans seeded.');
+    } catch (err) {
+      this.logger.error('Failed to seed subscription plans', err as Error);
+    }
+  }
 
   private async resolveOrgId(userId: number): Promise<number> {
     const user = await this.prisma.user.findUnique({
@@ -36,9 +110,15 @@ export class BillingService {
     });
     if (existing) return existing;
 
-    const freePlan = await this.prisma.subscriptionPlan.findUnique({
+    let freePlan = await this.prisma.subscriptionPlan.findUnique({
       where: { tier: PlanTier.FREE },
     });
+    if (!freePlan) {
+      await this.ensurePlansSeeded();
+      freePlan = await this.prisma.subscriptionPlan.findUnique({
+        where: { tier: PlanTier.FREE },
+      });
+    }
     if (!freePlan) throw new Error('FREE plan not found — run the seed script');
 
     const now = new Date();
