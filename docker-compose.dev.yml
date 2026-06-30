@@ -82,8 +82,6 @@ services:
       WEAVIATE_PORT: 8080
     ports:
       - "127.0.0.1:4001:4000"
-    volumes:
-      - uploads_data_dev:/app/public/uploads
     depends_on:
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }
@@ -113,7 +111,6 @@ services:
 volumes:
   postgres_data_dev:
   redis_data_dev:
-  uploads_data_dev:
   weaviate_data_dev:
 
 networks:

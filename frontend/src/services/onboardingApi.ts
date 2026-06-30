@@ -18,7 +18,7 @@ export type SchemaField = {
   options?: string[]
 }
 
-export type UploadedFile = { id: number; key: string; originalName: string; mimeType: string; size: number }
+export type UploadedFile = { id: number; key: string; url: string; originalName: string; mimeType: string; size: number }
 
 export type CreateProductDto = { name: string; price: number; currency: "USD" | "EUR" | "UZS" | "RUB" | "KZT" | "GBP" | "JPY"; quantity: number; images: number[] }
 

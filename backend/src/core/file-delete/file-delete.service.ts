@@ -1,48 +1,43 @@
 import { Injectable, Logger } from '@nestjs/common';
-import * as path from 'path';
-import * as fs from 'fs/promises';
+import { PrismaService } from '@/core/prisma/prisma.service';
+import { ImagekitService } from '@/core/imagekit/imagekit.service';
 
 @Injectable()
 export class FileDeleteService {
   private readonly logger = new Logger(FileDeleteService.name);
-  // Only allow deletes within this base directory
-  private readonly uploadsDir = path.resolve(__dirname, '@/public/uploads');
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly imagekit: ImagekitService,
+  ) {}
 
   /**
-   * Deletes a single file, specified by its key (filename or relative path)
+   * Deletes the stored asset for a File, identified by its key (ImageKit
+   * filePath). The DB row itself is left untouched — callers manage relations.
    */
   async deleteFileByKey(key: string): Promise<void> {
-    const filePath = this.getSafeFilePath(key);
     try {
-      await fs.unlink(filePath);
-      this.logger.log(`Deleted file: ${filePath}`);
-    } catch (error) {
-      // ENOENT = file not found: not a fatal error for delete
-      if (error.code !== 'ENOENT') {
-        this.logger.warn(`Failed to delete file: ${filePath}`, error);
+      const file = await this.prisma.file.findUnique({
+        where: { key },
+        select: { imagekitFileId: true },
+      });
+
+      if (!file?.imagekitFileId) {
+        this.logger.warn(`No ImageKit asset found for key: ${key}`);
+        return;
       }
+
+      await this.imagekit.delete(file.imagekitFileId);
+    } catch (error) {
+      this.logger.warn(`Failed to delete asset for key ${key}: ${error.message}`);
     }
   }
 
   /**
-   * Deletes multiple files concurrently.
+   * Deletes multiple assets concurrently.
    */
   async deleteFilesByKeys(keys: string[]): Promise<void> {
     if (!keys?.length) return;
-    // Concurrently delete files (with Promise.all)
     await Promise.all(keys.map((key) => this.deleteFileByKey(key)));
-  }
-
-  /**
-   * Prevents directory traversal attacks; returns only safe paths inside uploadsDir
-   */
-  private getSafeFilePath(key: string): string {
-    const sanitizedKey = path.basename(key); // Only allow filename, drop any dirs
-    const fullPath = path.join(this.uploadsDir, sanitizedKey);
-    // Extra security: ensure file is within uploadsDir
-    if (!fullPath.startsWith(this.uploadsDir)) {
-      throw new Error('Invalid file key/path');
-    }
-    return fullPath;
   }
 }

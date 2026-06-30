@@ -10,6 +10,7 @@ export interface Organization {
   logo?: {
     id: number
     key: string
+    url: string
   }
 }
 

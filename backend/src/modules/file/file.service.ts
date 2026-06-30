@@ -6,15 +6,10 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import { PrismaService } from '@/core/prisma/prisma.service';
+import { ImagekitService } from '@/core/imagekit/imagekit.service';
 import { FileType, FileStatus } from '@prisma/client';
 import { UploadFileResponseDto, FilePaginatedResponseDto } from './dto';
 import { PaginationDto, PaginatedResponseDto } from '@/shared/dto';
-import * as fs from 'fs/promises';
-import * as path from 'path';
-import { promisify } from 'util';
-import { unlink } from 'fs';
-
-const unlinkAsync = promisify(unlink);
 
 export interface UploadFileData {
   originalName: string;
@@ -30,23 +25,11 @@ export interface UploadFileData {
 @Injectable()
 export class FileService {
   private readonly logger = new Logger(FileService.name);
-  private readonly uploadsDir = path.join(process.cwd(), 'public', 'uploads');
 
-  constructor(private readonly prisma: PrismaService) {
-    this.ensureUploadsDirectory();
-  }
-
-  /**
-   * Ensures the uploads directory exists
-   */
-  private async ensureUploadsDirectory(): Promise<void> {
-    try {
-      await fs.access(this.uploadsDir);
-    } catch {
-      await fs.mkdir(this.uploadsDir, { recursive: true });
-      this.logger.log(`Created uploads directory: ${this.uploadsDir}`);
-    }
-  }
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly imagekit: ImagekitService,
+  ) {}
 
   /**
    * Determines file type based on MIME type
@@ -68,20 +51,14 @@ export class FileService {
   }
 
   /**
-   * Generates a unique filename to prevent conflicts
+   * Sanitises an original filename for use as the ImageKit file name.
    */
-  private generateUniqueFilename(originalName: string): string {
-    originalName = originalName.replace(/\s+/g, '_');
-
-    const timestamp = Date.now();
-    const randomString = Math.random().toString(36).substring(2, 15);
-    const extension = path.extname(originalName);
-    const baseName = path.basename(originalName, extension);
-    return `${baseName}_${timestamp}_${randomString}${extension}`;
+  private sanitizeFilename(originalName: string): string {
+    return originalName.replace(/\s+/g, '_');
   }
 
   /**
-   * Uploads a single file and saves metadata to database
+   * Uploads a single file (in-memory buffer) to ImageKit and saves metadata.
    */
   async uploadFile(
     file: Express.Multer.File,
@@ -90,20 +67,18 @@ export class FileService {
     productId?: number,
   ): Promise<UploadFileResponseDto> {
     try {
-      const uniqueFilename = this.generateUniqueFilename(file.originalname);
-      const fileKey = `public/uploads/${uniqueFilename}`;
-      const filePath = path.join(process.cwd(), fileKey);
+      const uploaded = await this.imagekit.upload(
+        file.buffer,
+        this.sanitizeFilename(file.originalname),
+      );
 
-      // Move file to permanent location
-      await fs.rename(file.path, filePath);
-
-      // Determine file type
       const fileType = this.getFileType(file.mimetype);
 
-      // Save metadata to database
       const savedFile = await this.prisma.file.create({
         data: {
-          key: fileKey,
+          key: uploaded.filePath,
+          url: uploaded.url,
+          imagekitFileId: uploaded.fileId,
           originalName: file.originalname,
           size: file.size,
           mimeType: file.mimetype,
@@ -116,22 +91,12 @@ export class FileService {
       });
 
       this.logger.log(
-        `File uploaded successfully: ${savedFile.id} - ${fileKey}`,
+        `File uploaded successfully: ${savedFile.id} - ${uploaded.url}`,
       );
 
       return savedFile;
     } catch (error) {
       this.logger.error(`Failed to upload file: ${error.message}`, error.stack);
-
-      // Clean up file if it exists
-      try {
-        if (file?.path) {
-          await unlinkAsync(file.path);
-        }
-      } catch (cleanupError) {
-        this.logger.warn(`Failed to cleanup file: ${cleanupError.message}`);
-      }
-
       throw new InternalServerErrorException('Failed to upload file');
     }
   }
@@ -150,18 +115,12 @@ export class FileService {
       `[saveDownloadedFile] Starting: originalName=${originalName}, size=${buffer.length}, mimeType=${mimeType}, organizationId=${organizationId}, uploaderId=${uploaderId}`,
     );
     try {
-      const uniqueFilename = this.generateUniqueFilename(originalName);
-      const fileKey = `public/uploads/${uniqueFilename}`;
-      const filePath = path.join(process.cwd(), fileKey);
-
-      this.logger.log(`[saveDownloadedFile] Generated unique filename: ${uniqueFilename}, fileKey: ${fileKey}`);
-
-      // Ensure directory exists
-      await this.ensureUploadsDirectory();
-
-      // Write buffer to file
-      this.logger.log(`[saveDownloadedFile] Writing buffer to file: ${filePath}`);
-      await fs.writeFile(filePath, buffer);
+      // Upload buffer straight to ImageKit
+      this.logger.log(`[saveDownloadedFile] Uploading buffer to ImageKit`);
+      const uploaded = await this.imagekit.upload(
+        buffer,
+        this.sanitizeFilename(originalName),
+      );
 
       // Determine file type
       const fileType = this.getFileType(mimeType);
@@ -171,7 +130,9 @@ export class FileService {
       this.logger.log(`[saveDownloadedFile] Creating file record in database`);
       const savedFile = await this.prisma.file.create({
         data: {
-          key: fileKey,
+          key: uploaded.filePath,
+          url: uploaded.url,
+          imagekitFileId: uploaded.fileId,
           originalName,
           size: buffer.length,
           mimeType,
@@ -183,7 +144,7 @@ export class FileService {
       });
 
       this.logger.log(
-        `[saveDownloadedFile] SUCCESS: File saved with id=${savedFile.id}, key=${fileKey}, size=${savedFile.size}`,
+        `[saveDownloadedFile] SUCCESS: File saved with id=${savedFile.id}, url=${uploaded.url}, size=${savedFile.size}`,
       );
 
       return savedFile;
@@ -227,7 +188,7 @@ export class FileService {
   }
 
   /**
-   * Deletes a file by ID (removes from database and filesystem)
+   * Deletes a file by ID (removes from database and ImageKit)
    */
   async deleteFile(fileId: number): Promise<void> {
     try {
@@ -244,15 +205,11 @@ export class FileService {
         where: { id: fileId },
       });
 
-      // Delete from filesystem
-      const filePath = path.join(process.cwd(), file.key);
-      try {
-        await unlinkAsync(filePath);
-        this.logger.log(`File deleted successfully: ${fileId} - ${file.key}`);
-      } catch (fsError) {
-        this.logger.warn(`File not found on filesystem: ${file.key}`);
-        // Don't throw error if file doesn't exist on filesystem
+      // Delete from ImageKit (non-fatal if missing)
+      if (file.imagekitFileId) {
+        await this.imagekit.delete(file.imagekitFileId);
       }
+      this.logger.log(`File deleted successfully: ${fileId} - ${file.key}`);
     } catch (error) {
       if (error instanceof NotFoundException) {
         throw error;
@@ -263,7 +220,7 @@ export class FileService {
   }
 
   /**
-   * Deletes a file by key (removes from database and filesystem)
+   * Deletes a file by key (removes from database and ImageKit)
    */
   async deleteFileByKey(key: string): Promise<void> {
     try {
@@ -280,15 +237,11 @@ export class FileService {
         where: { key },
       });
 
-      // Delete from filesystem
-      const filePath = path.join(process.cwd(), key);
-      try {
-        await unlinkAsync(filePath);
-        this.logger.log(`File deleted successfully by key: ${key}`);
-      } catch (fsError) {
-        this.logger.warn(`File not found on filesystem: ${key}`);
-        // Don't throw error if file doesn't exist on filesystem
+      // Delete from ImageKit (non-fatal if missing)
+      if (file.imagekitFileId) {
+        await this.imagekit.delete(file.imagekitFileId);
       }
+      this.logger.log(`File deleted successfully by key: ${key}`);
     } catch (error) {
       if (error instanceof NotFoundException) {
         throw error;
@@ -309,10 +262,10 @@ export class FileService {
     }
 
     try {
-      // Get all files first to check existence and get keys
+      // Get all files first to check existence and get ImageKit ids
       const files = await this.prisma.file.findMany({
         where: { id: { in: fileIds } },
-        select: { id: true, key: true },
+        select: { id: true, key: true, imagekitFileId: true },
       });
 
       if (files.length !== fileIds.length) {
@@ -332,18 +285,12 @@ export class FileService {
         ),
       );
 
-      // Delete from filesystem
+      // Delete from ImageKit (non-fatal if missing)
       const deletePromises = files.map(async (file) => {
-        const filePath = path.join(process.cwd(), file.key);
-        try {
-          await unlinkAsync(filePath);
-          this.logger.log(
-            `File deleted successfully: ${file.id} - ${file.key}`,
-          );
-        } catch (fsError) {
-          this.logger.warn(`File not found on filesystem: ${file.key}`);
-          // Don't throw error if file doesn't exist on filesystem
+        if (file.imagekitFileId) {
+          await this.imagekit.delete(file.imagekitFileId);
         }
+        this.logger.log(`File deleted successfully: ${file.id} - ${file.key}`);
       });
 
       await Promise.all(deletePromises);

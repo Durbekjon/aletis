@@ -42,6 +42,7 @@ export type UserResponse = {
   logo?: {
     id: number
     key: string
+    url: string
   }
 }
 

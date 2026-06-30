@@ -244,7 +244,8 @@ export function PostForm({ initialData, onSubmit, isLoading = false, isEditing =
               images: selectedProductData.imageIds && selectedProductData.images
                 ? selectedProductData.imageIds.map((id, index) => ({
                     id,
-                    key: selectedProductData.images[index]
+                    key: selectedProductData.images[index],
+                    url: selectedProductData.images[index]
                   }))
                 : undefined
             } : undefined

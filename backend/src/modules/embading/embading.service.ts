@@ -121,8 +121,8 @@ export class EmbadingService implements OnModuleInit {
     if (product.images && product.images.length > 0) {
       for (const image of product.images) {
         try {
-          // Use image.key as the filename (relative path from root)
-          const base64 = await this.imageToBase64Service.convert(image.key);
+          // image.url is the absolute ImageKit CDN URL; fetched over HTTP
+          const base64 = await this.imageToBase64Service.convert(image.url);
           await imageCollection.data.insert({
             properties: {
               image: base64,

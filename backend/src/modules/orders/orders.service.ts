@@ -42,6 +42,7 @@ export class OrdersService {
               select: {
                 id: true,
                 key: true,
+                url: true,
                 originalName: true,
               },
             },

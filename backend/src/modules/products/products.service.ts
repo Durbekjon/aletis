@@ -795,6 +795,7 @@ export class ProductsService {
             product.images.map((image) => ({
               id: image.id,
               key: image.key,
+              url: image.url,
               originalName: image.originalName,
               size: image.size,
               mimeType: image.mimeType,
@@ -920,6 +921,7 @@ export class ProductsService {
                   select: {
                     id: true,
                     key: true,
+                    url: true,
                   },
                 },
                 fields: {
@@ -949,6 +951,7 @@ export class ProductsService {
                 product.images.map((image) => ({
                   id: image.id,
                   key: image.key,
+                  url: image.url,
                 }));
 
               return {
@@ -1075,7 +1078,7 @@ export class ProductsService {
           },
         },
         images: {
-          select: { key: true },
+          select: { url: true },
           take: 1,
         },
       },
@@ -1089,7 +1092,8 @@ export class ProductsService {
       description:
         p.fields.find((f) => f.field.name.toLowerCase() === 'description')
           ?.valueText || '',
-      imageKey: p.images[0]?.key ?? null,
+      // Full ImageKit CDN URL; consumers send it to Telegram as-is.
+      imageKey: p.images[0]?.url ?? null,
     }));
   }
 }

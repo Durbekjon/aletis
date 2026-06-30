@@ -23,11 +23,9 @@ interface ChannelCardProps {
 
 export function ChannelCard({ channel, onDelete, onConfigure, onTestConnection }: ChannelCardProps) {
 
-  const getLogoUrl = (key: string) => `${process.env.NEXT_PUBLIC_BACKEND_URL}/${key}`
-
   const renderChannelAvatar = (channel: TelegramChannel) => {
-    if (channel.logo?.key) {
-      return <Avatar className="h-12 w-12"><AvatarImage src={getLogoUrl(channel.logo.key)} /></Avatar>
+    if (channel.logo?.url) {
+      return <Avatar className="h-12 w-12"><AvatarImage src={channel.logo.url} /></Avatar>
     }
     return <Avatar><AvatarFallback>{channel.channelName.charAt(0)}</AvatarFallback></Avatar>
   }

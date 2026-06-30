@@ -2,6 +2,7 @@
 export interface BackendProductImage {
   id: number
   key: string
+  url: string
 }
 
 export interface BackendProductField {
@@ -145,7 +146,7 @@ export function mapBackendProductToFrontend(backendProduct: BackendProduct): Pro
     lowStockThreshold: 5, // Default value
     trackQuantity: false, // Default value
     tags: [], // Not provided in backend response
-    images: backendProduct.images.map(img => img.key),
+    images: backendProduct.images.map(img => img.url),
     imageIds: backendProduct.images.map(img => img.id),
     variants: [], // Not provided in backend response
     status: backendProduct.status || "DRAFT",

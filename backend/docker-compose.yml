@@ -44,8 +44,6 @@ services:
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-aletis}:${POSTGRES_PASSWORD:-aletis_password}@postgres:5432/${POSTGRES_DB:-aletis_db}
       REDIS_HOST: redis
-    volumes:
-      - ./public/uploads:/app/public/uploads   # keep uploads persisted on host
     depends_on:
       postgres:
         condition: service_healthy

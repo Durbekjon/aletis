@@ -21,6 +21,7 @@ export interface BackendBot {
   logo?: {
     id: number
     key: string
+    url: string
   }
 }
 
@@ -36,6 +37,7 @@ export interface TelegramBot {
   logo?: {
     id: number
     key: string
+    url: string
   }
   createdAt: Date
   updatedAt: Date
@@ -76,6 +78,7 @@ export interface BackendChannel {
   logo?: {
     id: number
     key: string
+    url: string
   }
 }
 
@@ -98,6 +101,7 @@ export interface TelegramChannel {
   logo?: {
     id: number
     key: string
+    url: string
   }
 }
 
@@ -117,6 +121,7 @@ export function mapBackendBotToFrontend(backendBot: BackendBot): TelegramBot {
     logo: backendBot?.logo ? {
       id: backendBot.logo.id,
       key: backendBot.logo.key,
+      url: backendBot.logo.url,
     } : undefined,
     createdAt: new Date(backendBot.createdAt),
     updatedAt: new Date(backendBot.updatedAt),
@@ -187,6 +192,7 @@ export function mapBackendChannelToFrontend(backendChannel: BackendChannel): Tel
     logo: backendChannel?.logo ? {
       id: backendChannel.logo.id,
       key: backendChannel.logo.key,
+      url: backendChannel.logo.url,
     } : undefined,
   }
 }

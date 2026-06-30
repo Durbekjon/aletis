@@ -11,6 +11,7 @@ import { RedisModule } from './redis/redis.module';
 import { FileDeleteModule } from './file-delete/file-delete.module';
 import { TelegramLoggerModule } from './telegram-logger/telegram-logger.module';
 import { ImageToBase64Module } from './image-to-base64/image-to-base64.module';
+import { ImagekitModule } from './imagekit/imagekit.module';
 import { QueueModule } from './queue/queue.module';
 
 @Module({
@@ -24,6 +25,7 @@ import { QueueModule } from './queue/queue.module';
     FileDeleteModule,
     TelegramLoggerModule,
     ImageToBase64Module,
+    ImagekitModule,
     QueueModule,
   ],
   providers: [EncryptionService, GeminiService, RetryService],
@@ -34,6 +36,7 @@ import { QueueModule } from './queue/queue.module';
     RetryService,
     MessageBufferModule,
     ImageToBase64Module,
+    ImagekitModule,
     QueueModule,
   ],
 })

@@ -272,6 +272,7 @@ export class PostsService {
                 select: {
                   id: true,
                   key: true,
+                  url: true,
                   originalName: true,
                 },
               },
@@ -313,7 +314,7 @@ export class PostsService {
             currency: true,
             price: true,
             organizationId: true,
-            images: { select: { id: true, key: true, originalName: true } },
+            images: { select: { id: true, key: true, url: true, originalName: true } },
           },
         },
       },
@@ -378,7 +379,6 @@ export class PostsService {
 
     const token = this.encryption.decrypt(connectedBot.token);
     const images = post.product.images || [];
-    const baseUrl = this.configService.get<string>('PUBLIC_BASE_URL') || '';
     const botLink = `<a href="https://t.me/${connectedBot.username}?start=product_${post.productId}">More Info</a>`;
 
     let telegramId: string | null = null;
@@ -389,7 +389,7 @@ export class PostsService {
     if (images.length > 1) {
       const media = images.slice(0, 10).map((img, idx) => ({
         type: 'photo',
-        media: `${baseUrl}/${img.key}`.replace(/\\/g, '/'),
+        media: img.url,
         caption: idx === 0 ? caption : undefined,
         parse_mode: 'HTML',
       }));
@@ -409,7 +409,7 @@ export class PostsService {
     } else if (images.length === 1) {
       const res = await this.telegram.sendRequest(token, 'sendPhoto', {
         chat_id: post.channel.telegramId,
-        photo: `${baseUrl}/${images[0].key}`.replace(/\\/g, '/'),
+        photo: images[0].url,
         caption,
         parse_mode: 'HTML',
       });

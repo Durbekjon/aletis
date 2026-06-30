@@ -299,6 +299,7 @@ export class WebhookService {
               select: {
                 id: true,
                 key: true,
+                url: true,
                 originalName: true,
               },
             },
@@ -340,10 +341,6 @@ export class WebhookService {
           .join('\n');
 
         // Build product message
-        const baseUrl =
-          this.configService.get<string>('PUBLIC_BASE_URL') ||
-          process.env.PUBLIC_BASE_URL ||
-          '';
         const productMessage =
           `<b>${product.name}</b>\n\n` +
           `<b>Narxi:</b> ${product.price} ${product.currency}\n` +
@@ -357,10 +354,9 @@ export class WebhookService {
           if (product.images.length > 1) {
             // Send media group
             const images = product.images.slice(0, 10).map((img, index) => {
-              const imageUrl = `${baseUrl}/${img.key}`.replace(/\\/g, '/');
               const mediaItem: any = {
                 type: 'photo',
-                media: imageUrl,
+                media: img.url,
               };
               if (index === 0) {
                 mediaItem.caption = productMessage;
@@ -381,7 +377,7 @@ export class WebhookService {
             // Send single photo
             await this.telegramService.sendRequest(decyptedToken, 'sendPhoto', {
               chat_id: customer.telegramId,
-              photo: `${baseUrl}/${product.images[0].key}`.replace(/\\/g, '/'),
+              photo: product.images[0].url,
               caption: productMessage,
               parse_mode: 'HTML',
             });

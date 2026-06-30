@@ -117,9 +117,9 @@ export default function PostsPage() {
 
   const getProductImage = (image?: string) => {
     if (image) {
-      const imageUrl = `${process.env.NEXT_PUBLIC_BACKEND_URL}/${image}`;
-      console.log({ imageUrl });
-      return imageUrl;
+      return /^https?:\/\//i.test(image)
+        ? image
+        : `${process.env.NEXT_PUBLIC_BACKEND_URL}/${image}`;
     }
     return '/placeholder.svg?height=32&width=32';
   };
@@ -239,7 +239,7 @@ export default function PostsPage() {
                           <div className="flex items-center gap-3">
                             {post.product?.images && post.product.images.length > 0 ? (
                               <img
-                                src={getProductImage(post.product.images[0].key || undefined)}
+                                src={getProductImage(post.product.images[0].url || undefined)}
                                 alt={post.product?.name || 'Product'}
                                 className="h-10 w-10 rounded-md object-cover"
                               />
