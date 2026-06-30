@@ -1,0 +1,70 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-aletis}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-aletis_password}
+      POSTGRES_DB: ${POSTGRES_DB:-aletis_db}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-aletis} -d ${POSTGRES_DB:-aletis_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - aletis-network
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "${REDIS_PORT:-6379}:6379"   # expose only if you need host access
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - aletis-network
+    restart: unless-stopped
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "${PORT:-4000}:4000"
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-aletis}:${POSTGRES_PASSWORD:-aletis_password}@postgres:5432/${POSTGRES_DB:-aletis_db}
+      REDIS_HOST: redis
+    volumes:
+      - ./public/uploads:/app/public/uploads   # keep uploads persisted on host
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget --spider -q http://localhost:4000/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+    networks:
+      - aletis-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    # named volume stored by Docker (persistent)
+  redis_data:
+
+networks:
+  aletis-network:
+    driver: bridge
