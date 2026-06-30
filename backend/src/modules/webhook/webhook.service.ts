@@ -19,6 +19,7 @@ import { PrismaService } from '@core/prisma/prisma.service';
 import { EmbadingService } from '@modules/embading/embading.service';
 import { ProductCard } from './ai-response-handler.service';
 import { CustomerIntelligenceService } from '@modules/customer-intelligence/customer-intelligence.service';
+import { RetentionService } from '@modules/retention/retention.service';
 import { UsageService, QuotaStatus } from '@modules/usage/usage.service';
 
 @Injectable()
@@ -41,6 +42,7 @@ export class WebhookService {
     private readonly prisma: PrismaService,
     private readonly embadingService: EmbadingService,
     private readonly customerIntelligenceService: CustomerIntelligenceService,
+    private readonly retentionService: RetentionService,
     private readonly usageService: UsageService,
   ) {}
 
@@ -752,6 +754,14 @@ export class WebhookService {
         .enqueueAnalysis(customer.id, bot.organizationId)
         .catch((err) =>
           this.logger.error(`Failed to enqueue AI analysis: ${err.message}`),
+        );
+
+      // Retention: if this customer was recently sent a win-back, their reply
+      // means we re-engaged them — mark the attempt RESPONDED.
+      this.retentionService
+        .markResponseIfPending(customer.id)
+        .catch((err) =>
+          this.logger.warn(`Failed to mark win-back response: ${err.message}`),
         );
     } catch (error) {
       this.logger.error(

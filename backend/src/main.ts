@@ -9,6 +9,7 @@ import helmet from 'helmet';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     logger: ['error', 'warn', 'log'],
+    rawBody: true, // needed to verify Meta/Instagram webhook signatures
   });
 
   app.use(helmet());

@@ -45,6 +45,7 @@
     "overview": "Overview",
     "orders": "Orders",
     "customers": "Customers",
+    "retention": "Retention",
     "products": "Products",
     "posts": "Posts",
     "bots": "Bots",
@@ -55,6 +56,48 @@
     "conversations": "Conversations",
     "settings": "Settings",
     "dashboard": "Dashboard"
+  },
+  "retention": {
+    "title": "Retention",
+    "subtitle": "Turn one-time buyers into permanent customers — the AI agent re-engages dormant customers automatically.",
+    "runScan": "Run win-back scan",
+    "scanning": "Scanning...",
+    "daysShort": "d",
+    "winBack": "Win back",
+    "notSentYet": "Not generated yet",
+    "scanDone": "{{dormant}} dormant found · {{enqueued}} win-backs queued",
+    "scanError": "Scan failed",
+    "winBackQueued": "Win-back queued for {{name}}",
+    "winBackError": "Could not queue win-back",
+    "metrics": {
+      "dormant": "Dormant",
+      "sent": "Sent",
+      "responded": "Responded",
+      "recovered": "Recovered",
+      "revenue": "Revenue recovered",
+      "recoveryRate": "Recovery rate"
+    },
+    "tabs": { "dormant": "Dormant customers", "attempts": "Win-back history" },
+    "dormant": { "empty": "No dormant customers — everyone is active 🎉" },
+    "attempts": { "empty": "No win-backs yet. Run a scan to start." },
+    "col": {
+      "channel": "Channel",
+      "dormant": "Dormant",
+      "orders": "Orders",
+      "spent": "Spent",
+      "action": "Action",
+      "status": "Status",
+      "message": "AI message",
+      "recovered": "Recovered"
+    },
+    "status": {
+      "QUEUED": "Queued",
+      "SENT": "Sent",
+      "RESPONDED": "Responded",
+      "RECOVERED": "Recovered",
+      "FAILED": "Failed",
+      "SKIPPED": "Skipped"
+    }
   },
   "customers": {
     "title": "Customers",

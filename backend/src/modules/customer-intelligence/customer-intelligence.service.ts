@@ -29,7 +29,7 @@ export class CustomerIntelligenceService {
    * the conversation has been idle — never mid-conversation.
    */
   async enqueueAnalysis(customerId: number, organizationId: number): Promise<void> {
-    const jobId = `analyze:${customerId}`;
+    const jobId = `analyze-${customerId}`;
     const existing = await this.queue.getJob(jobId);
     if (existing) {
       const state = await existing.getState();
@@ -55,7 +55,7 @@ export class CustomerIntelligenceService {
    * Uses a stable jobId so the same order is never double-scheduled.
    */
   async enqueueFollowUp(orderId: number): Promise<void> {
-    const jobId = `followup:${orderId}`;
+    const jobId = `followup-${orderId}`;
     const existing = await this.queue.getJob(jobId);
     if (existing) return; // already scheduled
 
