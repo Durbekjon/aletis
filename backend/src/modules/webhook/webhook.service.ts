@@ -468,6 +468,7 @@ export class WebhookService {
     customer: Customer,
     decryptedToken: string,
   ): Promise<void> {
+    let loadingMessageId: number | undefined;
     try {
       this.logger.log(
         `Processing buffered messages for customer ${customer.id}: ${flushResult.messageCount} messages merged`,
@@ -478,10 +479,15 @@ export class WebhookService {
         chat_id: customer.telegramId,
         action: 'typing',
       });
-      await this.telegramService.sendRequest(decryptedToken, 'sendMessage', {
-        chat_id: customer.telegramId,
-        text: '⏳',
-      });
+      const loadingRes = await this.telegramService.sendRequest(
+        decryptedToken,
+        'sendMessage',
+        {
+          chat_id: customer.telegramId,
+          text: '⏳',
+        },
+      );
+      loadingMessageId = loadingRes?.result?.message_id;
 
       // Check usage quota before calling AI
       const quotaStatus = await this.usageService.checkAndIncrementConversation(
@@ -768,6 +774,20 @@ export class WebhookService {
         `Error processing buffered messages for customer ${customer.id}: ${error.message}`,
         error.stack,
       );
+    } finally {
+      // Remove the "⏳" loading message once processing is done (any exit path)
+      if (loadingMessageId !== undefined) {
+        await this.telegramService
+          .sendRequest(decryptedToken, 'deleteMessage', {
+            chat_id: customer.telegramId,
+            message_id: loadingMessageId,
+          })
+          .catch((err) =>
+            this.logger.warn(
+              `Failed to delete loading message for customer ${customer.id}: ${err.message}`,
+            ),
+          );
+      }
     }
   }
 
