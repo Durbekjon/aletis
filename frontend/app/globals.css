@@ -1,0 +1,338 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  /* Updated to aletis light mode color system */
+  --color-bg: #ffffff; /* light mode body bg */
+  --color-surface: #f3f4f6; /* cards, surfaces */
+  --color-surface-warm: #fffdf6; /* warm card variant */
+  --color-primary: #00e9ae; /* brand accent (dark mode use) */
+  --color-primary-dark: #007a5a; /* use for buttons / white text */
+  --color-primary-deep: #004b3a; /* for outlines / hover */
+  --color-accent: #fabd7f; /* supporting accent */
+  --color-text: #212529; /* primary text (charcoal) */
+  --color-muted: #6c757d; /* secondary text */
+  --color-border: #e9ecef;
+  --color-danger: #e53e3e;
+  --color-success: #00b37e;
+
+  /* Semantic token mappings for light mode */
+  --background: var(--color-bg);
+  --foreground: var(--color-text);
+  --card: var(--color-bg);
+  --card-foreground: var(--color-text);
+  --popover: var(--color-bg);
+  --popover-foreground: var(--color-text);
+  --primary: var(--color-primary-dark);
+  --primary-foreground: var(--color-bg);
+  --secondary: var(--color-surface);
+  --secondary-foreground: var(--color-text);
+  --muted: var(--color-surface);
+  --muted-foreground: var(--color-muted);
+  --accent: var(--color-accent);
+  --accent-foreground: var(--color-text);
+  --destructive: var(--color-danger);
+  --destructive-foreground: var(--color-bg);
+  --border: var(--color-border);
+  --input: var(--color-border);
+  --ring: var(--color-primary);
+  --chart-1: var(--color-primary);
+  --chart-2: var(--color-accent);
+  --chart-3: var(--color-primary-dark);
+  --chart-4: var(--color-primary-deep);
+  --chart-5: var(--color-muted);
+  --radius: 0.625rem;
+  --sidebar: var(--color-bg);
+  --sidebar-foreground: var(--color-text);
+  --sidebar-primary: var(--color-primary-dark);
+  --sidebar-primary-foreground: var(--color-bg);
+  --sidebar-accent: var(--color-surface);
+  --sidebar-accent-foreground: var(--color-text);
+  --sidebar-border: var(--color-border);
+  --sidebar-ring: var(--color-primary);
+}
+
+.dark {
+  /* Keep existing dark mode exactly as specified */
+  --color-bg: #1c1c1c; /* dark mode body bg */
+  --color-surface: #2a2a2a; /* dark mode surface (cards, panels) */
+  --color-surface-warm: #2d2a24;
+  --color-primary: #00e9ae; /* brand accent (keep bright in dark) */
+  --color-primary-dark: #00e9ae;
+  --color-primary-deep: #00b88a;
+  --color-accent: #fabd7f;
+  --color-text: #f8f9fa; /* light text for dark bg */
+  --color-muted: #adb5bd; /* muted text for dark mode */
+  --color-border: #343a40; /* borders in dark mode */
+  --color-danger: #ff6b6b;
+  --color-success: #51cf66;
+
+  --background: var(--color-bg);
+  --foreground: var(--color-text);
+  --card: var(--color-surface);
+  --card-foreground: var(--color-text);
+  --popover: var(--color-surface);
+  --popover-foreground: var(--color-text);
+  --primary: var(--color-primary);
+  --primary-foreground: var(--color-bg);
+  --secondary: var(--color-surface);
+  --secondary-foreground: var(--color-text);
+  --muted: var(--color-surface);
+  --muted-foreground: var(--color-muted);
+  --accent: var(--color-accent);
+  --accent-foreground: var(--color-bg);
+  --destructive: var(--color-danger);
+  --destructive-foreground: var(--color-text);
+  --border: var(--color-border);
+  --input: var(--color-border);
+  --ring: var(--color-primary);
+  --chart-1: var(--color-primary);
+  --chart-2: var(--color-accent);
+  --chart-3: var(--color-primary-deep);
+  --chart-4: var(--color-muted);
+  --chart-5: var(--color-border);
+  --sidebar: var(--color-bg);
+  --sidebar-foreground: var(--color-text);
+  --sidebar-primary: var(--color-primary);
+  --sidebar-primary-foreground: var(--color-bg);
+  --sidebar-accent: var(--color-surface);
+  --sidebar-accent-foreground: var(--color-text);
+  --sidebar-border: var(--color-border);
+  --sidebar-ring: var(--color-primary);
+}
+
+@theme inline {
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--color-destructive);
+  --color-destructive-foreground: var(--color-destructive-foreground);
+  --color-border: var(--color-border);
+  --color-input: var(--color-input);
+  --color-ring: var(--color-ring);
+  --color-chart-1: var(--color-chart-1);
+  --color-chart-2: var(--color-chart-2);
+  --color-chart-3: var(--color-chart-3);
+  --color-chart-4: var(--color-chart-4);
+  --color-chart-5: var(--color-chart-5);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* ══════════════════════════════════════
+   LANDING PAGE — GLASS & ANIMATION
+   ══════════════════════════════════════ */
+
+:root {
+  --lp-glass-bg: rgba(0, 0, 0, 0.04);
+  --lp-glass-border: rgba(0, 0, 0, 0.07);
+  --lp-glass-hover-bg: rgba(0, 0, 0, 0.07);
+  --lp-glass-hover-border: rgba(0, 120, 90, 0.3);
+  --lp-orb-opacity: 0.18;
+}
+
+.dark {
+  --lp-glass-bg: rgba(255, 255, 255, 0.04);
+  --lp-glass-border: rgba(255, 255, 255, 0.07);
+  --lp-glass-hover-bg: rgba(255, 255, 255, 0.07);
+  --lp-glass-hover-border: rgba(0, 233, 174, 0.28);
+  --lp-orb-opacity: 0.38;
+}
+
+/* Floating background orbs */
+.lp-orb {
+  position: fixed;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+  opacity: var(--lp-orb-opacity);
+}
+.lp-orb-1 {
+  width: 700px;
+  height: 700px;
+  background: radial-gradient(circle, #00e9ae, transparent 65%);
+  filter: blur(90px);
+  top: -260px;
+  left: -200px;
+  animation: lp-float1 15s ease-in-out infinite;
+}
+.lp-orb-2 {
+  width: 550px;
+  height: 550px;
+  background: radial-gradient(circle, #fabd7f, transparent 65%);
+  filter: blur(90px);
+  top: 20%;
+  right: -180px;
+  animation: lp-float2 19s ease-in-out infinite;
+}
+.lp-orb-3 {
+  width: 450px;
+  height: 450px;
+  background: radial-gradient(circle, #00b88a, transparent 65%);
+  filter: blur(90px);
+  bottom: 0;
+  left: 10%;
+  animation: lp-float3 17s ease-in-out infinite;
+}
+
+@keyframes lp-float1 {
+  0%, 100% { transform: translate(0px, 0px); }
+  25%  { transform: translate(55px, -65px); }
+  50%  { transform: translate(-30px, 45px); }
+  75%  { transform: translate(40px, 25px); }
+}
+@keyframes lp-float2 {
+  0%, 100% { transform: translate(0px, 0px); }
+  33%  { transform: translate(-65px, -45px); }
+  66%  { transform: translate(35px, 55px); }
+}
+@keyframes lp-float3 {
+  0%, 100% { transform: translate(0px, 0px); }
+  40%  { transform: translate(45px, -35px); }
+  80%  { transform: translate(-30px, 25px); }
+}
+
+/* Glass utilities */
+.lp-glass {
+  background: var(--lp-glass-bg);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--lp-glass-border);
+}
+
+.lp-glass-card {
+  background: var(--lp-glass-bg);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid var(--lp-glass-border);
+}
+
+/* Gradient text */
+.lp-gradient-text {
+  background: linear-gradient(135deg, #00e9ae 0%, #fabd7f 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Glow primary button */
+.lp-glow-btn {
+  box-shadow: 0 0 28px rgba(0, 233, 174, 0.35) !important;
+  transition: box-shadow 0.3s ease, transform 0.2s ease !important;
+}
+.lp-glow-btn:hover {
+  box-shadow: 0 0 48px rgba(0, 233, 174, 0.55) !important;
+  transform: translateY(-1px);
+}
+
+/* Scroll reveal */
+.lp-reveal {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity 0.65s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.65s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.lp-reveal.lp-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Chat bubble animations */
+@keyframes lp-msg-in {
+  from { opacity: 0; transform: translateY(10px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.lp-msg {
+  opacity: 0;
+  animation: lp-msg-in 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+.lp-msg:nth-child(1) { animation-delay: 0.4s; }
+.lp-msg:nth-child(2) { animation-delay: 1.0s; }
+.lp-msg:nth-child(3) { animation-delay: 1.8s; }
+.lp-msg:nth-child(4) { animation-delay: 2.6s; }
+.lp-msg:nth-child(5) { animation-delay: 3.4s; }
+
+/* Pulse dot */
+@keyframes lp-pulse-ring {
+  0%   { box-shadow: 0 0 0 0 rgba(0, 233, 174, 0.5); }
+  70%  { box-shadow: 0 0 0 6px rgba(0, 233, 174, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(0, 233, 174, 0); }
+}
+.lp-pulse {
+  animation: lp-pulse-ring 2.2s ease-in-out infinite;
+}
+
+/* Step number */
+.lp-step-num {
+  font-size: 4rem;
+  font-weight: 900;
+  line-height: 1;
+  background: linear-gradient(135deg, rgba(0, 233, 174, 0.6), rgba(250, 189, 127, 0.6));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Step horizontal connector */
+.lp-step-connector {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(0, 233, 174, 0.3), rgba(250, 189, 127, 0.3), transparent);
+  margin-top: 2.5rem;
+  min-width: 24px;
+}
+
+/* Auth pages glass card — overrides shadcn Card background */
+.lp-auth-card {
+  background: var(--lp-glass-bg) !important;
+  backdrop-filter: blur(28px);
+  -webkit-backdrop-filter: blur(28px);
+  border: 1px solid var(--lp-glass-border) !important;
+  box-shadow: 0 12px 60px rgba(0, 0, 0, 0.22);
+}
+
+/* CTA glow card */
+.lp-cta-glow {
+  background: var(--lp-glass-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(0, 233, 174, 0.2);
+  box-shadow:
+    0 0 90px rgba(0, 233, 174, 0.07),
+    0 0 180px rgba(0, 233, 174, 0.03),
+    inset 0 0 60px rgba(0, 233, 174, 0.02);
+}
