@@ -23,7 +23,7 @@ jobs:
           port: ${{ secrets.SSH_PORT || 22 }}
           script: |
             set -e
-            cd ${{ secrets.DEPLOY_PATH || '/opt/aletis' }}
+            cd ${{ secrets.DEPLOY_PATH_DEV || '/opt/aletis-dev' }}
             git fetch origin development
             git checkout development
             git reset --hard origin/development
