@@ -41,7 +41,14 @@ services:
       ENABLE_MODULES: multi2vec-clip
       CLIP_INFERENCE_API: http://multi2vec-clip:8080
       CLUSTER_HOSTNAME: node1
-    depends_on: [multi2vec-clip]
+    depends_on:
+      multi2vec-clip: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/v1/.well-known/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 18
+      start_period: 30s
     volumes:
       - weaviate_data:/var/lib/weaviate
     networks: [aletis]
@@ -52,6 +59,12 @@ services:
     image: cr.weaviate.io/semitechnologies/multi2vec-clip:sentence-transformers-clip-ViT-B-32-multilingual-v1
     environment:
       ENABLE_CUDA: "0"
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/.well-known/ready')"]
+      interval: 10s
+      timeout: 5s
+      retries: 24
+      start_period: 60s
     networks: [aletis]
     restart: unless-stopped
 
@@ -74,7 +87,7 @@ services:
     depends_on:
       postgres: { condition: service_healthy }
       redis: { condition: service_healthy }
-      weaviate: { condition: service_started }
+      weaviate: { condition: service_healthy }
     healthcheck:
       test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:4000/docs',r=>process.exit(r.statusCode<500?0:1)).on('error',()=>process.exit(1))\""]
       interval: 30s
