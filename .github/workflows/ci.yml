@@ -1,0 +1,104 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [development, main]
+  push:
+    branches: [development, main, "feature/**", "fix/**", "chore/**"]
+
+# Cancel superseded runs on the same ref
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Detect which app changed so we only build what's needed
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      backend: ${{ steps.filter.outputs.backend }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            backend:
+              - 'backend/**'
+              - '.github/workflows/ci.yml'
+            frontend:
+              - 'frontend/**'
+              - '.github/workflows/ci.yml'
+
+  backend:
+    needs: changes
+    if: ${{ needs.changes.outputs.backend == 'true' }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Enable Corepack (yarn)
+        run: corepack enable
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+      - name: Generate Prisma client
+        run: yarn prisma:generate
+      - name: Lint (non-blocking — see eslint.config.mjs)
+        run: yarn lint || true
+        continue-on-error: true
+      - name: Build
+        run: yarn build
+      - name: Test
+        run: yarn test --passWithNoTests
+
+  frontend:
+    needs: changes
+    if: ${{ needs.changes.outputs.frontend == 'true' }}
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Lint
+        run: pnpm lint || true
+        continue-on-error: true
+      - name: Build
+        run: pnpm build
+        env:
+          NEXT_PUBLIC_API_BASE_URL: https://api.aletis.me/api
+          NEXT_PUBLIC_BACKEND_URL: https://api.aletis.me
+
+  # Single required status check. Always runs (even when an app job is skipped by the
+  # path filter) so branch protection never deadlocks on single-app PRs.
+  ci-success:
+    name: ci-success
+    needs: [changes, backend, frontend]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify required build jobs did not fail
+        run: |
+          b='${{ needs.backend.result }}'
+          f='${{ needs.frontend.result }}'
+          echo "backend=$b frontend=$f"
+          if [ "$b" = "failure" ] || [ "$b" = "cancelled" ] || [ "$f" = "failure" ] || [ "$f" = "cancelled" ]; then
+            echo "A required build job failed."; exit 1
+          fi
+          echo "All required checks passed (skipped app jobs are OK)."
