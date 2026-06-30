@@ -50,6 +50,7 @@ model Organization {
   instagramAccounts  InstagramAccount[]
   customerAiNotes    CustomerAiNote[]
   subscription       Subscription?
+  winBackAttempts    WinBackAttempt[]
   @@map("organizations")
 }
 
@@ -300,6 +301,9 @@ model Customer {
   orders         Order[]
   lang           String? // "uz" | "ru" | "en"
   aiNote         CustomerAiNote?
+  channel        CustomerChannel  @default(TELEGRAM)
+  instagramId    String?
+  winBackAttempts WinBackAttempt[]
 
   @@unique([telegramId, organizationId, botId])
   @@index([telegramId])
@@ -563,6 +567,48 @@ enum PriceSensitivity {
   LOW
   MEDIUM
   HIGH
+}
+
+// ─── Retention / Win-Back ────────────────────────────────────────────────────
+
+enum CustomerChannel {
+  TELEGRAM
+  INSTAGRAM
+}
+
+enum WinBackStatus {
+  QUEUED // scheduled, message generated, awaiting send
+  SENT // re-engagement message delivered to the customer
+  RESPONDED // customer replied after the win-back
+  RECOVERED // customer placed an order after the win-back (success)
+  FAILED // delivery failed
+  SKIPPED // customer became active again before sending
+}
+
+/// One proactive re-engagement of a dormant customer. The core of the
+/// retention engine: detect → generate → send → track recovery.
+model WinBackAttempt {
+  id               Int             @id @default(autoincrement())
+  customerId       Int
+  customer         Customer        @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  organizationId   Int
+  organization     Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  channel          CustomerChannel @default(TELEGRAM)
+  status           WinBackStatus   @default(QUEUED)
+  dormantDays      Int? // days since last activity when flagged
+  generatedMessage String?
+  incentive        String? // optional offer included in the message
+  sentAt           DateTime?
+  respondedAt      DateTime?
+  recoveredAt      DateTime?
+  recoveredOrderId Int? // order that closed the loop
+  recoveredRevenue Float? // revenue attributed to the win-back
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  @@index([organizationId, status])
+  @@index([customerId, createdAt])
+  @@map("win_back_attempts")
 }
 
 // ─── Billing ───────────────────────────────────────────────────────────────

@@ -11,6 +11,7 @@ import { TelegramModule } from '@modules/telegram/telegram.module';
 import { OrdersModule } from '@modules/orders/orders.module';
 import { EmbadingModule } from '@modules/embading/embading.module';
 import { CustomerIntelligenceModule } from '@modules/customer-intelligence/customer-intelligence.module';
+import { RetentionModule } from '@modules/retention/retention.module';
 import { UsageModule } from '@modules/usage/usage.module';
 
 @Module({
@@ -24,6 +25,7 @@ import { UsageModule } from '@modules/usage/usage.module';
     OrdersModule,
     EmbadingModule,
     CustomerIntelligenceModule,
+    RetentionModule,
     UsageModule,
   ],
   controllers: [WebhookController],

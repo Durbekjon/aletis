@@ -1303,6 +1303,74 @@ Return only valid JSON, no other text.`;
     return this.callWithRotation('gemini-2.5-flash', prompt);
   }
 
+  /**
+   * Generate a personalized win-back / re-engagement message for a dormant
+   * customer. Returns a single ready-to-send message in the customer's
+   * language. The whole point of the retention engine: turn a one-time buyer
+   * back into an active customer.
+   */
+  async generateWinBackMessage(input: {
+    customerName?: string | null;
+    lang?: string | null;
+    businessName?: string | null;
+    dormantDays?: number | null;
+    purchaseHistory?: any;
+    favoriteCategories?: any;
+    salesOpportunities?: any;
+    aiSummary?: string | null;
+    incentive?: string | null;
+    suggestedProducts?: { name: string; price: number; currency: string }[];
+  }): Promise<{ text: string; incentive?: string }> {
+    const lang = ['uz', 'ru', 'en'].includes(input.lang || '')
+      ? (input.lang as string)
+      : 'uz';
+
+    const langName = { uz: 'Uzbek', ru: 'Russian', en: 'English' }[lang];
+    const products = (input.suggestedProducts || [])
+      .map((p) => `- ${p.name} (${p.price} ${p.currency})`)
+      .join('\n');
+
+    const prompt = `You are the AI sales & retention agent for "${input.businessName || 'our shop'}" in Uzbekistan.
+Your job: write ONE short, warm win-back message that brings a dormant customer back to buy again.
+
+CUSTOMER CONTEXT:
+- Name: ${input.customerName || 'valued customer'}
+- Days since last activity: ${input.dormantDays ?? 'unknown'}
+- Summary: ${input.aiSummary || 'n/a'}
+- Past purchases: ${JSON.stringify(input.purchaseHistory ?? []).slice(0, 600)}
+- Favorite categories: ${JSON.stringify(input.favoriteCategories ?? []).slice(0, 300)}
+- Sales opportunities: ${JSON.stringify(input.salesOpportunities ?? []).slice(0, 400)}
+${products ? `SUGGESTED PRODUCTS TO MENTION:\n${products}` : ''}
+${input.incentive ? `INCENTIVE TO OFFER: ${input.incentive}` : ''}
+
+RULES:
+- Write in ${langName} ONLY.
+- Tone: friendly, personal, not pushy. Like a shop owner who genuinely remembers them.
+- Reference what they bought/liked before to feel personal (do NOT invent purchases not listed).
+- Keep it SHORT (2-4 sentences). 1-2 tasteful emojis max.
+- End with a light call to action (a question or invitation to come back).
+- ${input.incentive ? 'Naturally include the incentive above.' : 'Do NOT invent discounts or prices that are not provided.'}
+- Output ONLY the message text. No quotes, no labels, no markdown.
+
+Message:`;
+
+    try {
+      const text = (
+        await this.callWithRotation('gemini-2.5-flash', prompt)
+      ).trim();
+      return { text, incentive: input.incentive ?? undefined };
+    } catch (error: any) {
+      this.logger.error(`Win-back generation failed: ${error.message}`);
+      // Language-aware fallback so the engine never silently no-ops
+      const fallback: Record<string, string> = {
+        uz: `Salom${input.customerName ? ', ' + input.customerName : ''}! 👋 Sizni sog'inib qoldik. Yangi mahsulotlarimizni ko'rib chiqishni xohlaysizmi?`,
+        ru: `Здравствуйте${input.customerName ? ', ' + input.customerName : ''}! 👋 Мы по вам соскучились. Хотите взглянуть на наши новинки?`,
+        en: `Hi${input.customerName ? ' ' + input.customerName : ''}! 👋 We've missed you. Want to see what's new in our shop?`,
+      };
+      return { text: fallback[lang], incentive: input.incentive ?? undefined };
+    }
+  }
+
   async matchProductsInContext(
     products: { id: number; name: string; price: number; currency: string; description: string }[],
     searchQuery: string,

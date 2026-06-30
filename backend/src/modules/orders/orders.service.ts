@@ -16,6 +16,7 @@ import {
 } from './dto';
 import { ActivityLogService } from '../activity-log/activity-log.service';
 import { CustomerIntelligenceService } from '@modules/customer-intelligence/customer-intelligence.service';
+import { RetentionService } from '@modules/retention/retention.service';
 
 @Injectable()
 export class OrdersService {
@@ -53,6 +54,7 @@ export class OrdersService {
     private readonly prisma: PrismaService,
     private readonly activityLogService: ActivityLogService,
     private readonly customerIntelligenceService: CustomerIntelligenceService,
+    private readonly retentionService: RetentionService,
   ) {}
 
   /**
@@ -669,6 +671,16 @@ export class OrdersService {
       data: { orderNumber: response.orderNumber },
       meta: { source: 'WEBHOOK', totalPrice: calculatedTotalPrice },
     });
+
+    // Close the retention loop: if this customer had a recent win-back, this
+    // order means we recovered them. Fire-and-forget so order flow is unaffected.
+    this.retentionService
+      .markRecoveryIfPending(customerId, order.id, calculatedTotalPrice)
+      .catch((err) =>
+        this.logger.warn(
+          `Failed to mark win-back recovery for customer ${customerId}: ${err.message}`,
+        ),
+      );
 
     return response;
   }

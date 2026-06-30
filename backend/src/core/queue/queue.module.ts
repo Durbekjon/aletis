@@ -3,6 +3,7 @@ import { BullModule } from '@nestjs/bullmq';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 
 export const CUSTOMER_INTELLIGENCE_QUEUE = 'customer-intelligence';
+export const RETENTION_QUEUE = 'retention';
 
 @Global()
 @Module({

@@ -45,6 +45,7 @@
     "overview": "Ko'rib chiqish",
     "orders": "Buyurtmalar",
     "customers": "Mijozlar",
+    "retention": "Mijozlarni qaytarish",
     "products": "Mahsulotlar",
     "posts": "Postlar",
     "bots": "Botlar",
@@ -55,6 +56,48 @@
     "conversations": "Suhbatlar",
     "settings": "Sozlamalar",
     "dashboard": "Boshqaruv paneli"
+  },
+  "retention": {
+    "title": "Mijozlarni qaytarish",
+    "subtitle": "Bir martalik xaridorlarni doimiy mijozlarga aylantiring — AI agent yo'qolgan mijozlarni avtomatik qaytaradi.",
+    "runScan": "Qaytarishni boshlash",
+    "scanning": "Tekshirilmoqda...",
+    "daysShort": "kun",
+    "winBack": "Qaytarish",
+    "notSentYet": "Hali yaratilmagan",
+    "scanDone": "{{dormant}} ta yo'qolgan mijoz · {{enqueued}} ta xabar navbatga qo'yildi",
+    "scanError": "Tekshirish xatosi",
+    "winBackQueued": "{{name}} uchun qaytarish navbatga qo'yildi",
+    "winBackError": "Qaytarishni navbatga qo'yib bo'lmadi",
+    "metrics": {
+      "dormant": "Yo'qolgan",
+      "sent": "Yuborilgan",
+      "responded": "Javob bergan",
+      "recovered": "Qaytarilgan",
+      "revenue": "Qaytarilgan daromad",
+      "recoveryRate": "Qaytarish darajasi"
+    },
+    "tabs": { "dormant": "Yo'qolgan mijozlar", "attempts": "Qaytarish tarixi" },
+    "dormant": { "empty": "Yo'qolgan mijozlar yo'q — hammasi faol 🎉" },
+    "attempts": { "empty": "Hali qaytarishlar yo'q. Boshlash uchun tekshiring." },
+    "col": {
+      "channel": "Kanal",
+      "dormant": "Yo'qolgan",
+      "orders": "Buyurtmalar",
+      "spent": "Sarflagan",
+      "action": "Amal",
+      "status": "Holat",
+      "message": "AI xabari",
+      "recovered": "Qaytarilgan"
+    },
+    "status": {
+      "QUEUED": "Navbatda",
+      "SENT": "Yuborildi",
+      "RESPONDED": "Javob berdi",
+      "RECOVERED": "Qaytarildi",
+      "FAILED": "Xato",
+      "SKIPPED": "O'tkazib yuborildi"
+    }
   },
   "customers": {
     "title": "Mijozlar",

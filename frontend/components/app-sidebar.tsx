@@ -32,6 +32,7 @@ import {
   // User,
   Newspaper,
   Bot,
+  Repeat,
 } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
@@ -63,6 +64,11 @@ export function AppSidebar() {
       title: t("navigation.customers"),
       url: ROUTES.CUSTOMERS,
       icon: Users,
+    },
+    {
+      title: t("navigation.retention"),
+      url: ROUTES.RETENTION,
+      icon: Repeat,
     },
     {
       title: t("navigation.products"),
