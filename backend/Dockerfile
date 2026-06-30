@@ -57,9 +57,10 @@ RUN yarn prisma:generate
 EXPOSE 4000
 
 # Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=40s --retries=3 \
-  CMD node -e "require('http').get('http://localhost:4000/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
+HEALTHCHECK --interval=30s --timeout=3s --start-period=60s --retries=3 \
+  CMD node -e "require('http').get('http://localhost:4000/api/v1/health', (r) => {process.exit(r.statusCode === 200 ? 0 : 1)})"
 
 # Run database migrations and start the application
-CMD ["sh", "-c", "yarn prisma:migrate:deploy && node dist/main"]
+# nest build emits to dist/src/main.js (tsconfig has no rootDir), so the entry is dist/src/main
+CMD ["sh", "-c", "yarn prisma:migrate:deploy && node dist/src/main"]
 
