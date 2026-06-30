@@ -41,6 +41,7 @@ export interface OrderDetails {
 export interface ProductImage {
   id: number
   key: string
+  url: string
   originalName: string
 }
 

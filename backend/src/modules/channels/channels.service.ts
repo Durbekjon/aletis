@@ -346,6 +346,7 @@ export class ChannelsService {
             select: {
               id: true,
               key: true,
+              url: true,
             },
           },
         },

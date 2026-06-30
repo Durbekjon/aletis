@@ -413,7 +413,10 @@ export function DynamicProductForm({ initialValues, initialSchemaId, onSubmitImp
       </div>
     )
   }
-  const getImageUrl = (image: string) => { return `${process.env.NEXT_PUBLIC_BACKEND_URL}/${image}` }
+  // Images are served from ImageKit (absolute URLs). Fall back to prefixing the
+  // backend origin for any legacy relative path.
+  const getImageUrl = (image: string) =>
+    /^https?:\/\//i.test(image) ? image : `${process.env.NEXT_PUBLIC_BACKEND_URL}/${image}`
   return (
     <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
       <div className="grid gap-6 lg:grid-cols-3">
@@ -621,7 +624,7 @@ export function DynamicProductForm({ initialValues, initialSchemaId, onSubmitImp
                           <div className="aspect-square bg-muted rounded-lg overflow-hidden">
                             {hasUploaded ? (
                               <img
-                                src={getImageUrl(uploadedImages[index].key)}
+                                src={uploadedImages[index].url}
                                 alt={`Preview ${index + 1}`}
                                 className="w-full h-full object-cover"
                               />

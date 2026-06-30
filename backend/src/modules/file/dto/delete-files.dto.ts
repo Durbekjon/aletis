@@ -14,8 +14,8 @@ export class DeleteFilesDto {
 
 export class DeleteFileByKeyDto {
   @ApiProperty({
-    description: 'The file key/path to delete',
-    example: 'public/uploads/abc123.png',
+    description: 'The file key (ImageKit filePath) to delete',
+    example: '/aletis/abc123.png',
   })
   @IsString()
   key: string;

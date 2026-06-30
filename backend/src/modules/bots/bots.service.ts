@@ -249,6 +249,7 @@ export class BotsService {
             select: {
               id: true,
               key: true,
+              url: true,
             },
           },
         },

@@ -12,13 +12,14 @@ interface PostPreviewProps {
     }
     product?: {
       name: string
-      images?: Array<{ id: number; key: string }>
+      images?: Array<{ id: number; key: string; url: string }>
     }
   }
 }
 
 export function PostPreview({ post }: PostPreviewProps) {
-  const getLogoUrl = (logo: { id: number; key: string }) => {
+  const getLogoUrl = (logo: { id: number; key: string; url?: string }) => {
+    if (logo.url) return logo.url
     return `${process.env.NEXT_PUBLIC_BACKEND_URL}/${logo.key}`
   }
 

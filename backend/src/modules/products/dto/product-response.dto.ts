@@ -66,10 +66,16 @@ export class ProductImageResponseDto {
   id: number;
 
   @ApiProperty({
-    description: 'The relative path to the file',
-    example: 'public/uploads/image_123.jpg',
+    description: 'The ImageKit filePath of the file',
+    example: '/aletis/image_123.jpg',
   })
   key: string;
+
+  @ApiProperty({
+    description: 'The absolute CDN URL of the image',
+    example: 'https://ik.imagekit.io/your_id/aletis/image_123.jpg',
+  })
+  url: string;
 
   // @ApiProperty({
   //   description: 'The original filename',

@@ -52,7 +52,7 @@ export default function SettingsPage() {
     category: "OTHER",
   })
 
-  const [orgLogoTemp, setOrgLogoTemp] = useState<{ id: number; key: string } | null>(null)
+  const [orgLogoTemp, setOrgLogoTemp] = useState<{ id: number; key: string; url: string } | null>(null)
   const [orgLogoUploading, setOrgLogoUploading] = useState(false)
   const orgFileInputRef = useRef<HTMLInputElement | null>(null)
 
@@ -100,7 +100,7 @@ export default function SettingsPage() {
     lastName: "",
   })
 
-  const [profileLogoTemp, setProfileLogoTemp] = useState<{ id: number; key: string } | null>(null)
+  const [profileLogoTemp, setProfileLogoTemp] = useState<{ id: number; key: string; url: string } | null>(null)
   const [profileLogoUploading, setProfileLogoUploading] = useState(false)
   const profileFileInputRef = useRef<HTMLInputElement | null>(null)
 
@@ -180,7 +180,8 @@ export default function SettingsPage() {
     )
   }
 
-  const getLogoUrl = (logo: { id: number; key: string }) => {
+  const getLogoUrl = (logo: { id: number; key: string; url?: string }) => {
+    if (logo.url) return logo.url
     return `${process.env.NEXT_PUBLIC_BACKEND_URL}/${logo.key}`
   }
 
@@ -198,7 +199,7 @@ export default function SettingsPage() {
     try {
       setProfileLogoUploading(true)
       const uploaded = await filesApi.uploadFile(file)
-      setProfileLogoTemp({ id: uploaded.id, key: uploaded.key })
+      setProfileLogoTemp({ id: uploaded.id, key: uploaded.key, url: uploaded.url })
       await updateProfileMutation.mutateAsync({ logoId: uploaded.id })
       setProfileLogoTemp(null)
       toast.success(t("settings.toasts.profilePhotoUpdated"))
@@ -230,7 +231,7 @@ export default function SettingsPage() {
     try {
       setOrgLogoUploading(true)
       const uploaded = await filesApi.uploadFile(file)
-      setOrgLogoTemp({ id: uploaded.id, key: uploaded.key })
+      setOrgLogoTemp({ id: uploaded.id, key: uploaded.key, url: uploaded.url })
       await updateOrgMutation.mutateAsync({ id: organization.id, payload: { logoId: uploaded.id } })
       setOrgLogoTemp(null)
       toast.success(t("settings.toasts.orgLogoUpdated"))
@@ -316,7 +317,7 @@ export default function SettingsPage() {
                       <Avatar className="h-20 w-20">
                         {
                           (profileLogoTemp || user.logo) ? (
-                            <AvatarImage src={getLogoUrl((profileLogoTemp || user.logo) as { id: number; key: string })} />
+                            <AvatarImage src={getLogoUrl((profileLogoTemp || user.logo) as { id: number; key: string; url?: string })} />
                           ) : (
                             <AvatarFallback>{user.firstName.charAt(0)}{user?.lastName?.charAt(0)}</AvatarFallback>
                           )
@@ -450,7 +451,7 @@ export default function SettingsPage() {
                   <div className="flex items-center gap-6">
                     <Avatar className="h-20 w-20">
                       { (orgLogoTemp || organization.logo) ? (
-                        <AvatarImage src={getLogoUrl((orgLogoTemp || organization.logo) as { id: number; key: string })} />
+                        <AvatarImage src={getLogoUrl((orgLogoTemp || organization.logo) as { id: number; key: string; url?: string })} />
                       ) : (
                         <AvatarFallback>{organization.name.charAt(0)}</AvatarFallback>
                       )}

@@ -44,7 +44,8 @@ export default function PostDetailPage() {
     }
   }
 
-  const getLogoUrl = (logo: { id: number; key: string }) => {
+  const getLogoUrl = (logo: { id: number; key: string; url?: string }) => {
+    if (logo.url) return logo.url
     return `${process.env.NEXT_PUBLIC_BACKEND_URL}/${logo.key}`
   }
 

@@ -128,8 +128,6 @@ export function AppSidebar() {
     return `${firstName} ${lastName || ""}`
   }
 
-  const getLogoUrl = (key: string) => `${process.env.NEXT_PUBLIC_BACKEND_URL}/${key}`
-
   return (
     <Sidebar>
       <SidebarHeader>
@@ -173,8 +171,8 @@ export function AppSidebar() {
                   className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
                 >
                   <Avatar className="h-8 w-8 rounded-lg">
-                    {user?.logo?.key ? (
-                      <AvatarImage src={getLogoUrl(user.logo.key)} />
+                    {user?.logo?.url ? (
+                      <AvatarImage src={user.logo.url} />
                     ) : (
                       <AvatarFallback className="rounded-lg">
                         {user ? getUserInitials(user.firstName, user?.lastName) : "U"}
@@ -200,8 +198,8 @@ export function AppSidebar() {
                 <DropdownMenuLabel className="p-0 font-normal">
                   <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
                     <Avatar className="h-8 w-8 rounded-lg">
-                      {user?.logo?.key ? (
-                        <AvatarImage src={getLogoUrl(user.logo.key)} />
+                      {user?.logo?.url ? (
+                        <AvatarImage src={user.logo.url} />
                       ) : (
                         <AvatarFallback className="rounded-lg">
                           {user ? getUserInitials(user.firstName, user?.lastName) : "U"}

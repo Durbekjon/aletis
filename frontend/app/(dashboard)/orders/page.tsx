@@ -137,9 +137,7 @@ export default function OrdersPage() {
 
   const getProductImage = (item: OrderItem) => {
     if (item.product && item.product.images && item.product.images.length > 0) {
-      const imageUrl = `${process.env.NEXT_PUBLIC_BACKEND_URL}/${item.product.images[0].key}`
-      console.log({imageUrl})
-      return imageUrl
+      return item.product.images[0].url
     }
     return "/placeholder.svg?height=32&width=32"
   }

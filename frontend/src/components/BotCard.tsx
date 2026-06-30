@@ -71,11 +71,9 @@ export function BotCard({ bot, onToggleStatus, onDelete, onCopyToken, onOpenSett
   }
 
 
-  const getLogoUrl = (key: string) => `${process.env.NEXT_PUBLIC_BACKEND_URL}/${key}`
-
   const renderBotAvatar = (bot: TelegramBot) => {
-    if (bot.logo?.key) {
-      return <AvatarImage src={getLogoUrl(bot.logo.key)} />
+    if (bot.logo?.url) {
+      return <AvatarImage src={bot.logo.url} />
     }
     return <AvatarFallback>
       <Bot className="h-6 w-6" />

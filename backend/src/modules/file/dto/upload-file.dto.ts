@@ -9,10 +9,16 @@ export class UploadFileResponseDto {
   id: number;
 
   @ApiProperty({
-    description: 'The relative path to the stored file',
-    example: 'public/uploads/abc123.png',
+    description: 'The ImageKit filePath of the stored file',
+    example: '/aletis/abc123.png',
   })
   key: string;
+
+  @ApiProperty({
+    description: 'The absolute CDN URL of the stored file',
+    example: 'https://ik.imagekit.io/your_id/aletis/abc123.png',
+  })
+  url: string;
 
   @ApiProperty({
     description: 'The original filename of the uploaded file',

@@ -192,14 +192,16 @@ enum FieldType {
 }
 
 model File {
-  id           Int        @id @default(autoincrement())
-  key          String     @unique // relative path: "public/uploads/abc.png"
-  originalName String
-  size         Int
-  mimeType     String
-  type         FileType   @default(OTHER)
-  status       FileStatus @default(READY)
-  createdAt    DateTime   @default(now())
+  id             Int        @id @default(autoincrement())
+  key            String     @unique // ImageKit filePath, e.g. "/aletis/abc.png"
+  url            String // absolute CDN URL served by ImageKit
+  imagekitFileId String? // ImageKit fileId, used to delete the asset
+  originalName   String
+  size           Int
+  mimeType       String
+  type           FileType   @default(OTHER)
+  status         FileStatus @default(READY)
+  createdAt      DateTime   @default(now())
 
   // Relations
   uploaderId        Int?

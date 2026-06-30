@@ -286,9 +286,9 @@ export class FileController {
   @ApiOperation({ summary: 'Delete a file by key/path' })
   @ApiParam({
     name: 'key',
-    description: 'The key/path of the file to delete',
+    description: 'The key (ImageKit filePath) of the file to delete',
     type: 'string',
-    example: 'public/uploads/abc123.png',
+    example: '/aletis/abc123.png',
   })
   @ApiResponse({
     status: 204,

@@ -23,7 +23,7 @@ export interface BackendPost {
     name: string
     price: number
     currency: string
-    images: Array<{ id: number; key: string }>
+    images: Array<{ id: number; key: string; url: string }>
   }
 }
 
@@ -66,7 +66,7 @@ export interface Post {
     name: string
     price: number
     currency: string
-    images?: Array<{ id: number; key: string }>
+    images?: Array<{ id: number; key: string; url: string }>
   }
 }
 

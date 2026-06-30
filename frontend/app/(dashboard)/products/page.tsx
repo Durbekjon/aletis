@@ -213,8 +213,9 @@ export default function ProductsPage() {
 
   const getImageUrl = (image?: string) => {
     if (image) {
-      const imageUrl = `${process.env.NEXT_PUBLIC_BACKEND_URL}/${image}`;
-      return imageUrl;
+      return /^https?:\/\//i.test(image)
+        ? image
+        : `${process.env.NEXT_PUBLIC_BACKEND_URL}/${image}`;
     }
     return '/placeholder.svg?height=40&width=40';
   };

@@ -245,9 +245,8 @@ ${userOrders.map((order) => `- Order #${order.id}: ${order.details?.items || 'N/
 }
 
 PRODUCT IMAGE RULES:
-- The server base URL for building absolute image URLs is: ${baseUrl}
-- Product data may include image keys like "public/uploads/filename.jpg"
-- When you need to return image URLs, construct absolute URLs by prefixing with the base URL if they are relative
+- Product image URLs are already absolute ImageKit CDN URLs (e.g. "https://ik.imagekit.io/.../filename.jpg")
+- When you need to return image URLs, use them exactly as provided — do not modify or prefix them
 
 
 
