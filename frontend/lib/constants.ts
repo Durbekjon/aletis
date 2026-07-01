@@ -14,6 +14,7 @@ export const ROUTES = {
   ORDERS: "/orders",
   CUSTOMERS: "/customers",
   RETENTION: "/retention",
+  REPLENISHMENT: "/replenishment",
   CONVERSATIONS: "/conversations",
   ANALYTICS: "/analytics",
   BOTS: "/bots",

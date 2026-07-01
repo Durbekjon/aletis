@@ -4,6 +4,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 
 export const CUSTOMER_INTELLIGENCE_QUEUE = 'customer-intelligence';
 export const RETENTION_QUEUE = 'retention';
+export const REPLENISHMENT_QUEUE = 'replenishment';
 
 @Global()
 @Module({

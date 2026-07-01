@@ -55,7 +55,8 @@
     "billing": "Billing",
     "conversations": "Conversations",
     "settings": "Settings",
-    "dashboard": "Dashboard"
+    "dashboard": "Dashboard",
+    "replenishment": "Replenishment"
   },
   "retention": {
     "title": "Retention",
@@ -77,9 +78,16 @@
       "revenue": "Revenue recovered",
       "recoveryRate": "Recovery rate"
     },
-    "tabs": { "dormant": "Dormant customers", "attempts": "Win-back history" },
-    "dormant": { "empty": "No dormant customers — everyone is active 🎉" },
-    "attempts": { "empty": "No win-backs yet. Run a scan to start." },
+    "tabs": {
+      "dormant": "Dormant customers",
+      "attempts": "Win-back history"
+    },
+    "dormant": {
+      "empty": "No dormant customers — everyone is active 🎉"
+    },
+    "attempts": {
+      "empty": "No win-backs yet. Run a scan to start."
+    },
     "col": {
       "channel": "Channel",
       "dormant": "Dormant",
@@ -567,6 +575,58 @@
     "deleted": "Successfully deleted",
     "created": "Successfully created",
     "updated": "Successfully updated"
+  },
+  "replenishment": {
+    "title": "Smart Replenishment",
+    "subtitle": "AI predicts when a customer will run out of a consumable (shampoo, vitamins) and reminds them to reorder at the right moment.",
+    "runScan": "Send reminders",
+    "scanning": "Scanning...",
+    "daysShort": "days",
+    "runningOut": "Likely run out",
+    "sendNow": "Send",
+    "notSentYet": "Not sent yet",
+    "scanDone": "{{due}} reminders due · {{enqueued}} queued",
+    "scanError": "Scan failed",
+    "sendQueued": "Reminder sent for {{name}}",
+    "sendError": "Could not send reminder",
+    "metrics": {
+      "scheduled": "Scheduled",
+      "sent": "Sent",
+      "responded": "Responded",
+      "purchased": "Reordered",
+      "reorderRate": "Reorder rate"
+    },
+    "tabs": {
+      "upcoming": "Upcoming",
+      "history": "History"
+    },
+    "upcoming": {
+      "empty": "No predicted run-outs yet."
+    },
+    "history": {
+      "empty": "No reminders yet."
+    },
+    "col": {
+      "product": "Product",
+      "method": "Method",
+      "runsOut": "Runs out",
+      "action": "Action",
+      "status": "Status",
+      "message": "AI message"
+    },
+    "method": {
+      "CADENCE": "Repeat buy",
+      "DOSAGE": "Prescription",
+      "AI_ESTIMATE": "AI estimate"
+    },
+    "status": {
+      "SCHEDULED": "Scheduled",
+      "SENT": "Sent",
+      "RESPONDED": "Responded",
+      "PURCHASED": "Reordered",
+      "DISMISSED": "Dismissed",
+      "FAILED": "Failed",
+      "SKIPPED": "Skipped"
+    }
   }
 }
-

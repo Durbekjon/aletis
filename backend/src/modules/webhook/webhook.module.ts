@@ -12,6 +12,7 @@ import { OrdersModule } from '@modules/orders/orders.module';
 import { EmbadingModule } from '@modules/embading/embading.module';
 import { CustomerIntelligenceModule } from '@modules/customer-intelligence/customer-intelligence.module';
 import { RetentionModule } from '@modules/retention/retention.module';
+import { ReplenishmentModule } from '@modules/replenishment/replenishment.module';
 import { UsageModule } from '@modules/usage/usage.module';
 
 @Module({
@@ -26,6 +27,7 @@ import { UsageModule } from '@modules/usage/usage.module';
     EmbadingModule,
     CustomerIntelligenceModule,
     RetentionModule,
+    ReplenishmentModule,
     UsageModule,
   ],
   controllers: [WebhookController],

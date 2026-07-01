@@ -4,6 +4,7 @@ import {
   ForbiddenException,
   BadRequestException,
   Logger,
+  Optional,
 } from '@nestjs/common';
 import { Prisma, OrderStatus, EntityType, ActionType } from '@prisma/client';
 import { PrismaService } from '@core/prisma/prisma.service';
@@ -17,6 +18,7 @@ import {
 import { ActivityLogService } from '../activity-log/activity-log.service';
 import { CustomerIntelligenceService } from '@modules/customer-intelligence/customer-intelligence.service';
 import { RetentionService } from '@modules/retention/retention.service';
+import { ReplenishmentService } from '@modules/replenishment/replenishment.service';
 
 @Injectable()
 export class OrdersService {
@@ -56,6 +58,8 @@ export class OrdersService {
     private readonly activityLogService: ActivityLogService,
     private readonly customerIntelligenceService: CustomerIntelligenceService,
     private readonly retentionService: RetentionService,
+    @Optional()
+    private readonly replenishmentService?: ReplenishmentService,
   ) {}
 
   /**
@@ -682,6 +686,27 @@ export class OrdersService {
           `Failed to mark win-back recovery for customer ${customerId}: ${err.message}`,
         ),
       );
+
+    // Replenishment: close any open reminder for the products just bought, then
+    // (re)predict the next run-out. Fire-and-forget — never block order flow.
+    if (this.replenishmentService) {
+      for (const item of orderItemsData) {
+        this.replenishmentService
+          .markPurchaseIfPending(customerId, item.productId, order.id)
+          .catch((err) =>
+            this.logger.warn(
+              `Failed to mark replenishment purchase for customer ${customerId}: ${err.message}`,
+            ),
+          );
+      }
+      this.replenishmentService
+        .computePrediction(order.id)
+        .catch((err) =>
+          this.logger.warn(
+            `Failed to compute replenishment prediction for order ${order.id}: ${err.message}`,
+          ),
+        );
+    }
 
     return response;
   }

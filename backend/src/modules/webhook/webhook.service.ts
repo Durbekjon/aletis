@@ -1,4 +1,4 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
 import { WebhookDto } from './dto/webhook.dto';
 import { BotsService } from '@modules/bots/bots.service';
 import { CustomersService } from '@modules/customers/customers.service';
@@ -20,6 +20,7 @@ import { EmbadingService } from '@modules/embading/embading.service';
 import { ProductCard } from './ai-response-handler.service';
 import { CustomerIntelligenceService } from '@modules/customer-intelligence/customer-intelligence.service';
 import { RetentionService } from '@modules/retention/retention.service';
+import { ReplenishmentService } from '@modules/replenishment/replenishment.service';
 import { UsageService, QuotaStatus } from '@modules/usage/usage.service';
 
 @Injectable()
@@ -44,6 +45,8 @@ export class WebhookService {
     private readonly customerIntelligenceService: CustomerIntelligenceService,
     private readonly retentionService: RetentionService,
     private readonly usageService: UsageService,
+    @Optional()
+    private readonly replenishmentService?: ReplenishmentService,
   ) {}
 
   async handleWebhook(
@@ -764,6 +767,13 @@ export class WebhookService {
         .markResponseIfPending(customer.id)
         .catch((err) =>
           this.logger.warn(`Failed to mark win-back response: ${err.message}`),
+        );
+
+      // Replenishment: same idea — a reply to a reorder reminder marks it RESPONDED.
+      this.replenishmentService
+        ?.markResponseIfPending(customer.id)
+        .catch((err) =>
+          this.logger.warn(`Failed to mark replenishment response: ${err.message}`),
         );
     } catch (error) {
       this.logger.error(

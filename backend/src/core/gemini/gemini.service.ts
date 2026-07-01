@@ -12,6 +12,7 @@ export interface AiResponse {
   images?: string[];
   missingInfo?: string[];
   searchQuery?: string;
+  escalationData?: { reason?: string; sentiment?: string };
 }
 
 @Injectable()
@@ -379,6 +380,20 @@ EXAMPLES OF SEARCH_PRODUCT:
 - Customer: "Do you have any red dresses?" -> [INTENT:SEARCH_PRODUCT] { "searchQuery": "red dress" }
 - Customer: "Show me sneakers" -> [INTENT:SEARCH_PRODUCT] { "searchQuery": "sneakers" }
 - Customer: "I need a gift for my wife" -> [INTENT:SEARCH_PRODUCT] { "searchQuery": "gift for wife" }
+
+6. When the customer explicitly asks to talk to a human — an admin, operator, manager or support agent — or has a serious complaint/problem that you cannot resolve yourself, connect them to the team. FIRST write a short reassuring message to the customer (in their language) telling them you are connecting them with the team, THEN append:
+[INTENT:ESCALATE_TO_SUPPORT]
+{
+  "reason": "short summary of why the customer needs a human (e.g. 'wants to speak with a manager', 'received a defective product', 'delivery complaint')",
+  "sentiment": "URGENT | NORMAL | COMPLAINT"
+}
+- Use "COMPLAINT" when the customer is unhappy about a product/order, "URGENT" when they are angry or it is time-sensitive, otherwise "NORMAL".
+- Only use this intent when the customer genuinely wants a human. Do NOT use it for normal product questions, prices, or ordering — handle those yourself.
+
+EXAMPLES OF ESCALATE_TO_SUPPORT:
+- Customer: "Meni administrator bilan bog'lang" -> reassure + [INTENT:ESCALATE_TO_SUPPORT] { "reason": "wants to speak with an admin", "sentiment": "NORMAL" }
+- Customer: "Buyurtmam buzuq keldi, javob bering!" -> reassure + [INTENT:ESCALATE_TO_SUPPORT] { "reason": "received a defective order", "sentiment": "COMPLAINT" }
+- Customer: "Свяжите меня с оператором" -> reassure + [INTENT:ESCALATE_TO_SUPPORT] { "reason": "wants to talk to an operator", "sentiment": "NORMAL" }
 
 EXAMPLES OF ASK_FOR_INFO:
 - Customer: "{productName} sotib olaman" (no contact/location/payment) → Ask for missing info
@@ -841,6 +856,33 @@ IMPORTANT: Read the conversation history carefully. If the customer has already 
       } catch (error) {
         this.logger.warn(
           'Failed to parse search product data from AI response',
+        );
+      }
+    }
+
+    // Look for escalate-to-support intent marker
+    const escalateMatch = aiText.match(
+      /\[INTENT:ESCALATE_TO_SUPPORT\]\s*(\{[\s\S]*?\})/,
+    );
+    if (escalateMatch) {
+      try {
+        const escalationData = JSON.parse(escalateMatch[1]);
+        const responseText = aiText
+          .replace(/\[INTENT:ESCALATE_TO_SUPPORT\][\s\S]*/, '')
+          .trim();
+
+        this.logger.log(
+          `ESCALATE_TO_SUPPORT intent detected: ${JSON.stringify(escalationData)}`,
+        );
+
+        return {
+          text: responseText,
+          intent: 'ESCALATE_TO_SUPPORT',
+          escalationData,
+        };
+      } catch (error) {
+        this.logger.warn(
+          'Failed to parse escalate-to-support data from AI response',
         );
       }
     }
@@ -1368,6 +1410,163 @@ Message:`;
       };
       return { text: fallback[lang], incentive: input.incentive ?? undefined };
     }
+  }
+
+  // ─── Replenishment / consumption prediction ───────────────────────────────
+
+  /**
+   * Classify whether a product is a consumable (gets used up and repurchased)
+   * and, if so, estimate how many days a single unit typically lasts one buyer.
+   * Result is cached onto the Product so this runs at most once per product.
+   */
+  async classifyConsumable(input: {
+    name: string;
+    category?: string | null;
+    description?: string | null;
+  }): Promise<{
+    consumable: boolean;
+    estimatedLifespanDays: number | null;
+    unit: string | null;
+  }> {
+    const prompt = `Classify a retail product for a replenishment-reminder system.
+
+PRODUCT:
+- Name: ${input.name}
+- Category: ${input.category || 'unknown'}
+- Description: ${(input.description || '').slice(0, 300)}
+
+A "consumable" is a product that gets used up and bought again on a rough cycle
+(shampoo, vitamins, coffee, diapers, pet food, cosmetics, supplements, detergent).
+A durable good is NOT consumable (electronics, GPU, phone, furniture, clothing, tools).
+
+Return a JSON object (no markdown, no code block):
+{
+  "consumable": <true|false>,
+  "estimatedLifespanDays": <integer days one unit lasts a typical single household, or null if not consumable>,
+  "unit": "<the consumption unit, e.g. 'bottle','pack','tablet', or null>"
+}
+JSON only:`;
+
+    try {
+      const raw = this.stripJson(
+        await this.callWithRotation('gemini-2.5-flash', prompt),
+      );
+      const parsed = JSON.parse(raw);
+      const lifespan = Number(parsed.estimatedLifespanDays);
+      return {
+        consumable: parsed.consumable === true,
+        estimatedLifespanDays:
+          Number.isFinite(lifespan) && lifespan > 0 ? Math.round(lifespan) : null,
+        unit: typeof parsed.unit === 'string' ? parsed.unit : null,
+      };
+    } catch (error: any) {
+      this.logger.error(`classifyConsumable failed: ${error.message}`);
+      return { consumable: false, estimatedLifespanDays: null, unit: null };
+    }
+  }
+
+  /**
+   * Extract a usage rate ("kuniga 2 mahal", "twice a day") for a given product
+   * from recent conversation text, plus the pack size if the customer mentioned
+   * it. Used for first-purchase depletion prediction (the vitamin/prescription case).
+   */
+  async extractUsageRate(input: {
+    productName: string;
+    recentMessages: string;
+  }): Promise<{ unitsPerDay: number | null; packSize: number | null }> {
+    const prompt = `From the conversation below, find how often the customer uses "${input.productName}"
+and the pack/bottle size if mentioned. The chat may be in Uzbek, Russian or English
+(e.g. "kuniga 2 mahal" = 2 times a day, "60 tabletka" = pack of 60).
+
+CONVERSATION:
+${input.recentMessages.slice(0, 1500)}
+
+Return a JSON object (no markdown):
+{
+  "unitsPerDay": <number of units consumed per day, or null if not stated>,
+  "packSize": <number of units in one pack/bottle, or null if not stated>
+}
+Only report values actually implied by the text. JSON only:`;
+
+    try {
+      const raw = this.stripJson(
+        await this.callWithRotation('gemini-2.5-flash', prompt),
+      );
+      const parsed = JSON.parse(raw);
+      const perDay = Number(parsed.unitsPerDay);
+      const pack = Number(parsed.packSize);
+      return {
+        unitsPerDay: Number.isFinite(perDay) && perDay > 0 ? perDay : null,
+        packSize: Number.isFinite(pack) && pack > 0 ? Math.round(pack) : null,
+      };
+    } catch (error: any) {
+      this.logger.error(`extractUsageRate failed: ${error.message}`);
+      return { unitsPerDay: null, packSize: null };
+    }
+  }
+
+  /**
+   * Compose a short, warm "your X is probably running low — reorder?" nudge in
+   * the customer's language. Mirrors generateWinBackMessage.
+   */
+  async generateReplenishmentMessage(input: {
+    customerName?: string | null;
+    lang?: string | null;
+    businessName?: string | null;
+    productName: string;
+    daysLeft: number;
+    price?: number | null;
+    currency?: string | null;
+  }): Promise<{ text: string }> {
+    const lang = ['uz', 'ru', 'en'].includes(input.lang || '')
+      ? (input.lang as string)
+      : 'uz';
+    const langName = { uz: 'Uzbek', ru: 'Russian', en: 'English' }[lang];
+    const runningOut = input.daysLeft <= 0;
+
+    const prompt = `You are the AI sales & retention agent for "${input.businessName || 'our shop'}" in Uzbekistan.
+Write ONE short, caring message reminding a customer their consumable is about to run out, and offer to reorder.
+
+CONTEXT:
+- Customer name: ${input.customerName || 'valued customer'}
+- Product: ${input.productName}
+- Estimated status: ${runningOut ? 'likely already run out' : `about ${input.daysLeft} day(s) left`}
+${input.price ? `- Price to reorder: ${input.price} ${input.currency || ''}` : ''}
+
+RULES:
+- Write in ${langName} ONLY.
+- Tone: friendly and helpful, like a shop owner who noticed and wants to help — not pushy.
+- Mention the specific product by name and that it's probably running low.
+- Keep it SHORT (2-3 sentences). 1-2 tasteful emojis max.
+- End with an easy call to action to reorder (a question).
+- Do NOT invent discounts or prices not provided.
+- Output ONLY the message text. No quotes, no labels, no markdown.
+
+Message:`;
+
+    try {
+      const text = (
+        await this.callWithRotation('gemini-2.5-flash', prompt)
+      ).trim();
+      return { text };
+    } catch (error: any) {
+      this.logger.error(`Replenishment generation failed: ${error.message}`);
+      const fallback: Record<string, string> = {
+        uz: `Salom${input.customerName ? ', ' + input.customerName : ''}! 👋 "${input.productName}" tugab qolgan bo'lsa kerak. Yangisiga buyurtma beramizmi?`,
+        ru: `Здравствуйте${input.customerName ? ', ' + input.customerName : ''}! 👋 Похоже, "${input.productName}" уже заканчивается. Оформить новый заказ?`,
+        en: `Hi${input.customerName ? ' ' + input.customerName : ''}! 👋 Your "${input.productName}" is probably running low. Want to reorder?`,
+      };
+      return { text: fallback[lang] };
+    }
+  }
+
+  /** Strip an optional ```json fenced code block from a model response. */
+  private stripJson(raw: string): string {
+    return raw
+      .trim()
+      .replace(/^```(?:json)?/i, '')
+      .replace(/```$/i, '')
+      .trim();
   }
 
   async matchProductsInContext(

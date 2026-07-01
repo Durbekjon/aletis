@@ -55,7 +55,8 @@
     "billing": "To'lov",
     "conversations": "Suhbatlar",
     "settings": "Sozlamalar",
-    "dashboard": "Boshqaruv paneli"
+    "dashboard": "Boshqaruv paneli",
+    "replenishment": "To‘ldirish"
   },
   "retention": {
     "title": "Mijozlarni qaytarish",
@@ -77,9 +78,16 @@
       "revenue": "Qaytarilgan daromad",
       "recoveryRate": "Qaytarish darajasi"
     },
-    "tabs": { "dormant": "Yo'qolgan mijozlar", "attempts": "Qaytarish tarixi" },
-    "dormant": { "empty": "Yo'qolgan mijozlar yo'q — hammasi faol 🎉" },
-    "attempts": { "empty": "Hali qaytarishlar yo'q. Boshlash uchun tekshiring." },
+    "tabs": {
+      "dormant": "Yo'qolgan mijozlar",
+      "attempts": "Qaytarish tarixi"
+    },
+    "dormant": {
+      "empty": "Yo'qolgan mijozlar yo'q — hammasi faol 🎉"
+    },
+    "attempts": {
+      "empty": "Hali qaytarishlar yo'q. Boshlash uchun tekshiring."
+    },
     "col": {
       "channel": "Kanal",
       "dormant": "Yo'qolgan",
@@ -567,6 +575,58 @@
     "deleted": "Muvaffaqiyatli o'chirildi",
     "created": "Muvaffaqiyatli yaratildi",
     "updated": "Muvaffaqiyatli yangilandi"
+  },
+  "replenishment": {
+    "title": "Aqlli to‘ldirish",
+    "subtitle": "AI sarflanadigan mahsulot (shampun, vitamin) qachon tugashini bashorat qiladi va o‘sha payt mijozga qayta buyurtma eslatmasini yuboradi.",
+    "runScan": "Eslatmalarni yuborish",
+    "scanning": "Tekshirilmoqda...",
+    "daysShort": "kun",
+    "runningOut": "Tugagan bo‘lishi mumkin",
+    "sendNow": "Yuborish",
+    "notSentYet": "Hali yuborilmagan",
+    "scanDone": "{{due}} ta eslatma muddati keldi · {{enqueued}} ta navbatga qo‘yildi",
+    "scanError": "Tekshirish xatosi",
+    "sendQueued": "{{name}} uchun eslatma yuborildi",
+    "sendError": "Eslatmani yuborib bo‘lmadi",
+    "metrics": {
+      "scheduled": "Rejalashtirilgan",
+      "sent": "Yuborilgan",
+      "responded": "Javob bergan",
+      "purchased": "Qayta sotib oldi",
+      "reorderRate": "Qayta buyurtma darajasi"
+    },
+    "tabs": {
+      "upcoming": "Yaqinlashayotgan",
+      "history": "Tarix"
+    },
+    "upcoming": {
+      "empty": "Hozircha bashorat qilingan tugash yo‘q."
+    },
+    "history": {
+      "empty": "Hali eslatmalar yo‘q."
+    },
+    "col": {
+      "product": "Mahsulot",
+      "method": "Usul",
+      "runsOut": "Tugaydi",
+      "action": "Amal",
+      "status": "Holat",
+      "message": "AI xabari"
+    },
+    "method": {
+      "CADENCE": "Takror xarid",
+      "DOSAGE": "Retsept",
+      "AI_ESTIMATE": "AI baho"
+    },
+    "status": {
+      "SCHEDULED": "Rejada",
+      "SENT": "Yuborildi",
+      "RESPONDED": "Javob berdi",
+      "PURCHASED": "Qayta oldi",
+      "DISMISSED": "Bekor",
+      "FAILED": "Xato",
+      "SKIPPED": "O‘tkazildi"
+    }
   }
 }
-

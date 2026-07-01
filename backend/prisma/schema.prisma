@@ -51,6 +51,8 @@ model Organization {
   customerAiNotes    CustomerAiNote[]
   subscription       Subscription?
   winBackAttempts    WinBackAttempt[]
+  replenishmentReminders ReplenishmentReminder[]
+  supportTickets     SupportTicket[]
   @@map("organizations")
 }
 
@@ -114,6 +116,10 @@ model Product {
   status         ProductStatus @default(DRAFT)
   deletedAt      DateTime?
   isDeleted      Boolean       @default(false)
+  // Replenishment: lazily cached consumable classification (see ReplenishmentReminder)
+  isConsumable          Boolean? // null = not yet classified by AI
+  estimatedLifespanDays Int? // AI-estimated days one unit lasts a typical customer
+  replenishmentReminders ReplenishmentReminder[]
 
   @@index([name])
   @@index([isDeleted])
@@ -306,6 +312,8 @@ model Customer {
   channel        CustomerChannel  @default(TELEGRAM)
   instagramId    String?
   winBackAttempts WinBackAttempt[]
+  replenishmentReminders ReplenishmentReminder[]
+  supportTickets  SupportTicket[]
 
   @@unique([telegramId, organizationId, botId])
   @@index([telegramId])
@@ -613,6 +621,55 @@ model WinBackAttempt {
   @@map("win_back_attempts")
 }
 
+// ─── Replenishment / Consumption Prediction ─────────────────────────────────
+
+enum ReplenishmentMethod {
+  CADENCE // derived from the customer's repeat-purchase interval
+  DOSAGE // pack size ÷ usage rate extracted from the conversation
+  AI_ESTIMATE // Gemini-estimated default lifespan (first purchase, no cadence)
+}
+
+enum ReplenishmentStatus {
+  SCHEDULED // depletion predicted, waiting for the reminder to come due
+  SENT // reorder nudge delivered to the customer
+  RESPONDED // customer replied after the reminder
+  PURCHASED // customer reordered (success — loop closed)
+  DISMISSED // merchant/customer opted out
+  FAILED // delivery failed
+  SKIPPED // customer already reordered before the reminder fired
+}
+
+/// One predicted run-out of a consumable a customer bought, plus the proactive
+/// reorder reminder tied to it. Detect (on order) → predict → remind → track reorder.
+model ReplenishmentReminder {
+  id                    Int                 @id @default(autoincrement())
+  customerId            Int
+  customer              Customer            @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  organizationId        Int
+  organization          Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  botId                 Int?
+  productId             Int
+  product               Product             @relation(fields: [productId], references: [id], onDelete: Cascade)
+  quantity              Int                 @default(1)
+  lastOrderId           Int? // order that (re)scheduled this reminder
+  predictedDepletionDate DateTime
+  method                ReplenishmentMethod
+  status                ReplenishmentStatus @default(SCHEDULED)
+  basis                 Json? // { intervalDays, purchaseCount, packSize, unitsPerDay, estimatedLifespanDays, source }
+  generatedMessage      String?
+  sentAt                DateTime?
+  respondedAt           DateTime?
+  purchasedAt           DateTime?
+  purchasedOrderId      Int? // order that closed the loop
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+
+  @@index([organizationId, status])
+  @@index([customerId, productId])
+  @@index([status, predictedDepletionDate])
+  @@map("replenishment_reminders")
+}
+
 // ─── Billing ───────────────────────────────────────────────────────────────
 
 enum PlanTier {
@@ -717,4 +774,27 @@ model Invoice {
 
   @@index([subscriptionId, status])
   @@map("invoices")
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+}
+
+model SupportTicket {
+  id             Int          @id @default(autoincrement())
+  organizationId Int
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  customerId     Int
+  customer       Customer     @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  reason         String // AI-extracted reason the customer wants a human
+  sentiment      String       @default("NORMAL") // URGENT | NORMAL | COMPLAINT
+  status         TicketStatus @default(OPEN)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([organizationId, status, createdAt(sort: Desc)])
+  @@index([customerId])
+  @@map("support_tickets")
 }

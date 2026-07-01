@@ -33,6 +33,7 @@ import {
   Newspaper,
   Bot,
   Repeat,
+  PackageCheck,
 } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
@@ -69,6 +70,11 @@ export function AppSidebar() {
       title: t("navigation.retention"),
       url: ROUTES.RETENTION,
       icon: Repeat,
+    },
+    {
+      title: t("navigation.replenishment"),
+      url: ROUTES.REPLENISHMENT,
+      icon: PackageCheck,
     },
     {
       title: t("navigation.products"),

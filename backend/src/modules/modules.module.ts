@@ -19,6 +19,7 @@ import { ActivityLogModule } from './activity-log/activity-log.module';
 import { EmbadingModule } from './embading/embading.module';
 import { CustomerIntelligenceModule } from './customer-intelligence/customer-intelligence.module';
 import { RetentionModule } from './retention/retention.module';
+import { ReplenishmentModule } from './replenishment/replenishment.module';
 import { InstagramModule } from './instagram/instagram.module';
 import { InstagramWebhookModule } from './instagram/instagram-webhook.module';
 import { BillingModule } from './billing/billing.module';
@@ -46,6 +47,7 @@ import { UsageModule } from './usage/usage.module';
     EmbadingModule,
     CustomerIntelligenceModule,
     RetentionModule,
+    ReplenishmentModule,
     InstagramModule,
     InstagramWebhookModule,
     BillingModule,
