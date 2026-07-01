@@ -104,7 +104,7 @@ export default function HomePage() {
       </div>
 
       {/* ── Sticky glass navbar ── */}
-      <header className="fixed top-0 left-0 right-0 z-50 lp-glass border-b border-border/40">
+      <header className="fixed top-0 left-0 right-0 z-50 lp-glass border-b border-border/40 max-w-[1200px] mx-auto mt-3 rounded-full">
         <div className="container max-w-6xl mx-auto px-4 md:px-0 flex h-16 items-center justify-between">
           <div className="flex items-center gap-2">
             <Image
@@ -114,7 +114,7 @@ export default function HomePage() {
               height={28}
               className="rounded-md"
             />
-            <span className="text-lg font-bold tracking-tight">Aletis</span>
+            <Link href="/" className="text-lg font-bold tracking-tight">Aletis</Link>
           </div>
 
           <nav className="hidden md:flex items-center gap-6">
