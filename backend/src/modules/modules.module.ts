@@ -24,6 +24,7 @@ import { InstagramModule } from './instagram/instagram.module';
 import { InstagramWebhookModule } from './instagram/instagram-webhook.module';
 import { BillingModule } from './billing/billing.module';
 import { UsageModule } from './usage/usage.module';
+import { BarcodeCatalogModule } from './barcode-catalog/barcode-catalog.module';
 
 @Module({
   imports: [
@@ -52,6 +53,7 @@ import { UsageModule } from './usage/usage.module';
     InstagramWebhookModule,
     BillingModule,
     UsageModule,
+    BarcodeCatalogModule,
   ],
 })
 export class ModulesModule {}

@@ -798,3 +798,38 @@ model SupportTicket {
   @@index([customerId])
   @@map("support_tickets")
 }
+
+enum BarcodeCatalogStatus {
+  PENDING
+  COMPLETED
+}
+
+enum BarcodeSource {
+  SOLIQ
+  MANUAL
+  // future: GS1, OPENFOODFACTS, ...
+}
+
+// Central shared catalog: barcode (GTIN) -> product data, reused across ALL
+// organizations (intentionally not tenant-scoped). Populated from Soliq's MXIK
+// classifier and from merchants' manual entries so external-API calls shrink
+// over time.
+model BarcodeCatalogEntry {
+  id           Int                  @id @default(autoincrement())
+  barcode      String               @unique
+  status       BarcodeCatalogStatus @default(PENDING)
+  source       BarcodeSource?
+  productName  String?
+  description  String?
+  brandName    String?
+  categoryName String?
+  unitName     String?
+  mxikCode     String?
+  imageUrl     String?
+  metadata     Json?
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt()
+
+  @@index([status])
+  @@map("barcode_catalog_entries")
+}
