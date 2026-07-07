@@ -39,6 +39,8 @@
     "@radix-ui/react-tooltip": "1.1.6",
     "@tanstack/react-query": "^5.90.5",
     "@vercel/analytics": "latest",
+    "@zxing/browser": "^0.2.1",
+    "@zxing/library": "^0.23.0",
     "autoprefixer": "^10.4.20",
     "axios": "^1.12.2",
     "class-variance-authority": "^0.7.1",

@@ -28,10 +28,13 @@ import { Switch } from "@/components/ui/switch"
 import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { X, Upload, Loader2, AlertCircle } from "lucide-react"
+import { X, Upload, Loader2, AlertCircle, ScanBarcode } from "lucide-react"
 import { useProductSchema } from "@/src/context/ProductSchemaContext"
 import { useDynamicProductForm, type FormData } from "@/src/hooks/useDynamicProductForm"
 import { useUploadManyFilesMutation, useDeleteFileByKeyMutation } from "@/src/hooks/useFilesQuery"
+import { useCompleteBarcodeMutation } from "@/src/hooks/useBarcodeCatalogQuery"
+import { findMatchingField } from "@/src/lib/barcode-field-matching"
+import { BarcodeScanDialog, type BarcodeScanResolution } from "@/components/product/barcode-scan-dialog"
 import type { ProductSchemaField } from "@/lib/types/product"
 
 interface DynamicProductFormProps {
@@ -55,6 +58,9 @@ export function DynamicProductForm({ initialValues, initialSchemaId, onSubmitImp
   const [imageFiles, setImageFiles] = useState<File[]>([])
   const [uploadedImages, setUploadedImages] = useState<any[]>([])
   const [selectedSchema, setSelectedSchema] = useState<number | null>(initialSchemaId ?? null)
+  const [scanDialogOpen, setScanDialogOpen] = useState(false)
+  const [pendingBarcode, setPendingBarcode] = useState<string | null>(null)
+  const completeBarcodeMutation = useCompleteBarcodeMutation()
   const didPrefillRef = useRef(false)
 
   const {
@@ -195,9 +201,55 @@ export function DynamicProductForm({ initialValues, initialSchemaId, onSubmitImp
     setValue("images", newImages, { shouldDirty: true })
   }
 
+  const handleBarcodeResolved = (resolution: BarcodeScanResolution) => {
+    if (resolution.status === "COMPLETED" && resolution.data) {
+      const { productName, description, brandName, categoryName, unitName } = resolution.data
+      if (productName) {
+        setValue("name", productName, { shouldDirty: true })
+      }
+      if (currentSchema) {
+        const matches: Array<[string | undefined, "description" | "brandName" | "categoryName" | "unitName"]> = [
+          [description, "description"],
+          [brandName, "brandName"],
+          [categoryName, "categoryName"],
+          [unitName, "unitName"],
+        ]
+        matches.forEach(([value, attr]) => {
+          if (!value) return
+          const field = findMatchingField(currentSchema.fields, attr)
+          if (field) {
+            setValue(`fields.${field.id}`, value, { shouldDirty: true })
+          }
+        })
+      }
+    } else {
+      setPendingBarcode(resolution.barcode)
+    }
+  }
+
   const handleFormSubmit = async (data: any) => {
     const success = await onSubmit(data)
     if (success) {
+      if (pendingBarcode) {
+        const findValue = (attr: "description" | "brandName" | "categoryName" | "unitName") => {
+          const field = currentSchema && findMatchingField(currentSchema.fields, attr)
+          return field ? data.fields?.[field.id] : undefined
+        }
+        completeBarcodeMutation
+          .mutateAsync({
+            barcode: pendingBarcode,
+            payload: {
+              productName: data.name,
+              description: findValue("description"),
+              brandName: findValue("brandName"),
+              categoryName: findValue("categoryName"),
+              unitName: findValue("unitName"),
+            },
+          })
+          .catch((error) => {
+            console.error("Failed to save barcode catalog entry:", error)
+          })
+      }
       onSuccess?.()
     }
   }
@@ -418,13 +470,22 @@ export function DynamicProductForm({ initialValues, initialSchemaId, onSubmitImp
   const getImageUrl = (image: string) =>
     /^https?:\/\//i.test(image) ? image : `${process.env.NEXT_PUBLIC_BACKEND_URL}/${image}`
   return (
+    <>
     <form onSubmit={handleSubmit(handleFormSubmit)} className="space-y-6">
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Basic Information */}
         <Card className="lg:col-span-2">
-          <CardHeader>
-            <CardTitle>Product Information</CardTitle>
-            <CardDescription>Fill in the product details based on your schema</CardDescription>
+          <CardHeader className="flex flex-row items-start justify-between gap-4">
+            <div>
+              <CardTitle>Product Information</CardTitle>
+              <CardDescription>Fill in the product details based on your schema</CardDescription>
+            </div>
+            {!initialValues && (
+              <Button type="button" variant="outline" size="sm" onClick={() => setScanDialogOpen(true)}>
+                <ScanBarcode className="h-4 w-4 mr-2" />
+                Barcode skanerlash
+              </Button>
+            )}
           </CardHeader>
           <CardContent className="space-y-4">
             {/* Schema Selection */}
@@ -686,5 +747,13 @@ export function DynamicProductForm({ initialValues, initialSchemaId, onSubmitImp
         )}
       </div>
     </form>
+    {!initialValues && (
+      <BarcodeScanDialog
+        open={scanDialogOpen}
+        onOpenChange={setScanDialogOpen}
+        onResolved={handleBarcodeResolved}
+      />
+    )}
+    </>
   )
 }
