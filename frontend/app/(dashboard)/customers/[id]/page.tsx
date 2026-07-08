@@ -1,8 +1,10 @@
 "use client"
 
+import { useState } from "react"
 import { useParams, useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Textarea } from "@/components/ui/textarea"
 import { Skeleton } from "@/components/ui/skeleton"
 import {
   ArrowLeft,
@@ -13,12 +15,19 @@ import {
   ShoppingBag,
   Lightbulb,
   MessageCircle,
+  Send,
+  Loader2,
   Star,
   TrendingUp,
   Tag,
   User,
 } from "lucide-react"
-import { useCustomerQuery, useAnalyzeCustomerMutation } from "@/src/hooks/useCustomersQuery"
+import { toast } from "sonner"
+import {
+  useCustomerQuery,
+  useAnalyzeCustomerMutation,
+  useSendCustomerMessageMutation,
+} from "@/src/hooks/useCustomersQuery"
 import { useTranslation } from "@/src/context/I18nContext"
 import { ROUTES } from "@/lib/constants"
 import { cn } from "@/lib/utils"
@@ -54,6 +63,19 @@ export default function CustomerProfilePage() {
 
   const { data: customer, isLoading } = useCustomerQuery(customerId)
   const analyzeMutation = useAnalyzeCustomerMutation(customerId)
+  const sendMessageMutation = useSendCustomerMessageMutation(customerId)
+  const [draft, setDraft] = useState("")
+
+  const handleSend = () => {
+    const content = draft.trim()
+    if (!content || sendMessageMutation.isPending) return
+    sendMessageMutation.mutate(content, {
+      onSuccess: () => {
+        setDraft("")
+        toast.success(t("customers.messageSent"))
+      },
+    })
+  }
 
   const formatTime = (dateStr: string) =>
     new Date(dateStr).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" })
@@ -381,6 +403,34 @@ export default function CustomerProfilePage() {
                 </div>
               )}
             </CardContent>
+
+            {/* Reply input — sends via the customer's own channel (Telegram bot / Instagram) */}
+            <div className="shrink-0 border-t p-3 flex items-end gap-2">
+              <Textarea
+                value={draft}
+                onChange={(e) => setDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault()
+                    handleSend()
+                  }
+                }}
+                placeholder={t("customers.messagePlaceholder")}
+                rows={1}
+                className="min-h-9 max-h-32 resize-none"
+              />
+              <Button
+                size="icon"
+                onClick={handleSend}
+                disabled={!draft.trim() || sendMessageMutation.isPending}
+              >
+                {sendMessageMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
+              </Button>
+            </div>
           </Card>
         </div>
       </div>

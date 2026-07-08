@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { toast } from "sonner"
 import customersApi, { CustomersQueryParams } from "@/src/api/customersApi"
 
 export function useCustomersQuery(params: CustomersQueryParams = {}) {
@@ -25,6 +26,19 @@ export function useAnalyzeCustomerMutation(customerId: number) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["customer", customerId] })
       queryClient.invalidateQueries({ queryKey: ["customers"] })
+    },
+  })
+}
+
+export function useSendCustomerMessageMutation(customerId: number) {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (content: string) => customersApi.sendMessage(customerId, content),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["customer", customerId] })
+    },
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.message || "Failed to send message")
     },
   })
 }

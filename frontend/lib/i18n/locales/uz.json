@@ -126,7 +126,11 @@
     "salesOpportunities": "Sotuv imkoniyatlari",
     "analyzeNow": "Tahlil qilish",
     "lastAnalyzed": "Oxirgi tahlil",
-    "noInsights": "Hali AI tahlil yo'q. Tahlil qilish tugmasini bosing."
+    "noInsights": "Hali AI tahlil yo'q. Tahlil qilish tugmasini bosing.",
+    "messagePlaceholder": "Xabar yozing...",
+    "send": "Yuborish",
+    "messageSent": "Xabar yuborildi",
+    "messageSendError": "Xabar yuborilmadi"
   },
   "home": {
     "title": "Aletis",

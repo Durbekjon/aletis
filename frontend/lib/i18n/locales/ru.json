@@ -126,7 +126,11 @@
     "salesOpportunities": "Возможности продаж",
     "analyzeNow": "Анализировать",
     "lastAnalyzed": "Последний анализ",
-    "noInsights": "AI аналитика ещё не готова. Нажмите «Анализировать»."
+    "noInsights": "AI аналитика ещё не готова. Нажмите «Анализировать».",
+    "messagePlaceholder": "Напишите сообщение...",
+    "send": "Отправить",
+    "messageSent": "Сообщение отправлено",
+    "messageSendError": "Не удалось отправить сообщение"
   },
   "home": {
     "title": "Aletis",

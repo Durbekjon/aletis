@@ -126,7 +126,11 @@
     "salesOpportunities": "Sales Opportunities",
     "analyzeNow": "Analyze Now",
     "lastAnalyzed": "Last analyzed",
-    "noInsights": "No AI insights yet. Click Analyze Now to generate."
+    "noInsights": "No AI insights yet. Click Analyze Now to generate.",
+    "messagePlaceholder": "Type a message...",
+    "send": "Send",
+    "messageSent": "Message sent",
+    "messageSendError": "Failed to send message"
   },
   "home": {
     "title": "Aletis",
