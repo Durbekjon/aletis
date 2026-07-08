@@ -10,8 +10,10 @@ import { AlertCircle } from "lucide-react"
 import { DynamicProductForm } from "@/src/components/DynamicProductForm"
 import { useProductQuery, useUpdateProductMutation } from "@/src/hooks/useProductsQuery"
 import type { FormData } from "@/src/hooks/useDynamicProductForm"
+import { useTranslation } from "@/src/context/I18nContext"
 
 export default function EditProductPage() {
+  const { t } = useTranslation()
   const params = useParams()
   const router = useRouter()
   const idParam = params.id
@@ -119,7 +121,7 @@ export default function EditProductPage() {
       <Alert variant="destructive">
         <AlertCircle className="h-4 w-4" />
         <AlertDescription>
-          Failed to load product. Please try again.
+          {t('products.failedToLoadProduct')}
         </AlertDescription>
       </Alert>
     )
@@ -128,8 +130,8 @@ export default function EditProductPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Edit Product</h1>
-        <p className="text-muted-foreground">Update product details and fields</p>
+        <h1 className="text-3xl font-bold tracking-tight">{t('products.editProductTitle')}</h1>
+        <p className="text-muted-foreground">{t('products.editProductSubtitle')}</p>
       </div>
       <Separator />
       <DynamicProductForm

@@ -10,8 +10,10 @@ import { AlertCircle, ArrowLeft } from "lucide-react"
 import { DynamicProductForm } from "@/src/components/DynamicProductForm"
 import { useProductQuery, useUpdateProductMutation } from "@/src/hooks/useProductsQuery"
 import type { FormData } from "@/src/hooks/useDynamicProductForm"
+import { useTranslation } from "@/src/context/I18nContext"
 
 export default function ProductDetailPage() {
+  const { t } = useTranslation()
   const params = useParams()
   const router = useRouter()
   const idParam = Array.isArray(params?.id) ? params.id[0] : (params?.id as string)
@@ -86,7 +88,7 @@ export default function ProductDetailPage() {
     return (
       <Alert variant="destructive">
         <AlertCircle className="h-4 w-4" />
-        <AlertDescription>Failed to load product.</AlertDescription>
+        <AlertDescription>{t('products.failedToLoadProduct')}</AlertDescription>
       </Alert>
     )
   }
@@ -97,7 +99,7 @@ export default function ProductDetailPage() {
         <Button variant="outline" size="sm" asChild>
           <Link href="/products">
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Products
+            {t('products.backToProducts')}
           </Link>
         </Button>
       </div>

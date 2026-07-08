@@ -379,12 +379,21 @@ export class PostsService {
 
     const token = this.encryption.decrypt(connectedBot.token);
     const images = post.product.images || [];
-    const botLink = `<a href="https://t.me/${connectedBot.username}?start=product_${post.productId}">More Info</a>`;
+    const botStartUrl = `https://t.me/${connectedBot.username}?start=product_${post.productId}`;
+
+    const reply_markup = post.productId
+      ? {
+          inline_keyboard: [
+            [{ text: "📋 Ma'lumot olish", url: botStartUrl, style: 'primary' }],
+            [{ text: '🛒 Sotib olish', url: botStartUrl, style: 'success' }],
+          ],
+        }
+      : undefined;
 
     let telegramId: string | null = null;
     let meta: any = {};
 
-    const caption = `${post.content}\n\n👉 ${botLink}`;
+    const caption = post.content;
 
     if (images.length > 1) {
       const media = images.slice(0, 10).map((img, idx) => ({
@@ -412,6 +421,7 @@ export class PostsService {
         photo: images[0].url,
         caption,
         parse_mode: 'HTML',
+        ...(reply_markup ? { reply_markup } : {}),
       });
 
       if (!res.ok) {
@@ -425,6 +435,7 @@ export class PostsService {
         chat_id: post.channel.telegramId,
         text: caption,
         parse_mode: 'HTML',
+        ...(reply_markup ? { reply_markup } : {}),
       });
 
       if (!res.ok) {

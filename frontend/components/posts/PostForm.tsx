@@ -13,6 +13,7 @@ import { useProductsQuery } from "@/src/hooks/useProductsQuery"
 import { generatePostContent } from "@/lib/utils/post-template"
 import { type Post, type PostStatus, type CreatePostRequest, type UpdatePostRequest } from "@/lib/types/post"
 import { PostPreview } from "./PostPreview"
+import { useTranslation } from "@/src/context/I18nContext"
 
 interface PostFormProps {
   initialData?: Post
@@ -22,6 +23,7 @@ interface PostFormProps {
 }
 
 export function PostForm({ initialData, onSubmit, isLoading = false, isEditing = false }: PostFormProps) {
+  const { t } = useTranslation()
   const [selectedChannel, setSelectedChannel] = useState<string>("")
   const [selectedProduct, setSelectedProduct] = useState<string>("")
   const [content, setContent] = useState("")
@@ -94,8 +96,8 @@ export function PostForm({ initialData, onSubmit, isLoading = false, isEditing =
           {/* Channel Selection */}
           <Card>
             <CardHeader>
-              <CardTitle>Channel</CardTitle>
-              <CardDescription>Select the channel where you want to post</CardDescription>
+              <CardTitle>{t('posts.channelCardTitle')}</CardTitle>
+              <CardDescription>{t('posts.channelCardDescription')}</CardDescription>
             </CardHeader>
             <CardContent>
               <Select 
@@ -104,7 +106,7 @@ export function PostForm({ initialData, onSubmit, isLoading = false, isEditing =
                 disabled={isLoading}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select a channel" />
+                  <SelectValue placeholder={t('posts.selectChannelPlaceholder')} />
                 </SelectTrigger>
                 <SelectContent>
                   {channels?.items.map((channel) => (
@@ -120,8 +122,8 @@ export function PostForm({ initialData, onSubmit, isLoading = false, isEditing =
           {/* Product Selection */}
           <Card>
             <CardHeader>
-              <CardTitle>Product</CardTitle>
-              <CardDescription>Select a product to auto-generate post content</CardDescription>
+              <CardTitle>{t('posts.productCardTitle')}</CardTitle>
+              <CardDescription>{t('posts.productCardDescription')}</CardDescription>
             </CardHeader>
             <CardContent>
               <Select 
@@ -130,12 +132,12 @@ export function PostForm({ initialData, onSubmit, isLoading = false, isEditing =
                 disabled={isLoading}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select a product" />
+                  <SelectValue placeholder={t('posts.selectProductPlaceholder')} />
                 </SelectTrigger>
                 <SelectContent>
                   {products?.items.map((product) => (
                     <SelectItem key={product.id} value={product.id}>
-                      {product.name} (${product.price})
+                      {product.name} ({product.currency === 'USD' ? '$' : ''}{product.price})
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -147,30 +149,30 @@ export function PostForm({ initialData, onSubmit, isLoading = false, isEditing =
         {/* Content Editor */}
         <Card>
           <CardHeader>
-            <CardTitle>Content</CardTitle>
-            <CardDescription>Edit your post content</CardDescription>
+            <CardTitle>{t('posts.contentCardTitle')}</CardTitle>
+            <CardDescription>{t('posts.contentCardDescription')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <Textarea
-              placeholder="Post content..."
+              placeholder={t('posts.contentPlaceholder')}
               value={content}
               onChange={(e) => setContent(e.target.value)}
               className="min-h-[200px] font-mono text-sm"
               disabled={!isContentEditable || isLoading}
             />
-            <div className="text-sm text-muted-foreground">{content.length} characters</div>
+            <div className="text-sm text-muted-foreground">{t('posts.charactersCount', { count: content.length })}</div>
           </CardContent>
         </Card>
 
         {/* Status and Scheduling */}
         <Card>
           <CardHeader>
-            <CardTitle>Publishing</CardTitle>
-            <CardDescription>Choose how and when to publish this post</CardDescription>
+            <CardTitle>{t('posts.publishingCardTitle')}</CardTitle>
+            <CardDescription>{t('posts.publishingCardDescription')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label>Status</Label>
+              <Label>{t('posts.statusLabel')}</Label>
               <Select 
                 value={status} 
                 onValueChange={(value: PostStatus) => setStatus(value)}
@@ -180,16 +182,16 @@ export function PostForm({ initialData, onSubmit, isLoading = false, isEditing =
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="DRAFT">Draft</SelectItem>
-                  <SelectItem value="SENT">Send Now</SelectItem>
-                  <SelectItem value="SCHEDULED">Schedule</SelectItem>
+                  <SelectItem value="DRAFT">{t('posts.statusDraft')}</SelectItem>
+                  <SelectItem value="SENT">{t('posts.actionSendNow')}</SelectItem>
+                  <SelectItem value="SCHEDULED">{t('posts.statusScheduled')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             {status === "SCHEDULED" && (
               <div className="space-y-2">
-                <Label>Scheduled At</Label>
+                <Label>{t('posts.scheduledAtLabel')}</Label>
                 <Input 
                   type="datetime-local" 
                   value={scheduledAt} 
@@ -208,24 +210,8 @@ export function PostForm({ initialData, onSubmit, isLoading = false, isEditing =
             disabled={isLoading || !selectedChannel || !content.trim()}
           >
             <Save className="h-4 w-4 mr-2" />
-             Create Post
+             {isEditing ? t('posts.editPost') : t('posts.createPost')}
           </Button>
-          {/* <Button
-            onClick={() => handleSubmit("send")}
-            disabled={isLoading || !selectedChannel || !content.trim() || status === "SCHEDULED"}
-          >
-            <Send className="h-4 w-4 mr-2" />
-            Send Now
-          </Button>
-          {status === "SCHEDULED" && (
-            <Button
-              onClick={() => handleSubmit("schedule")}
-              disabled={isLoading || !selectedChannel || !content.trim() || !scheduledAt}
-            >
-              <Clock className="h-4 w-4 mr-2" />
-              Schedule
-            </Button>
-          )} */}
         </div>
       </div>
 

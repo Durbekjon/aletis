@@ -244,7 +244,7 @@ export default function ProductsPage() {
           </RefreshButton>
           <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}>
             <Upload className="h-4 w-4 mr-2" />
-            Import
+            {t('products.import')}
           </Button>
           <Button asChild className="lp-glow-btn">
             <Link href="/products/new">

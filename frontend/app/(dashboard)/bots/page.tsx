@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useSearchParams } from "next/navigation"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import {
@@ -38,7 +39,17 @@ import { LanguageSwitcher } from "@/components/language-switcher"
 
 export default function BotsPage() {
   const { t } = useTranslation()
-  const [activeTab, setActiveTab] = useState<"bots" | "channels">("bots")
+  const searchParams = useSearchParams()
+  const tabParam = searchParams.get("tab")
+  const [activeTab, setActiveTab] = useState<"bots" | "channels">(
+    tabParam === "channels" ? "channels" : "bots"
+  )
+
+  useEffect(() => {
+    if (tabParam === "channels" || tabParam === "bots") {
+      setActiveTab(tabParam)
+    }
+  }, [tabParam])
   
   // Separate search states for each tab
   const [botsSearchQuery, setBotsSearchQuery] = useState("")

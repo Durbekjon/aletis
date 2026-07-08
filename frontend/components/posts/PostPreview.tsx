@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { type Post, type PostStatus } from "@/lib/types/post"
+import { useTranslation } from "@/src/context/I18nContext"
 
 interface PostPreviewProps {
   post: {
@@ -18,6 +19,8 @@ interface PostPreviewProps {
 }
 
 export function PostPreview({ post }: PostPreviewProps) {
+  const { t } = useTranslation()
+
   const getLogoUrl = (logo: { id: number; key: string; url?: string }) => {
     if (logo.url) return logo.url
     return `${process.env.NEXT_PUBLIC_BACKEND_URL}/${logo.key}`
@@ -26,13 +29,13 @@ export function PostPreview({ post }: PostPreviewProps) {
   const getStatusBadge = (status: PostStatus) => {
     switch (status) {
       case "DRAFT":
-        return <Badge variant="secondary">Draft</Badge>
+        return <Badge variant="secondary">{t('posts.statusDraft')}</Badge>
       case "SENT":
-        return <Badge className="bg-primary">Ready to Send</Badge>
+        return <Badge className="bg-primary">{t('posts.statusReadyToSend')}</Badge>
       case "SCHEDULED":
-        return <Badge variant="outline" className="text-blue-600 border-blue-600">Scheduled</Badge>
+        return <Badge variant="outline" className="text-blue-600 border-blue-600">{t('posts.statusScheduled')}</Badge>
       case "FAILED":
-        return <Badge variant="destructive">Failed</Badge>
+        return <Badge variant="destructive">{t('posts.statusFailed')}</Badge>
       default:
         return <Badge variant="secondary">{status}</Badge>
     }
@@ -41,8 +44,8 @@ export function PostPreview({ post }: PostPreviewProps) {
   return (
     <Card className="sticky top-6">
       <CardHeader>
-        <CardTitle>Preview</CardTitle>
-        <p className="text-sm text-muted-foreground">Telegram channel preview</p>
+        <CardTitle>{t('posts.previewCardTitle')}</CardTitle>
+        <p className="text-sm text-muted-foreground">{t('posts.previewCardDescription')}</p>
       </CardHeader>
       <CardContent>
         {post.channel && post.product ? (
@@ -77,7 +80,7 @@ export function PostPreview({ post }: PostPreviewProps) {
           </div>
         ) : (
           <div className="text-center py-8 text-muted-foreground">
-            <p className="text-sm">Select a channel and product to see preview</p>
+            <p className="text-sm">{t('posts.previewEmptyState')}</p>
           </div>
         )}
       </CardContent>

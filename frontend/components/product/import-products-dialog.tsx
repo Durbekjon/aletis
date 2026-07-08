@@ -15,6 +15,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { useImportProductsMutation } from '@/src/hooks/useProductsQuery';
 import type { ImportProductsResult } from '@/src/api/productsApi';
+import { useTranslation } from '@/src/context/I18nContext';
 
 interface Props {
   open: boolean;
@@ -22,6 +23,7 @@ interface Props {
 }
 
 export function ImportProductsDialog({ open, onOpenChange }: Props) {
+  const { t } = useTranslation();
   const [file, setFile] = useState<File | null>(null);
   const [dragOver, setDragOver] = useState(false);
   const [result, setResult] = useState<ImportProductsResult | null>(null);
@@ -61,10 +63,9 @@ export function ImportProductsDialog({ open, onOpenChange }: Props) {
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Mahsulotlarni import qilish</DialogTitle>
+          <DialogTitle>{t('products.importTitle')}</DialogTitle>
           <DialogDescription>
-            CSV yoki Excel faylini yuklang. Yangi ustunlar avtomatik schema
-            field sifatida yaratiladi.
+            {t('products.importDescription')}
           </DialogDescription>
         </DialogHeader>
 
@@ -113,10 +114,10 @@ export function ImportProductsDialog({ open, onOpenChange }: Props) {
                 <div className="space-y-2">
                   <Upload className="h-8 w-8 mx-auto text-muted-foreground" />
                   <p className="text-sm font-medium">
-                    Faylni bu yerga tashlang yoki bosib tanlang
+                    {t('products.dragDropFile')}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    .csv, .xlsx, .xls — max 10MB
+                    {t('products.maxSize')}
                   </p>
                 </div>
               )}
@@ -126,19 +127,19 @@ export function ImportProductsDialog({ open, onOpenChange }: Props) {
             <Alert>
               <AlertCircle className="h-4 w-4" />
               <AlertDescription className="text-xs space-y-1">
-                <p className="font-medium">Majburiy ustunlar:</p>
+                <p className="font-medium">{t('products.requiredColumns')}</p>
                 <p>
                   <code className="bg-muted px-1 rounded">name</code>{' '}
                   <code className="bg-muted px-1 rounded">price</code>
                 </p>
-                <p className="font-medium mt-1">Ixtiyoriy ustunlar:</p>
+                <p className="font-medium mt-1">{t('products.optionalColumns')}</p>
                 <p>
                   <code className="bg-muted px-1 rounded">currency</code>{' '}
                   <code className="bg-muted px-1 rounded">quantity</code>{' '}
                   <code className="bg-muted px-1 rounded">status</code>
                 </p>
                 <p className="text-muted-foreground mt-1">
-                  Boshqa barcha ustunlar schema fieldga aylanadi.
+                  {t('products.otherColumnsHint')}
                 </p>
               </AlertDescription>
             </Alert>
@@ -150,11 +151,11 @@ export function ImportProductsDialog({ open, onOpenChange }: Props) {
               <CheckCircle2 className="h-5 w-5 text-green-500 mt-0.5 shrink-0" />
               <div className="space-y-1">
                 <p className="font-medium text-sm">
-                  {result.imported} ta mahsulot import qilindi
+                  {t('products.importedSuccess', { count: result.imported })}
                 </p>
                 {result.skipped > 0 && (
                   <p className="text-sm text-muted-foreground">
-                    {result.skipped} ta qator o'tkazib yuborildi
+                    {t('products.skippedRows', { count: result.skipped })}
                   </p>
                 )}
               </div>
@@ -162,7 +163,7 @@ export function ImportProductsDialog({ open, onOpenChange }: Props) {
 
             {result.createdFields.length > 0 && (
               <div className="space-y-2">
-                <p className="text-sm font-medium">Yangi schema fieldlar yaratildi:</p>
+                <p className="text-sm font-medium">{t('products.newSchemaFieldsCreated')}</p>
                 <div className="flex flex-wrap gap-1">
                   {result.createdFields.map((f) => (
                     <Badge key={f} variant="secondary">
@@ -176,13 +177,13 @@ export function ImportProductsDialog({ open, onOpenChange }: Props) {
             {result.errors.length > 0 && (
               <div className="space-y-2">
                 <p className="text-sm font-medium text-destructive">
-                  Xatoliklar ({result.errors.length} ta):
+                  {t('products.errorsCount', { count: result.errors.length })}
                 </p>
                 <div className="max-h-36 overflow-y-auto space-y-1 text-xs text-muted-foreground">
                   {result.errors.map((e) => (
                     <p key={e.row}>
                       <span className="font-mono text-destructive">
-                        Qator {e.row}:
+                        {t('products.rowError', { row: e.row })}
                       </span>{' '}
                       {e.message}
                     </p>
@@ -195,14 +196,14 @@ export function ImportProductsDialog({ open, onOpenChange }: Props) {
 
         <DialogFooter>
           <Button variant="outline" onClick={handleClose}>
-            {result ? 'Yopish' : 'Bekor qilish'}
+            {result ? t('common.close') : t('common.cancel')}
           </Button>
           {!result && (
             <Button
               onClick={handleImport}
               disabled={!file || importMutation.isPending}
             >
-              {importMutation.isPending ? 'Import qilinmoqda...' : 'Import qilish'}
+              {importMutation.isPending ? t('products.importing') : t('products.import')}
             </Button>
           )}
         </DialogFooter>
