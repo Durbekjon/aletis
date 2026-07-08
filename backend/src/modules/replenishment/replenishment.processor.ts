@@ -24,6 +24,15 @@ export class ReplenishmentProcessor extends WorkerHost {
         await this.service.runReminder(reminderId);
         break;
       }
+      case 'daily-scan': {
+        this.logger.log(`[Job ${job.id}] Running daily replenishment scan (all orgs)`);
+        try {
+          await this.service.scanAllOrganizations();
+        } catch (err) {
+          this.logger.warn(`Daily replenishment scan failed: ${err.message}`);
+        }
+        break;
+      }
       default:
         this.logger.warn(`Unknown job name: ${job.name}`);
     }

@@ -1,41 +1,27 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { ReplenishmentService } from './replenishment.service';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
+import { REPLENISHMENT_QUEUE } from '@core/queue/queue.module';
 
 /**
- * Daily sweep that enqueues replenishment reminders whose predicted run-out is
- * within the lead window. Mirrors RetentionScheduler (the project does not use
- * @nestjs/schedule).
+ * Registers the daily replenishment sweep as a BullMQ repeatable job so the
+ * schedule persists in Redis and survives process restarts/deploys — the
+ * previous hand-rolled setTimeout/setInterval timer silently skipped a day
+ * whenever the process wasn't up at the scheduled hour. The actual scan runs
+ * in ReplenishmentProcessor (job name 'daily-scan').
  */
 @Injectable()
-export class ReplenishmentScheduler {
+export class ReplenishmentScheduler implements OnModuleInit {
   private readonly logger = new Logger(ReplenishmentScheduler.name);
 
-  constructor(private readonly service: ReplenishmentService) {
-    this.scheduleDaily();
-  }
+  constructor(@InjectQueue(REPLENISHMENT_QUEUE) private readonly queue: Queue) {}
 
-  private scheduleDaily(): void {
-    const now = new Date();
-    // Run at 10:00 UTC daily — after the retention sweep (09:00).
-    const next = new Date(
-      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 10, 0, 0, 0),
+  async onModuleInit(): Promise<void> {
+    await this.queue.upsertJobScheduler(
+      'daily-replenishment-scan',
+      { pattern: '0 10 * * *', tz: 'UTC' }, // 10:00 UTC daily — after the retention sweep
+      { name: 'daily-scan', opts: { removeOnComplete: true, removeOnFail: 50 } },
     );
-    if (next <= now) next.setUTCDate(next.getUTCDate() + 1);
-    const delay = next.getTime() - now.getTime();
-    setTimeout(() => {
-      this.runScan();
-      setInterval(() => this.runScan(), 24 * 60 * 60 * 1000);
-    }, delay);
-    this.logger.log(
-      `Replenishment scan scheduled — first run in ${Math.round(delay / 60000)} min`,
-    );
-  }
-
-  private runScan(): void {
-    this.service
-      .scanAllOrganizations()
-      .catch((err) =>
-        this.logger.warn(`Daily replenishment scan failed: ${err.message}`),
-      );
+    this.logger.log('Daily replenishment scan registered (BullMQ repeatable, 10:00 UTC)');
   }
 }
