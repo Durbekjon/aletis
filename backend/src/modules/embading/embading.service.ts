@@ -117,26 +117,29 @@ export class EmbadingService implements OnModuleInit {
       },
     });
 
-    // 2. Insert Images (Image Vectors)
+    // 2. Insert Images (Image Vectors) — one image failing/timing out
+    // shouldn't delay or block the others.
     if (product.images && product.images.length > 0) {
-      for (const image of product.images) {
-        try {
-          // image.url is the absolute ImageKit CDN URL; fetched over HTTP
-          const base64 = await this.imageToBase64Service.convert(image.url);
-          await imageCollection.data.insert({
-            properties: {
-              image: base64,
-            },
-            references: {
-              product: productUuid,
-            },
-          });
-        } catch (error) {
-          this.logger.error(
-            `Failed to vectorise image ${image.key} for product ${product.id}: ${error.message}`,
-          );
-        }
-      }
+      await Promise.all(
+        product.images.map(async (image) => {
+          try {
+            // image.url is the absolute ImageKit CDN URL; fetched over HTTP
+            const base64 = await this.imageToBase64Service.convert(image.url);
+            await imageCollection.data.insert({
+              properties: {
+                image: base64,
+              },
+              references: {
+                product: productUuid,
+              },
+            });
+          } catch (error) {
+            this.logger.error(
+              `Failed to vectorise image ${image.key} for product ${product.id}: ${error.message}`,
+            );
+          }
+        }),
+      );
     }
   }
 

@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { FieldType, ProductStatus } from '@prisma/client';
+import { Currency, FieldType, ProductStatus } from '@prisma/client';
 
 export class FieldValueResponseDto {
   @ApiProperty({
@@ -120,6 +120,12 @@ export class ProductResponseDto {
     example: 1,
   })
   quantity: number;
+
+  @ApiProperty({
+    description: 'The currency the price is denominated in',
+    example: Currency.USD,
+  })
+  currency: Currency;
 
   @ApiProperty({
     description: 'The status of the product',
