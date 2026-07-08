@@ -1307,6 +1307,13 @@ If you change your mind, you can always place a new order! Is there anything els
 CUSTOMER DATA:
 ${customerData}
 
+LANGUAGE RULE: Write all free-text values (aiSummary, buyingBehavior.notes,
+salesOpportunities[].description, frequentQuestions[], favoriteCategories[])
+in Uzbek (o'zbek tilida) ONLY, regardless of what language the customer data
+above is in. Keep all JSON field/key names and enum values (priceSensitivity,
+aiTags, confidence, orderFrequency, type) exactly as specified below in
+English — only the human-readable text content should be Uzbek.
+
 STRICT PRIVACY RULES:
 - Extract ONLY information relevant to sales and customer service
 - Do NOT record health information, political or religious beliefs, personal relationships, or any data unrelated to shopping behavior
