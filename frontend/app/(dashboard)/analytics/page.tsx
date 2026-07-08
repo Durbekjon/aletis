@@ -1,6 +1,8 @@
 "use client"
 
 import { useState } from "react"
+import { useTranslation } from "@/src/context/I18nContext"
+import { LanguageSwitcher } from "@/components/language-switcher"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -92,6 +94,7 @@ const chartConfig = {
 }
 
 export default function AnalyticsPage() {
+  const { t } = useTranslation()
   const [timeRange, setTimeRange] = useState("7d")
   const [activeTab, setActiveTab] = useState("overview")
 
@@ -119,27 +122,28 @@ export default function AnalyticsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Analytics</h1>
-          <p className="text-muted-foreground">Insights and performance metrics for your store</p>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{t('analytics.title')}</h1>
+          <p className="text-muted-foreground">{t('analytics.subtitle')}</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <LanguageSwitcher />
           <Select value={timeRange} onValueChange={setTimeRange}>
             <SelectTrigger className="w-[180px]">
               <Calendar className="h-4 w-4 mr-2" />
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="7d">Last 7 days</SelectItem>
-              <SelectItem value="30d">Last 30 days</SelectItem>
-              <SelectItem value="90d">Last 90 days</SelectItem>
-              <SelectItem value="1y">Last year</SelectItem>
+              <SelectItem value="7d">{t('analytics.timeRange.last7Days')}</SelectItem>
+              <SelectItem value="30d">{t('analytics.timeRange.last30Days')}</SelectItem>
+              <SelectItem value="90d">{t('analytics.timeRange.last90Days')}</SelectItem>
+              <SelectItem value="1y">{t('analytics.timeRange.lastYear')}</SelectItem>
             </SelectContent>
           </Select>
           <Button variant="outline">
             <Download className="h-4 w-4 mr-2" />
-            Export
+            {t('analytics.export')}
           </Button>
         </div>
       </div>
@@ -148,7 +152,7 @@ export default function AnalyticsPage() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('analytics.metrics.totalRevenue')}</CardTitle>
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -162,14 +166,14 @@ export default function AnalyticsPage() {
               <span className={revenueGrowth.isPositive ? "text-primary" : "text-red-500"}>
                 {revenueGrowth.value}%
               </span>
-              <span className="ml-1">from last period</span>
+              <span className="ml-1">{t('analytics.metrics.fromLastPeriod')}</span>
             </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('analytics.metrics.totalOrders')}</CardTitle>
             <ShoppingCart className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -181,14 +185,14 @@ export default function AnalyticsPage() {
                 <ArrowDownRight className="h-3 w-3 text-red-500 mr-1" />
               )}
               <span className={ordersGrowth.isPositive ? "text-primary" : "text-red-500"}>{ordersGrowth.value}%</span>
-              <span className="ml-1">from last period</span>
+              <span className="ml-1">{t('analytics.metrics.fromLastPeriod')}</span>
             </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">New Customers</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('analytics.metrics.newCustomers')}</CardTitle>
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -202,14 +206,14 @@ export default function AnalyticsPage() {
               <span className={customersGrowth.isPositive ? "text-primary" : "text-red-500"}>
                 {customersGrowth.value}%
               </span>
-              <span className="ml-1">from last period</span>
+              <span className="ml-1">{t('analytics.metrics.fromLastPeriod')}</span>
             </div>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Conversion Rate</CardTitle>
+            <CardTitle className="text-sm font-medium">{t('analytics.metrics.conversionRate')}</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -223,7 +227,7 @@ export default function AnalyticsPage() {
               <span className={conversionGrowth.isPositive ? "text-primary" : "text-red-500"}>
                 {conversionGrowth.value}%
               </span>
-              <span className="ml-1">from last period</span>
+              <span className="ml-1">{t('analytics.metrics.fromLastPeriod')}</span>
             </div>
           </CardContent>
         </Card>
@@ -232,10 +236,10 @@ export default function AnalyticsPage() {
       {/* Analytics Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid w-full grid-cols-4">
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="products">Products</TabsTrigger>
-          <TabsTrigger value="customers">Customers</TabsTrigger>
-          <TabsTrigger value="funnel">Funnel</TabsTrigger>
+          <TabsTrigger value="overview">{t('analytics.tabs.overview')}</TabsTrigger>
+          <TabsTrigger value="products">{t('analytics.tabs.products')}</TabsTrigger>
+          <TabsTrigger value="customers">{t('analytics.tabs.customers')}</TabsTrigger>
+          <TabsTrigger value="funnel">{t('analytics.tabs.funnel')}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
@@ -243,8 +247,8 @@ export default function AnalyticsPage() {
             {/* Revenue Chart */}
             <Card>
               <CardHeader>
-                <CardTitle>Revenue Trend</CardTitle>
-                <CardDescription>Daily revenue over the selected period</CardDescription>
+                <CardTitle>{t('analytics.revenueTrend')}</CardTitle>
+                <CardDescription>{t('analytics.revenueTrendDesc')}</CardDescription>
               </CardHeader>
               <CardContent>
                 <ChartContainer config={chartConfig} className="h-[300px]">
@@ -268,8 +272,8 @@ export default function AnalyticsPage() {
             {/* Orders & Customers Chart */}
             <Card>
               <CardHeader>
-                <CardTitle>Orders & Customers</CardTitle>
-                <CardDescription>Daily orders and new customers</CardDescription>
+                <CardTitle>{t('analytics.ordersCustomers')}</CardTitle>
+                <CardDescription>{t('analytics.ordersCustomersDesc')}</CardDescription>
               </CardHeader>
               <CardContent>
                 <ChartContainer config={chartConfig} className="h-[300px]">
@@ -302,8 +306,8 @@ export default function AnalyticsPage() {
           {/* Category Distribution */}
           <Card>
             <CardHeader>
-              <CardTitle>Sales by Category</CardTitle>
-              <CardDescription>Revenue distribution across product categories</CardDescription>
+              <CardTitle>{t('analytics.salesByCategory')}</CardTitle>
+              <CardDescription>{t('analytics.salesByCategoryDesc')}</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="grid gap-6 lg:grid-cols-2">
@@ -344,8 +348,8 @@ export default function AnalyticsPage() {
         <TabsContent value="products" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Top Performing Products</CardTitle>
-              <CardDescription>Products ranked by sales volume and revenue</CardDescription>
+              <CardTitle>{t('analytics.topProducts')}</CardTitle>
+              <CardDescription>{t('analytics.topProductsDesc')}</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-4">
@@ -357,14 +361,14 @@ export default function AnalyticsPage() {
                       </div>
                       <div>
                         <p className="font-medium">{product.name}</p>
-                        <p className="text-sm text-muted-foreground">{product.sales} units sold</p>
+                        <p className="text-sm text-muted-foreground">{product.sales} {t('analytics.unitsSold')}</p>
                       </div>
                     </div>
                     <div className="text-right">
                       <p className="font-medium">{formatCurrency(product.revenue)}</p>
                       <div className="flex items-center gap-2">
                         <Badge variant={product.stock < 10 ? "destructive" : "secondary"}>
-                          {product.stock} in stock
+                          {product.stock} {t('analytics.inStock')}
                         </Badge>
                       </div>
                     </div>
@@ -376,8 +380,8 @@ export default function AnalyticsPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Product Sales Comparison</CardTitle>
-              <CardDescription>Revenue comparison across top products</CardDescription>
+              <CardTitle>{t('analytics.productComparison')}</CardTitle>
+              <CardDescription>{t('analytics.productComparisonDesc')}</CardDescription>
             </CardHeader>
             <CardContent>
               <ChartContainer config={chartConfig} className="h-[400px]">
@@ -397,8 +401,8 @@ export default function AnalyticsPage() {
           <div className="grid gap-6 lg:grid-cols-2">
             <Card>
               <CardHeader>
-                <CardTitle>Customer Acquisition</CardTitle>
-                <CardDescription>New customers over time</CardDescription>
+                <CardTitle>{t('analytics.customerAcquisition')}</CardTitle>
+                <CardDescription>{t('analytics.customerAcquisitionDesc')}</CardDescription>
               </CardHeader>
               <CardContent>
                 <ChartContainer config={chartConfig} className="h-[300px]">
@@ -421,26 +425,26 @@ export default function AnalyticsPage() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Customer Metrics</CardTitle>
-                <CardDescription>Key customer performance indicators</CardDescription>
+                <CardTitle>{t('analytics.customerMetrics')}</CardTitle>
+                <CardDescription>{t('analytics.customerMetricsDesc')}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="text-center p-4 border rounded-lg">
                     <div className="text-2xl font-bold">156</div>
-                    <div className="text-sm text-muted-foreground">Total Customers</div>
+                    <div className="text-sm text-muted-foreground">{t('analytics.totalCustomers')}</div>
                   </div>
                   <div className="text-center p-4 border rounded-lg">
                     <div className="text-2xl font-bold">2.3</div>
-                    <div className="text-sm text-muted-foreground">Avg Orders/Customer</div>
+                    <div className="text-sm text-muted-foreground">{t('analytics.avgOrdersCustomer')}</div>
                   </div>
                   <div className="text-center p-4 border rounded-lg">
                     <div className="text-2xl font-bold">{formatCurrency(97)}</div>
-                    <div className="text-sm text-muted-foreground">Avg Order Value</div>
+                    <div className="text-sm text-muted-foreground">{t('analytics.avgOrderValue')}</div>
                   </div>
                   <div className="text-center p-4 border rounded-lg">
                     <div className="text-2xl font-bold">68%</div>
-                    <div className="text-sm text-muted-foreground">Repeat Rate</div>
+                    <div className="text-sm text-muted-foreground">{t('analytics.repeatRate')}</div>
                   </div>
                 </div>
               </CardContent>
@@ -451,8 +455,8 @@ export default function AnalyticsPage() {
         <TabsContent value="funnel" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Conversion Funnel</CardTitle>
-              <CardDescription>Customer journey from conversation to completed order</CardDescription>
+              <CardTitle>{t('analytics.conversionFunnel')}</CardTitle>
+              <CardDescription>{t('analytics.conversionFunnelDesc')}</CardDescription>
             </CardHeader>
             <CardContent>
               <ChartContainer config={chartConfig} className="h-[400px]">
@@ -469,24 +473,24 @@ export default function AnalyticsPage() {
           <div className="grid gap-6 lg:grid-cols-3">
             <Card>
               <CardHeader>
-                <CardTitle>Conversion Rates</CardTitle>
+                <CardTitle>{t('analytics.conversionRates')}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
-                    <span>Conversation → Inquiry</span>
+                    <span>{t('analytics.funnel.conversationInquiry')}</span>
                     <span className="font-medium">65%</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span>Inquiry → Cart</span>
+                    <span>{t('analytics.funnel.inquiryCart')}</span>
                     <span className="font-medium">64.6%</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span>Cart → Order</span>
+                    <span>{t('analytics.funnel.cartOrder')}</span>
                     <span className="font-medium">66.7%</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span>Order → Completion</span>
+                    <span>{t('analytics.funnel.orderCompletion')}</span>
                     <span className="font-medium">87.5%</span>
                   </div>
                 </div>
@@ -495,24 +499,24 @@ export default function AnalyticsPage() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Drop-off Analysis</CardTitle>
+                <CardTitle>{t('analytics.dropOffAnalysis')}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
-                    <span>Lost at Inquiry</span>
+                    <span>{t('analytics.dropoff.lostInquiry')}</span>
                     <span className="text-red-500 font-medium">350</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span>Lost at Cart</span>
+                    <span>{t('analytics.dropoff.lostCart')}</span>
                     <span className="text-red-500 font-medium">230</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span>Lost at Checkout</span>
+                    <span>{t('analytics.dropoff.lostCheckout')}</span>
                     <span className="text-red-500 font-medium">140</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span>Incomplete Orders</span>
+                    <span>{t('analytics.dropoff.incompleteOrders')}</span>
                     <span className="text-red-500 font-medium">35</span>
                   </div>
                 </div>
@@ -521,17 +525,17 @@ export default function AnalyticsPage() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Optimization Tips</CardTitle>
+                <CardTitle>{t('analytics.optimizationTips')}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-2 text-sm">
                 <div className="p-2 bg-blue-50 rounded text-blue-700">
-                  • Improve product descriptions to reduce inquiry drop-off
+                  {t('analytics.tips.descriptions')}
                 </div>
                 <div className="p-2 bg-yellow-50 rounded text-yellow-700">
-                  • Simplify checkout process to reduce cart abandonment
+                  {t('analytics.tips.checkout')}
                 </div>
                 <div className="p-2 bg-green-50 rounded text-green-700">
-                  • Follow up on incomplete orders within 24 hours
+                  {t('analytics.tips.followup')}
                 </div>
               </CardContent>
             </Card>

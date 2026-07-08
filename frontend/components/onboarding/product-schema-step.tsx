@@ -13,6 +13,7 @@ import { ArrowRight, Plus, Trash2, X } from "lucide-react"
 import { useOnboarding } from "@/src/hooks/useOnboarding"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useToast } from "@/hooks/use-toast"
+import { useTranslation } from "@/src/context/I18nContext"
 
 interface ProductSchemaStepProps {
   data: OnboardingData
@@ -42,6 +43,7 @@ const DEFAULT_SCHEMAS: Record<string, ProductSchemaField[]> = {
 }
 
 export function ProductSchemaStep({ data, onUpdate, onNext }: ProductSchemaStepProps) {
+  const { t } = useTranslation()
   const [schema, setSchema] = useState<ProductSchemaField[]>(data.productSchema)
   const [newField, setNewField] = useState({ name: "", type: "TEXT" as FieldType, required: false })
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -174,9 +176,9 @@ export function ProductSchemaStep({ data, onUpdate, onNext }: ProductSchemaStepP
     <div className="space-y-8" onKeyDown={handleKeyPress}>
       {/* Header Section */}
       <div className="space-y-2">
-        <h3 className="text-lg font-semibold text-foreground">Product Schema Configuration</h3>
+        <h3 className="text-lg font-semibold text-foreground">{t("onboarding.schema.title")}</h3>
         <p className="text-sm text-muted-foreground">
-          Define the fields that will be available for your products. You can customize these based on your business needs.
+          {t("onboarding.schema.desc")}
         </p>
       </div>
 
@@ -191,7 +193,7 @@ export function ProductSchemaStep({ data, onUpdate, onNext }: ProductSchemaStepP
                   {/* Field Name */}
                   <div className="space-y-2">
                     <Label htmlFor={`field-name-${field.id}`} className="text-sm font-medium text-foreground">
-                      Field Name
+                      {t("onboarding.schema.fieldName")}
                     </Label>
                     <Input
                       id={`field-name-${field.id}`}
@@ -205,7 +207,7 @@ export function ProductSchemaStep({ data, onUpdate, onNext }: ProductSchemaStepP
                   {/* Field Type */}
                   <div className="space-y-2">
                     <Label htmlFor={`field-type-${field.id}`} className="text-sm font-medium text-foreground">
-                      Field Type
+                      {t("onboarding.schema.fieldType")}
                     </Label>
                     <Select value={field.type} onValueChange={(value: any) => updateField(field.id, { type: value })}>
                       <SelectTrigger 
@@ -215,11 +217,11 @@ export function ProductSchemaStep({ data, onUpdate, onNext }: ProductSchemaStepP
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="TEXT">Text</SelectItem>
-                        <SelectItem value="NUMBER">Number</SelectItem>
-                        <SelectItem value="DATE">Date</SelectItem>
-                        <SelectItem value="BOOLEAN">Yes/No</SelectItem>
-                        <SelectItem value="ENUM">Select</SelectItem>
+                        <SelectItem value="TEXT">{t("onboarding.schema.typeText")}</SelectItem>
+                        <SelectItem value="NUMBER">{t("onboarding.schema.typeNumber")}</SelectItem>
+                        <SelectItem value="DATE">{t("onboarding.schema.typeDate")}</SelectItem>
+                        <SelectItem value="BOOLEAN">{t("onboarding.schema.typeBool")}</SelectItem>
+                        <SelectItem value="ENUM">{t("onboarding.schema.typeSelect")}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -236,7 +238,7 @@ export function ProductSchemaStep({ data, onUpdate, onNext }: ProductSchemaStepP
                         className="transition-all duration-200"
                       />
                       <Label htmlFor={`required-${field.id}`} className="text-sm font-medium text-foreground cursor-pointer">
-                        Required field
+                        {t("onboarding.schema.required")}
                       </Label>
                     </div>
                   </div>
@@ -255,7 +257,7 @@ export function ProductSchemaStep({ data, onUpdate, onNext }: ProductSchemaStepP
                 {field.type === "ENUM" && (
                   <div className="border border-border/30 rounded-lg bg-muted/20 p-4 space-y-4">
                     <div className="flex items-center justify-between">
-                      <Label className="text-sm font-medium text-foreground">Field Options</Label>
+                      <Label className="text-sm font-medium text-foreground">{t("onboarding.schema.options")}</Label>
                       <span className="text-xs text-muted-foreground">
                         {field.options?.filter(opt => opt.trim() !== "").length || 0} options
                       </span>
@@ -315,14 +317,14 @@ export function ProductSchemaStep({ data, onUpdate, onNext }: ProductSchemaStepP
           <CardContent className="p-6">
             <div className="space-y-4">
               <div className="text-center">
-                <h4 className="text-sm font-medium text-muted-foreground mb-2">Add New Field</h4>
+                <h4 className="text-sm font-medium text-muted-foreground mb-2">{t("onboarding.schema.addNew")}</h4>
               </div>
               
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 {/* New Field Name */}
                 <div className="space-y-2">
                   <Label htmlFor="new-field-name" className="text-sm font-medium text-foreground">
-                    Field Name
+                    {t("onboarding.schema.fieldName")}
                   </Label>
                   <Input
                     id="new-field-name"
@@ -337,7 +339,7 @@ export function ProductSchemaStep({ data, onUpdate, onNext }: ProductSchemaStepP
                 {/* New Field Type */}
                 <div className="space-y-2">
                   <Label htmlFor="new-field-type" className="text-sm font-medium text-foreground">
-                    Field Type
+                    {t("onboarding.schema.fieldType")}
                   </Label>
                   <Select value={newField.type} onValueChange={(value: any) => setNewField({ ...newField, type: value })}>
                     <SelectTrigger 
@@ -347,11 +349,11 @@ export function ProductSchemaStep({ data, onUpdate, onNext }: ProductSchemaStepP
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="TEXT">Text</SelectItem>
-                      <SelectItem value="NUMBER">Number</SelectItem>
-                      <SelectItem value="DATE">Date</SelectItem>
-                      <SelectItem value="BOOLEAN">Yes/No</SelectItem>
-                      <SelectItem value="ENUM">Select</SelectItem>
+                      <SelectItem value="TEXT">{t("onboarding.schema.typeText")}</SelectItem>
+                      <SelectItem value="NUMBER">{t("onboarding.schema.typeNumber")}</SelectItem>
+                      <SelectItem value="DATE">{t("onboarding.schema.typeDate")}</SelectItem>
+                      <SelectItem value="BOOLEAN">{t("onboarding.schema.typeBool")}</SelectItem>
+                      <SelectItem value="ENUM">{t("onboarding.schema.typeSelect")}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -366,7 +368,7 @@ export function ProductSchemaStep({ data, onUpdate, onNext }: ProductSchemaStepP
                     className="transition-all duration-200"
                   />
                   <Label htmlFor="new-required" className="text-sm font-medium text-foreground cursor-pointer">
-                    Required field
+                    {t("onboarding.schema.required")}
                   </Label>
                 </div>
                 
@@ -376,7 +378,7 @@ export function ProductSchemaStep({ data, onUpdate, onNext }: ProductSchemaStepP
                   className="bg-[#00E6A8] hover:bg-[#00E6A8]/90 text-black font-medium transition-all duration-200 hover:scale-105"
                 >
                   <Plus className="h-4 w-4 mr-2" />
-                  Add Field
+                  {t("onboarding.schema.addField")}
                 </Button>
               </div>
             </div>
@@ -405,7 +407,7 @@ export function ProductSchemaStep({ data, onUpdate, onNext }: ProductSchemaStepP
             </>
           ) : (
             <>
-              Continue
+              {t("onboarding.continue")}
               <ArrowRight className="h-4 w-4 ml-2" />
             </>
           )}

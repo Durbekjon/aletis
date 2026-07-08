@@ -291,7 +291,14 @@
     "deleteSingleTitle": "Удалить товар",
     "deleteBulkTitle": "Удалить выбранные товары",
     "deleteSingleDescription": "Вы уверены, что хотите удалить этот товар? Это действие нельзя отменить.",
-    "deleteBulkDescription": "Вы уверены, что хотите удалить {{count}} товаров? Это действие нельзя отменить."
+    "deleteBulkDescription": "Вы уверены, что хотите удалить {{count}} товаров? Это действие нельзя отменить.",
+    "newTitle": "Новый товар",
+    "newDesc": "Создайте товар по схеме вашей организации",
+    "backToProducts": "К товарам",
+    "editTitle": "Редактировать товар",
+    "editDesc": "Обновите данные и поля товара",
+    "loadFailed": "Не удалось загрузить товар.",
+    "loadFailedRetry": "Не удалось загрузить товар. Попробуйте снова."
   },
   "orders": {
     "title": "Заказы",
@@ -339,7 +346,49 @@
     "paginationSummary": "Показаны {{start}}–{{end}} из {{total}} заказов",
     "previous": "Назад",
     "next": "Далее",
-    "itemsCount": "{{count}} товаров"
+    "itemsCount": "{{count}} товаров",
+    "detail": {
+      "backToOrders": "К заказам",
+      "errorLoading": "Ошибка загрузки заказа",
+      "failedLoad": "Не удалось загрузить детали заказа",
+      "subtitle": "Детали и управление заказом",
+      "print": "Печать",
+      "failedTitle": "Не удалось загрузить заказ",
+      "failedDesc": "Произошла ошибка при загрузке деталей заказа.",
+      "tryAgain": "Повторить",
+      "orderItems": "Товары заказа",
+      "quantity": "Количество: {{count}}",
+      "each": "${{price}} за шт.",
+      "subtotal": "Подытог",
+      "total": "Итого",
+      "orderStatus": "Статус заказа",
+      "currentStatus": "Текущий статус",
+      "updating": "Обновление...",
+      "paymentStatus": "Статус оплаты",
+      "notes": "Заметки",
+      "notesPlaceholder": "Добавьте заметки к заказу...",
+      "saving": "Сохранение...",
+      "saveNotes": "Сохранить заметки",
+      "customerInfo": "Информация о клиенте",
+      "telegramId": "Telegram ID:",
+      "phoneNumber": "Телефон:",
+      "location": "Адрес:",
+      "notesLabel": "заметки:",
+      "viewConversation": "Открыть диалог",
+      "timeline": "История заказа",
+      "orderCreated": "Заказ создан",
+      "toast": {
+        "errorTitle": "Ошибка",
+        "successTitle": "Готово",
+        "loadFailed": "Не удалось загрузить детали заказа. Попробуйте снова.",
+        "statusUpdated": "Статус заказа обновлён",
+        "statusFailed": "Не удалось обновить статус заказа",
+        "paymentUpdated": "Статус оплаты обновлён",
+        "paymentFailed": "Не удалось обновить статус оплаты",
+        "notesUpdated": "Заметки обновлены",
+        "notesFailed": "Не удалось обновить заметки"
+      }
+    }
   },
   "bots": {
     "title": "Управление ботами",
@@ -429,7 +478,36 @@
     "error": "Не удалось загрузить посты",
     "errorMessage": "Не удалось загрузить посты. Попробуйте ещё раз.",
     "deleteConfirm": "Удалить этот пост?",
-    "deleteConfirmDescription": "Это действие нельзя отменить."
+    "deleteConfirmDescription": "Это действие нельзя отменить.",
+    "createTitle": "Создать пост",
+    "createDesc": "Создайте и запланируйте новый пост в Telegram-канал",
+    "detail": {
+      "confirmDelete": "Вы уверены, что хотите удалить этот пост?",
+      "title": "Детали поста",
+      "loadingDesc": "Загрузка деталей поста...",
+      "loading": "Загрузка...",
+      "notFound": "Пост не найден",
+      "loadFailed": "Не удалось загрузить пост. Попробуйте снова.",
+      "backToPosts": "К постам",
+      "unknownChannel": "Неизвестный канал",
+      "edit": "Редактировать",
+      "delete": "Удалить",
+      "info": "Информация о посте",
+      "infoDesc": "Детали этого поста",
+      "status": "Статус",
+      "channel": "Канал",
+      "created": "Создан",
+      "updated": "Обновлён",
+      "sentAt": "Отправлен",
+      "scheduledFor": "Запланирован на",
+      "telegramMessageId": "ID сообщения Telegram",
+      "content": "Содержание",
+      "contentDesc": "Содержание поста",
+      "product": "Товар",
+      "productDesc": "Связанная информация о товаре",
+      "editPost": "Редактировать пост",
+      "editPostDesc": "Обновите содержание и настройки поста"
+    }
   },
   "settings": {
     "pageTitle": "Настройки",
@@ -549,8 +627,85 @@
     "completion": "Завершение",
     "continue": "Продолжить",
     "skip": "Пропустить",
+    "skipForNow": "Пропустить пока",
     "back": "Назад",
-    "next": "Далее"
+    "next": "Далее",
+    "optional": "Необязательно",
+    "stepOf": "Шаг {{current}} из {{total}}",
+    "percentComplete": "{{percent}}% завершено",
+    "steps": {
+      "organizationTitle": "Название организации",
+      "organizationDesc": "Расскажите о вашем бизнесе",
+      "categoryTitle": "Выберите категорию",
+      "categoryDesc": "Выберите тип бизнеса",
+      "schemaTitle": "Настройка схемы товара",
+      "schemaDesc": "Настройте поля товара",
+      "firstProductTitle": "Создайте первый товар",
+      "firstProductDesc": "Добавьте ваш первый товар",
+      "botTitle": "Подключить Telegram-бота",
+      "botDesc": "Подключите вашего Telegram-бота с помощью Bot Token",
+      "completionTitle": "Завершение",
+      "completionDesc": "Всё готово!"
+    },
+    "org": {
+      "nameLabel": "Название организации",
+      "namePlaceholder": "Введите название вашего бизнеса",
+      "nameHelp": "Это будет показано вашим клиентам и использовано в вашем боте",
+      "descLabel": "О вашем бизнесе",
+      "descHelp": "Помогите ИИ понять ваш бизнес, чтобы он мог отвечать как ваш агент по продажам"
+    },
+    "categoryStep": {
+      "label": "Категория бизнеса",
+      "placeholder": "Выберите категорию вашего бизнеса",
+      "help": "Это поможет нам предложить правильные поля товара для вашего бизнеса"
+    },
+    "schema": {
+      "title": "Настройка схемы товара",
+      "desc": "Определите поля, описывающие ваши товары",
+      "fieldName": "Название поля",
+      "fieldType": "Тип поля",
+      "typeText": "Текст",
+      "typeNumber": "Число",
+      "typeDate": "Дата",
+      "typeBool": "Да/Нет",
+      "typeSelect": "Выбор",
+      "required": "Обязательное поле",
+      "options": "Варианты поля",
+      "addNew": "Добавить новое поле",
+      "addField": "Добавить поле"
+    },
+    "product": {
+      "nameLabel": "Название товара",
+      "namePlaceholder": "Введите название товара",
+      "priceLabel": "Цена",
+      "currencyLabel": "Валюта",
+      "quantityLabel": "Количество",
+      "additionalFields": "Дополнительные поля",
+      "images": "Изображения товара (до 3)",
+      "dragDrop": "Перетащите изображения сюда или нажмите для выбора",
+      "selectImages": "Выбрать изображения",
+      "preview": "Предпросмотр"
+    },
+    "bot": {
+      "recommend": "Подключение Telegram-бота необязательно, но рекомендуется. Вы всегда можете добавить его позже в настройках.",
+      "tokenLabel": "Telegram Bot Token",
+      "tokenPlaceholder": "Введите токен вашего Telegram-бота",
+      "needHelp": "Нужна помощь с получением токена бота?",
+      "howToGet": "Как получить Telegram Bot Token"
+    },
+    "completionStep": {
+      "congrats": "🎉 Поздравляем!",
+      "subtitle": "Ваша организация и первый товар готовы!",
+      "summary": "Итоги настройки",
+      "organization": "Организация",
+      "category": "Категория",
+      "botConnected": "Бот подключён",
+      "yes": "Да",
+      "no": "Нет",
+      "goDashboard": "Перейти в панель управления",
+      "previewBot": "Просмотр в Telegram-боте",
+      "footer": "Вы всегда можете изменить эти настройки позже в панели управления."
+    }
   },
   "errors": {
     "generic": "Произошла ошибка",
@@ -628,5 +783,360 @@
       "FAILED": "Ошибка",
       "SKIPPED": "Пропущено"
     }
+  },
+  "analytics": {
+    "title": "Аналитика",
+    "subtitle": "Аналитика и показатели эффективности вашего магазина",
+    "export": "Экспорт",
+    "timeRange": {
+      "last7Days": "Последние 7 дней",
+      "last30Days": "Последние 30 дней",
+      "last90Days": "Последние 90 дней",
+      "lastYear": "Последний год"
+    },
+    "metrics": {
+      "totalRevenue": "Общая выручка",
+      "totalOrders": "Всего заказов",
+      "newCustomers": "Новые клиенты",
+      "conversionRate": "Конверсия",
+      "fromLastPeriod": "с прошлого периода"
+    },
+    "tabs": {
+      "overview": "Обзор",
+      "products": "Товары",
+      "customers": "Клиенты",
+      "funnel": "Воронка"
+    },
+    "revenueTrend": "Динамика выручки",
+    "revenueTrendDesc": "Ежедневная выручка за выбранный период",
+    "ordersCustomers": "Заказы и клиенты",
+    "ordersCustomersDesc": "Ежедневные заказы и новые клиенты",
+    "salesByCategory": "Продажи по категориям",
+    "salesByCategoryDesc": "Распределение выручки по категориям товаров",
+    "topProducts": "Топ товаров",
+    "topProductsDesc": "Товары по объёму продаж и выручке",
+    "unitsSold": "шт. продано",
+    "inStock": "на складе",
+    "productComparison": "Сравнение продаж товаров",
+    "productComparisonDesc": "Сравнение выручки по топовым товарам",
+    "customerAcquisition": "Привлечение клиентов",
+    "customerAcquisitionDesc": "Новые клиенты со временем",
+    "customerMetrics": "Метрики клиентов",
+    "customerMetricsDesc": "Ключевые показатели по клиентам",
+    "totalCustomers": "Всего клиентов",
+    "avgOrdersCustomer": "Ср. заказов/клиент",
+    "avgOrderValue": "Ср. чек",
+    "repeatRate": "Повторные покупки",
+    "conversionFunnel": "Воронка конверсии",
+    "conversionFunnelDesc": "Путь клиента от диалога до завершённого заказа",
+    "conversionRates": "Конверсии",
+    "dropOffAnalysis": "Анализ оттока",
+    "optimizationTips": "Советы по оптимизации",
+    "funnel": {
+      "conversationInquiry": "Диалог → Запрос",
+      "inquiryCart": "Запрос → Корзина",
+      "cartOrder": "Корзина → Заказ",
+      "orderCompletion": "Заказ → Завершение"
+    },
+    "dropoff": {
+      "lostInquiry": "Потеряно на запросе",
+      "lostCart": "Потеряно в корзине",
+      "lostCheckout": "Потеряно на оплате",
+      "incompleteOrders": "Незавершённые заказы"
+    },
+    "tips": {
+      "descriptions": "Улучшите описания товаров, чтобы снизить отток на этапе запроса",
+      "checkout": "Упростите оформление, чтобы снизить брошенные корзины",
+      "followup": "Свяжитесь по незавершённым заказам в течение 24 часов"
+    }
+  },
+  "billing": {
+    "title": "Оплата и тарифы",
+    "subtitle": "Управление подпиской и платёжной информацией",
+    "upgradePlan": "Повысить тариф",
+    "tabs": {
+      "overview": "Обзор",
+      "usage": "Использование",
+      "invoices": "Счета"
+    },
+    "status": {
+      "active": "Активна",
+      "trial": "Пробный",
+      "pastDue": "Просрочена",
+      "cancelled": "Отменена",
+      "paid": "Оплачен",
+      "pending": "Ожидает",
+      "draft": "Черновик",
+      "void": "Аннулирован"
+    },
+    "currentPlan": "Текущий тариф",
+    "trialEnds": "Пробный период заканчивается {{date}}",
+    "free": "Бесплатно",
+    "perMonth": "/мес",
+    "perMonthShort": "/мес",
+    "perMonthLabel": "в месяц",
+    "renews": "Продление {{date}}",
+    "cancels": "Отмена {{date}}",
+    "aiConversations": "AI-диалоги",
+    "products": "Товары",
+    "bots": "Боты",
+    "teamMembers": "Участники команды",
+    "unlimited": "Безлимит",
+    "usageDetails": "Детали использования",
+    "usageDetailsDesc": "Использование в текущем периоде",
+    "approachingLimit": "⚠️ Приближается лимит — рассмотрите повышение тарифа",
+    "invoiceHistory": "История счетов",
+    "invoiceHistoryDesc": "История оплат по этой подписке",
+    "noInvoices": "Счетов пока нет.",
+    "table": {
+      "invoice": "Счёт",
+      "status": "Статус",
+      "amount": "Сумма",
+      "period": "Период",
+      "dueDate": "Срок оплаты"
+    },
+    "overageIncl": "(вкл. ${{amount}} превышение)",
+    "chooseYourPlan": "Выберите тариф",
+    "chooseYourPlanDesc": "Выберите тариф, который лучше всего подходит вашему бизнесу",
+    "mostPopular": "Популярный",
+    "currentPlanBtn": "Текущий тариф",
+    "switchTo": "Перейти на {{name}}",
+    "cancelSubscription": "Отменить подписку",
+    "planFeatures": {
+      "FREE": [
+        "100 AI-диалогов/мес",
+        "50 товаров",
+        "1 бот",
+        "1 участник"
+      ],
+      "STARTER": [
+        "500 AI-диалогов/мес",
+        "500 товаров",
+        "1 бот",
+        "3 участника",
+        "$0.04/доп. диалог"
+      ],
+      "GROWTH": [
+        "2 000 AI-диалогов/мес",
+        "2 000 товаров",
+        "3 бота",
+        "10 участников",
+        "$0.04/доп. диалог"
+      ],
+      "SCALE": [
+        "8 000 AI-диалогов/мес",
+        "Безлимит товаров",
+        "Безлимит ботов",
+        "Безлимит участников",
+        "$0.04/доп. диалог"
+      ]
+    }
+  },
+  "team": {
+    "title": "Управление командой",
+    "subtitle": "Управление участниками, ролями и правами",
+    "inviteMember": "Пригласить",
+    "inviteDialog": {
+      "title": "Пригласить участника",
+      "desc": "Отправьте приглашение присоединиться к команде",
+      "emailLabel": "Email",
+      "emailPlaceholder": "colleague@example.com",
+      "roleLabel": "Роль",
+      "permissionsLabel": "Права",
+      "messageLabel": "Личное сообщение (необязательно)",
+      "messagePlaceholder": "Добро пожаловать в команду! Рады видеть вас с нами.",
+      "cancel": "Отмена",
+      "send": "Отправить приглашение"
+    },
+    "tabs": {
+      "members": "Участники",
+      "invitations": "Приглашения",
+      "roles": "Роли и права"
+    },
+    "membersCard": {
+      "title": "Участники ({{count}})",
+      "desc": "Управляйте участниками команды и их доступом"
+    },
+    "table": {
+      "member": "Участник",
+      "role": "Роль",
+      "status": "Статус",
+      "departments": "Отделы",
+      "lastActive": "Активность",
+      "actions": "Действия",
+      "email": "Email",
+      "invitedBy": "Пригласил",
+      "sent": "Отправлено",
+      "expires": "Истекает"
+    },
+    "actions": {
+      "editMember": "Редактировать",
+      "managePermissions": "Настроить права",
+      "removeMember": "Удалить участника",
+      "resendInvitation": "Отправить повторно",
+      "cancelInvitation": "Отменить приглашение"
+    },
+    "status": {
+      "active": "Активен",
+      "pending": "Ожидает",
+      "suspended": "Заблокирован",
+      "expired": "Истёк"
+    },
+    "lastActive": {
+      "never": "Никогда",
+      "minutesAgo": "{{count}} мин назад",
+      "hoursAgo": "{{count}} ч назад",
+      "daysAgo": "{{count}} д назад"
+    },
+    "invitationsCard": {
+      "title": "Приглашения ({{count}})",
+      "desc": "Отслеживайте отправленные приглашения и их статус"
+    },
+    "unknown": "Неизвестно",
+    "rolesCard": {
+      "permissionsCount": "Права ({{count}})",
+      "default": "По умолчанию",
+      "editRole": "Изменить роль",
+      "delete": "Удалить"
+    },
+    "editDialog": {
+      "title": "Редактировать участника",
+      "desc": "Обновите роль и права участника",
+      "roleLabel": "Роль",
+      "statusLabel": "Статус",
+      "statusActive": "Активен",
+      "statusSuspended": "Заблокирован",
+      "cancel": "Отмена",
+      "save": "Сохранить"
+    }
+  },
+  "conversations": {
+    "title": "Диалоги",
+    "subtitle": "Управляйте диалогами с клиентами и оказывайте поддержку",
+    "searchPlaceholder": "Поиск диалогов...",
+    "statusPlaceholder": "Статус",
+    "priorityPlaceholder": "Приоритет",
+    "filters": {
+      "allStatus": "Все статусы",
+      "allPriority": "Все приоритеты"
+    },
+    "status": {
+      "active": "Активен",
+      "waiting": "Ожидание",
+      "resolved": "Решён",
+      "archived": "В архиве"
+    },
+    "priority": {
+      "low": "Низкий",
+      "medium": "Средний",
+      "high": "Высокий",
+      "urgent": "Срочный"
+    },
+    "actions": {
+      "markResolved": "Отметить решённым",
+      "assignOperator": "Назначить оператора",
+      "archive": "В архив",
+      "changePriority": "Изменить приоритет",
+      "archiveConversation": "Архивировать диалог"
+    },
+    "messagesCount": "{{count}} сообщений",
+    "openChat": "Открыть чат",
+    "time": {
+      "minutesAgo": "{{count}} мин назад",
+      "hoursAgo": "{{count}} ч назад",
+      "daysAgo": "{{count}} д назад"
+    },
+    "empty": {
+      "title": "Диалоги не найдены",
+      "filtersHint": "Попробуйте изменить фильтры, чтобы увидеть больше диалогов.",
+      "defaultHint": "Диалоги с клиентами появятся здесь, когда они начнут писать вашему боту."
+    },
+    "detail": {
+      "customerInfo": "Инфо о клиенте",
+      "conversationDetails": "Детали диалога",
+      "statusLabel": "Статус",
+      "priorityLabel": "Приоритет",
+      "assignedOperator": "Назначенный оператор",
+      "selectOperator": "Выберите оператора",
+      "tags": "Теги",
+      "telegramId": "Telegram ID: {{id}}",
+      "joined": "Присоединился: {{date}}",
+      "typeMessage": "Введите сообщение...",
+      "today": "Сегодня",
+      "yesterday": "Вчера"
+    }
+  },
+  "productForm": {
+    "info": "Информация о товаре",
+    "infoDesc": "Заполните данные товара по вашей схеме",
+    "scanBarcode": "Сканировать штрихкод",
+    "schema": "Схема товара",
+    "selectSchema": "Выберите схему",
+    "name": "Название товара",
+    "namePlaceholder": "Введите название товара",
+    "nameRequired": "Название товара обязательно",
+    "price": "Цена",
+    "priceRequired": "Цена обязательна",
+    "priceMin": "Цена должна быть больше 0",
+    "pricePlaceholder": "0.00",
+    "quantity": "Количество",
+    "quantityRequired": "Количество обязательно",
+    "quantityNegative": "Количество не может быть отрицательным",
+    "quantityPlaceholder": "0",
+    "currency": "Валюта",
+    "currencyRequired": "Валюта обязательна",
+    "selectCurrency": "Выберите валюту",
+    "status": "Статус",
+    "statusRequired": "Статус обязателен",
+    "selectStatus": "Выберите статус",
+    "statusActive": "Активный",
+    "statusDraft": "Черновик",
+    "statusArchived": "В архиве",
+    "noFields": "В этой схеме нет дополнительных полей",
+    "images": "Изображения товара",
+    "imagesDesc": "Загрузите изображения товара",
+    "uploadImages": "Загрузить изображения",
+    "imagesCount": "{{count}} изобр.",
+    "uploading": "Загрузка...",
+    "imageN": "Изображение {{n}}",
+    "cancel": "Отмена",
+    "saving": "Сохранение...",
+    "updateProduct": "Обновить товар",
+    "createProduct": "Создать товар",
+    "schemaLoadFailed": "Не удалось загрузить схему товара: {{msg}}",
+    "fieldRequired": "Поле «{{field}}» обязательно",
+    "fieldMin": "«{{field}}» должно быть больше 0",
+    "enterField": "Введите: {{field}}",
+    "selectField": "Выберите: {{field}}",
+    "enterFieldJson": "Введите {{field}} в формате JSON",
+    "currencies": {
+      "USD": "USD — доллар США",
+      "EUR": "EUR — евро",
+      "UZS": "UZS — узбекский сум",
+      "RUB": "RUB — российский рубль",
+      "KZT": "KZT — казахстанский тенге",
+      "GBP": "GBP — фунт стерлингов",
+      "JPY": "JPY — японская иена"
+    }
+  },
+  "postForm": {
+    "channel": "Канал",
+    "channelDesc": "Выберите канал для публикации",
+    "selectChannel": "Выберите канал",
+    "product": "Товар",
+    "productDesc": "Выберите товар для авто-генерации текста поста",
+    "selectProduct": "Выберите товар",
+    "content": "Содержание",
+    "contentDesc": "Отредактируйте текст поста",
+    "contentPlaceholder": "Текст поста...",
+    "charactersCount": "{{count}} символов",
+    "publishing": "Публикация",
+    "publishingDesc": "Выберите, как и когда опубликовать пост",
+    "status": "Статус",
+    "statusDraft": "Черновик",
+    "statusSend": "Отправить сейчас",
+    "statusSchedule": "Запланировать",
+    "scheduledAt": "Запланировано на",
+    "createPost": "Создать пост"
   }
 }

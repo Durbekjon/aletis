@@ -14,6 +14,7 @@ import { useOnboarding } from "@/src/hooks/useOnboarding"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import onboardingApi, { SchemaField } from "@/src/services/onboardingApi"
 import { useToast } from "@/hooks/use-toast"
+import { useTranslation } from "@/src/context/I18nContext"
 
 interface FirstProductStepProps {
   data: OnboardingData
@@ -22,6 +23,7 @@ interface FirstProductStepProps {
 }
 
 export function FirstProductStep({ data, onUpdate, onNext }: FirstProductStepProps) {
+  const { t } = useTranslation()
   const [product, setProduct] = useState(data.firstProduct)
   const [dragOver, setDragOver] = useState(false)
   const { uploadImagesAndCreateProduct, loading, error } = useOnboarding()
@@ -131,18 +133,18 @@ export function FirstProductStep({ data, onUpdate, onNext }: FirstProductStepPro
         {/* Product Form */}
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="productName">Product Name *</Label>
+            <Label htmlFor="productName">{t("onboarding.product.nameLabel")} *</Label>
             <Input
               id="productName"
               value={product.name}
               onChange={(e) => handleInputChange("name", e.target.value)}
-              placeholder="Enter product name"
+              placeholder={t("onboarding.product.namePlaceholder")}
             />
           </div>
 
           <div className="grid grid-cols-3 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="price">Price *</Label>
+              <Label htmlFor="price">{t("onboarding.product.priceLabel")} *</Label>
               <Input
                 id="price"
                 type="number"
@@ -154,7 +156,7 @@ export function FirstProductStep({ data, onUpdate, onNext }: FirstProductStepPro
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="currency">Currency *</Label>
+              <Label htmlFor="currency">{t("onboarding.product.currencyLabel")} *</Label>
               <Select
                 value={product.currency || "USD"}
                 onValueChange={(value) => handleInputChange("currency", value)}
@@ -174,7 +176,7 @@ export function FirstProductStep({ data, onUpdate, onNext }: FirstProductStepPro
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="quantity">Quantity</Label>
+              <Label htmlFor="quantity">{t("onboarding.product.quantityLabel")}</Label>
               <Input
                 id="quantity"
                 type="number"
@@ -189,7 +191,7 @@ export function FirstProductStep({ data, onUpdate, onNext }: FirstProductStepPro
       {/* Dynamic Fields based on schema */}
       {schemaFields.length > 0 && (
         <div className="space-y-4">
-          <Label>Additional Fields</Label>
+          <Label>{t("onboarding.product.additionalFields")}</Label>
           {schemaFields.map((f) => (
             <div key={f.id} className="space-y-2">
               <Label>{f.name}{f.required ? " *" : ""}</Label>
@@ -237,7 +239,7 @@ export function FirstProductStep({ data, onUpdate, onNext }: FirstProductStepPro
 
           {/* Image Upload */}
           <div className="space-y-2">
-            <Label>Product Images (up to 3)</Label>
+            <Label>{t("onboarding.product.images")}</Label>
             <div
               className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
                 dragOver ? "border-primary bg-primary/5" : "border-muted-foreground/25"
@@ -250,7 +252,7 @@ export function FirstProductStep({ data, onUpdate, onNext }: FirstProductStepPro
               onDragLeave={() => setDragOver(false)}
             >
               <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-              <p className="text-sm text-muted-foreground mb-2">Drag and drop images here, or click to select</p>
+              <p className="text-sm text-muted-foreground mb-2">{t("onboarding.product.dragDrop")}</p>
               <input
                 type="file"
                 multiple
@@ -265,7 +267,7 @@ export function FirstProductStep({ data, onUpdate, onNext }: FirstProductStepPro
                 onClick={() => document.getElementById("image-upload")?.click()}
                 disabled={product.images.length >= 3}
               >
-                Select Images
+                {t("onboarding.product.selectImages")}
               </Button>
             </div>
 
@@ -298,7 +300,7 @@ export function FirstProductStep({ data, onUpdate, onNext }: FirstProductStepPro
         <div className="space-y-4">
           <div className="flex items-center gap-2">
             <Eye className="h-4 w-4" />
-            <Label>Preview</Label>
+            <Label>{t("onboarding.product.preview")}</Label>
           </div>
           <Card>
             <CardHeader className="pb-3">
@@ -331,7 +333,7 @@ export function FirstProductStep({ data, onUpdate, onNext }: FirstProductStepPro
         disabled={!product.name || product.price <= 0 || uploadedImageIds.length === 0 || loading || isUploading}
         className="w-full flex items-center gap-2"
       >
-        Continue
+        {t("onboarding.continue")}
         <ArrowRight className="h-4 w-4" />
       </Button>
     </div>

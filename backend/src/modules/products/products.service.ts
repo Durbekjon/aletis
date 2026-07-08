@@ -28,6 +28,7 @@ import { ActivityLogService } from '../activity-log/activity-log.service';
 import { EmbadingService } from '@modules/embading/embading.service';
 import { CustomerIntelligenceService } from '@modules/customer-intelligence/customer-intelligence.service';
 import { UsageService } from '../usage/usage.service';
+import { PostsService } from '../posts/posts.service';
 
 @Injectable()
 export class ProductsService {
@@ -69,6 +70,7 @@ export class ProductsService {
     private readonly embadingService: EmbadingService,
     @Optional() private readonly customerIntelligenceService?: CustomerIntelligenceService,
     @Optional() private readonly usageService?: UsageService,
+    @Optional() private readonly postsService?: PostsService,
   ) {}
 
   // ==================== CACHE HELPER METHODS ====================
@@ -487,6 +489,16 @@ export class ProductsService {
           .notifyInterestedCustomers(notifyProduct as any, organizationId)
           .catch((err) =>
             this.logger.warn(`Interest notification failed: ${err.message}`),
+          );
+      }
+
+      // Auto-publish the new product to the organization's connected channel
+      // (fire-and-forget — product creation must never fail because of posting).
+      if (createProductDto.status === 'ACTIVE' && this.postsService) {
+        this.postsService
+          .autoPostProduct(result.product.id, organizationId)
+          .catch((err) =>
+            this.logger.warn(`Auto-post to channel failed: ${err.message}`),
           );
       }
 

@@ -1,6 +1,7 @@
 "use client"
 
 import { useMemo } from "react"
+import { useTranslation } from "@/src/context/I18nContext"
 import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -14,6 +15,7 @@ import type { FormData } from "@/src/hooks/useDynamicProductForm"
 export default function ProductDetailPage() {
   const params = useParams()
   const router = useRouter()
+  const { t } = useTranslation()
   const idParam = Array.isArray(params?.id) ? params.id[0] : (params?.id as string)
   const productId = Number(idParam)
 
@@ -86,7 +88,7 @@ export default function ProductDetailPage() {
     return (
       <Alert variant="destructive">
         <AlertCircle className="h-4 w-4" />
-        <AlertDescription>Failed to load product.</AlertDescription>
+        <AlertDescription>{t('products.loadFailed')}</AlertDescription>
       </Alert>
     )
   }
@@ -97,7 +99,7 @@ export default function ProductDetailPage() {
         <Button variant="outline" size="sm" asChild>
           <Link href="/products">
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Back to Products
+            {t('products.backToProducts')}
           </Link>
         </Button>
       </div>

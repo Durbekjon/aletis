@@ -9,6 +9,7 @@ import { BUSINESS_CATEGORIES } from "@/lib/constants"
 import { ArrowRight, Sparkles } from "lucide-react"
 import { useOnboarding } from "@/src/hooks/useOnboarding"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { useTranslation } from "@/src/context/I18nContext"
 
 interface CategoryStepProps {
   data: OnboardingData
@@ -17,6 +18,7 @@ interface CategoryStepProps {
 }
 
 export function CategoryStep({ data, onUpdate, onNext }: CategoryStepProps) {
+  const { t } = useTranslation()
   const [category, setCategory] = useState(data.category)
   const { updateCategory, loading, error } = useOnboarding()
   const selectRef = useRef<HTMLButtonElement>(null)
@@ -70,10 +72,10 @@ export function CategoryStep({ data, onUpdate, onNext }: CategoryStepProps) {
       )} */}
 
       <div className="space-y-2">
-        <Label htmlFor="category">Business Category *</Label>
+        <Label htmlFor="category">{t("onboarding.categoryStep.label")} *</Label>
         <Select value={category} onValueChange={(value) => handleSelectCategory(value as string)}>
           <SelectTrigger ref={selectRef} className="w-full">
-            <SelectValue placeholder="Select your business category" />
+            <SelectValue placeholder={t("onboarding.categoryStep.placeholder")} />
           </SelectTrigger>
           <SelectContent>
             {BUSINESS_CATEGORIES.map((cat) => (
@@ -84,7 +86,7 @@ export function CategoryStep({ data, onUpdate, onNext }: CategoryStepProps) {
           </SelectContent>
         </Select>
         <p className="text-sm text-muted-foreground">
-          This helps us suggest the right product fields for your business
+          {t("onboarding.categoryStep.help")}
         </p>
       </div>
 
@@ -94,7 +96,7 @@ export function CategoryStep({ data, onUpdate, onNext }: CategoryStepProps) {
         </Alert>
       )}
       <Button onClick={handleNext} disabled={!category || loading} className="w-full flex items-center gap-2">
-        Continue
+        {t("onboarding.continue")}
         <ArrowRight className="h-4 w-4" />
       </Button>
     </div>

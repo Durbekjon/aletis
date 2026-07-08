@@ -328,14 +328,35 @@ export class WebhookService {
           return { status: 'error', error: 'Product not found' };
         }
 
+        // Localize the product message based on the customer's language
+        const lang = customer.lang || 'uz';
+        const L = {
+          price: lang === 'ru' ? 'Цена' : lang === 'en' ? 'Price' : 'Narxi',
+          quantity:
+            lang === 'ru'
+              ? 'Количество'
+              : lang === 'en'
+                ? 'Quantity'
+                : 'Miqdori',
+          status:
+            lang === 'ru' ? 'Статус' : lang === 'en' ? 'Status' : 'Holati',
+          yes: lang === 'ru' ? 'Да' : lang === 'en' ? 'Yes' : 'Ha',
+          no: lang === 'ru' ? 'Нет' : lang === 'en' ? 'No' : "Yo'q",
+          order:
+            lang === 'ru'
+              ? '📦 Оформить заказ'
+              : lang === 'en'
+                ? '📦 Place order'
+                : '📦 Buyurtma berish',
+        };
+
         // Format product fields
         const fieldsText = product.fields
           .map((fv) => {
             let value = '';
             if (fv.valueText) value = fv.valueText;
             else if (fv.valueNumber !== null) value = String(fv.valueNumber);
-            else if (fv.valueBool !== null)
-              value = fv.valueBool ? 'Ha' : "Yo'q";
+            else if (fv.valueBool !== null) value = fv.valueBool ? L.yes : L.no;
             else if (fv.valueDate)
               value = new Date(fv.valueDate).toLocaleDateString();
             else if (fv.valueJson) value = String(fv.valueJson);
@@ -346,11 +367,11 @@ export class WebhookService {
         // Build product message
         const productMessage =
           `<b>${product.name}</b>\n\n` +
-          `<b>Narxi:</b> ${product.price} ${product.currency}\n` +
-          `<b>Miqdori:</b> ${product.quantity}\n` +
-          `<b>Holati:</b> ${product.status}\n` +
+          `<b>${L.price}:</b> ${product.price} ${product.currency}\n` +
+          `<b>${L.quantity}:</b> ${product.quantity}\n` +
+          `<b>${L.status}:</b> ${product.status}\n` +
           (fieldsText ? `\n${fieldsText}\n` : '') +
-          `\n<a href="https://t.me/${bot.username}?start=order_${product.id}">📦 Buyurtma berish</a>`;
+          `\n<a href="https://t.me/${bot.username}?start=order_${product.id}">${L.order}</a>`;
 
         // Send product images if available
         if (product.images && product.images.length > 0) {

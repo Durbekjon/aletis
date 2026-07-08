@@ -1,6 +1,8 @@
 "use client"
 
 import { useState } from "react"
+import { useTranslation } from "@/src/context/I18nContext"
+import { LanguageSwitcher } from "@/components/language-switcher"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -32,16 +34,16 @@ import {
 } from "@/src/hooks/useBilling"
 import type { PlanTier, SubscriptionStatus, InvoiceStatus } from "@/src/api/billingApi"
 
-function getStatusBadge(status: SubscriptionStatus | InvoiceStatus | string) {
-  const map: Record<string, { label: string; color: string; icon: React.ElementType }> = {
-    ACTIVE:    { label: "Active",    color: "bg-primary",    icon: CheckCircle },
-    TRIALING:  { label: "Trial",     color: "bg-blue-500",   icon: Zap },
-    PAST_DUE:  { label: "Past Due",  color: "bg-yellow-500", icon: Clock },
-    CANCELLED: { label: "Cancelled", color: "bg-red-500",    icon: AlertCircle },
-    PAID:      { label: "Paid",      color: "bg-primary",    icon: CheckCircle },
-    OPEN:      { label: "Pending",   color: "bg-yellow-500", icon: Clock },
-    DRAFT:     { label: "Draft",     color: "bg-gray-400",   icon: Clock },
-    VOID:      { label: "Void",      color: "bg-gray-500",   icon: AlertCircle },
+function getStatusBadge(status: SubscriptionStatus | InvoiceStatus | string, t: (key: string) => string) {
+  const map: Record<string, { key: string; color: string; icon: React.ElementType }> = {
+    ACTIVE:    { key: "active",    color: "bg-primary",    icon: CheckCircle },
+    TRIALING:  { key: "trial",     color: "bg-blue-500",   icon: Zap },
+    PAST_DUE:  { key: "pastDue",   color: "bg-yellow-500", icon: Clock },
+    CANCELLED: { key: "cancelled", color: "bg-red-500",    icon: AlertCircle },
+    PAID:      { key: "paid",      color: "bg-primary",    icon: CheckCircle },
+    OPEN:      { key: "pending",   color: "bg-yellow-500", icon: Clock },
+    DRAFT:     { key: "draft",     color: "bg-gray-400",   icon: Clock },
+    VOID:      { key: "void",      color: "bg-gray-500",   icon: AlertCircle },
   }
   const config = map[status.toUpperCase()]
   if (!config) return null
@@ -49,7 +51,7 @@ function getStatusBadge(status: SubscriptionStatus | InvoiceStatus | string) {
   return (
     <Badge variant="outline" className={`${config.color} text-white flex items-center gap-1`}>
       <Icon className="h-3 w-3" />
-      {config.label}
+      {t(`billing.status.${config.key}`)}
     </Badge>
   )
 }
@@ -58,8 +60,8 @@ function formatDate(date: string | Date) {
   return new Date(date).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })
 }
 
-function formatLimit(limit: number) {
-  return limit === -1 ? "Unlimited" : limit.toLocaleString()
+function formatLimit(limit: number, t: (key: string) => string) {
+  return limit === -1 ? t("billing.unlimited") : limit.toLocaleString()
 }
 
 function usagePercent(current: number, limit: number) {
@@ -67,14 +69,8 @@ function usagePercent(current: number, limit: number) {
   return Math.min((current / limit) * 100, 100)
 }
 
-const PLAN_FEATURES: Record<PlanTier, string[]> = {
-  FREE:    ["100 AI conversations/mo", "50 products", "1 bot", "1 team member"],
-  STARTER: ["500 AI conversations/mo", "500 products", "1 bot", "3 team members", "$0.04/extra convo"],
-  GROWTH:  ["2,000 AI conversations/mo", "2,000 products", "3 bots", "10 team members", "$0.04/extra convo"],
-  SCALE:   ["8,000 AI conversations/mo", "Unlimited products", "Unlimited bots", "Unlimited team members", "$0.04/extra convo"],
-}
-
 export default function BillingPage() {
+  const { t } = useTranslation()
   const [isUpgradeDialogOpen, setIsUpgradeDialogOpen] = useState(false)
 
   const { data: dashboard, isLoading: dashLoading } = useBillingDashboard()
@@ -90,22 +86,25 @@ export default function BillingPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Billing & Plans</h1>
-          <p className="text-muted-foreground">Manage your subscription and billing information</p>
+          <h1 className="text-2xl sm:text-3xl font-bold">{t('billing.title')}</h1>
+          <p className="text-muted-foreground">{t('billing.subtitle')}</p>
         </div>
-        <Button onClick={() => setIsUpgradeDialogOpen(true)}>
-          <Crown className="h-4 w-4 mr-2" />
-          Upgrade Plan
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <LanguageSwitcher />
+          <Button onClick={() => setIsUpgradeDialogOpen(true)}>
+            <Crown className="h-4 w-4 mr-2" />
+            {t('billing.upgradePlan')}
+          </Button>
+        </div>
       </div>
 
       <Tabs defaultValue="overview" className="space-y-6">
         <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="usage">Usage</TabsTrigger>
-          <TabsTrigger value="invoices">Invoices</TabsTrigger>
+          <TabsTrigger value="overview">{t('billing.tabs.overview')}</TabsTrigger>
+          <TabsTrigger value="usage">{t('billing.tabs.usage')}</TabsTrigger>
+          <TabsTrigger value="invoices">{t('billing.tabs.invoices')}</TabsTrigger>
         </TabsList>
 
         {/* ── Overview ─────────────────────────────────────────── */}
@@ -114,7 +113,7 @@ export default function BillingPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Crown className="h-5 w-5" />
-                Current Plan
+                {t('billing.currentPlan')}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -125,32 +124,32 @@ export default function BillingPage() {
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
                       <h3 className="text-2xl font-bold">{dashboard.plan.name}</h3>
-                      {getStatusBadge(dashboard.subscription.status)}
+                      {getStatusBadge(dashboard.subscription.status, t)}
                     </div>
                     {dashboard.subscription.status === "TRIALING" && dashboard.subscription.trialEndsAt && (
                       <p className="text-sm text-blue-600">
-                        Trial ends {formatDate(dashboard.subscription.trialEndsAt)}
+                        {t('billing.trialEnds', { date: formatDate(dashboard.subscription.trialEndsAt) })}
                       </p>
                     )}
                     <div className="flex items-center gap-4 text-sm text-muted-foreground">
                       <span>
                         <DollarSign className="h-4 w-4 inline mr-1" />
-                        {dashboard.plan.priceUsd === 0 ? "Free" : `$${dashboard.plan.priceUsd}/month`}
+                        {dashboard.plan.priceUsd === 0 ? t('billing.free') : `$${dashboard.plan.priceUsd}${t('billing.perMonth')}`}
                       </span>
                       <span>
                         <Calendar className="h-4 w-4 inline mr-1" />
                         {dashboard.subscription.cancelAtPeriodEnd
-                          ? `Cancels ${formatDate(dashboard.subscription.currentPeriodEnd)}`
-                          : `Renews ${formatDate(dashboard.subscription.currentPeriodEnd)}`}
+                          ? t('billing.cancels', { date: formatDate(dashboard.subscription.currentPeriodEnd) })
+                          : t('billing.renews', { date: formatDate(dashboard.subscription.currentPeriodEnd) })}
                       </span>
                     </div>
                   </div>
                   <div className="text-right">
                     <div className="text-3xl font-bold">
-                      {dashboard.plan.priceUsd === 0 ? "Free" : `$${dashboard.plan.priceUsd}`}
+                      {dashboard.plan.priceUsd === 0 ? t('billing.free') : `$${dashboard.plan.priceUsd}`}
                     </div>
                     {dashboard.plan.priceUsd > 0 && (
-                      <div className="text-sm text-muted-foreground">per month</div>
+                      <div className="text-sm text-muted-foreground">{t('billing.perMonthLabel')}</div>
                     )}
                   </div>
                 </div>
@@ -166,42 +165,42 @@ export default function BillingPage() {
               <>
                 <Card>
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">AI Conversations</CardTitle>
+                    <CardTitle className="text-sm font-medium">{t('billing.aiConversations')}</CardTitle>
                     <MessageSquare className="h-4 w-4 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold">{dashboard.usage.aiConvos.current}</div>
                     <Progress value={usagePercent(dashboard.usage.aiConvos.current, dashboard.usage.aiConvos.limit)} className="mt-2" />
                     <p className="text-xs text-muted-foreground mt-1">
-                      {dashboard.usage.aiConvos.current.toLocaleString()} / {formatLimit(dashboard.usage.aiConvos.limit)}
+                      {dashboard.usage.aiConvos.current.toLocaleString()} / {formatLimit(dashboard.usage.aiConvos.limit, t)}
                     </p>
                   </CardContent>
                 </Card>
 
                 <Card>
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Products</CardTitle>
+                    <CardTitle className="text-sm font-medium">{t('billing.products')}</CardTitle>
                     <Package className="h-4 w-4 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold">{dashboard.usage.products.current}</div>
                     <Progress value={usagePercent(dashboard.usage.products.current, dashboard.usage.products.limit)} className="mt-2" />
                     <p className="text-xs text-muted-foreground mt-1">
-                      {dashboard.usage.products.current.toLocaleString()} / {formatLimit(dashboard.usage.products.limit)}
+                      {dashboard.usage.products.current.toLocaleString()} / {formatLimit(dashboard.usage.products.limit, t)}
                     </p>
                   </CardContent>
                 </Card>
 
                 <Card>
                   <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Bots</CardTitle>
+                    <CardTitle className="text-sm font-medium">{t('billing.bots')}</CardTitle>
                     <Bot className="h-4 w-4 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>
                     <div className="text-2xl font-bold">{dashboard.usage.bots.current}</div>
                     <Progress value={usagePercent(dashboard.usage.bots.current, dashboard.usage.bots.limit)} className="mt-2" />
                     <p className="text-xs text-muted-foreground mt-1">
-                      {dashboard.usage.bots.current} / {formatLimit(dashboard.usage.bots.limit)}
+                      {dashboard.usage.bots.current} / {formatLimit(dashboard.usage.bots.limit, t)}
                     </p>
                   </CardContent>
                 </Card>
@@ -214,18 +213,18 @@ export default function BillingPage() {
         <TabsContent value="usage" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Usage Details</CardTitle>
-              <CardDescription>Current billing period usage</CardDescription>
+              <CardTitle>{t('billing.usageDetails')}</CardTitle>
+              <CardDescription>{t('billing.usageDetailsDesc')}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
               {dashLoading || !dashboard ? (
                 <Skeleton className="h-40 w-full" />
               ) : (
                 [
-                  { key: "AI Conversations", icon: MessageSquare, stat: dashboard.usage.aiConvos },
-                  { key: "Products",         icon: Package,       stat: dashboard.usage.products },
-                  { key: "Bots",             icon: Bot,           stat: dashboard.usage.bots },
-                  { key: "Team Members",     icon: Users,         stat: dashboard.usage.teamMembers },
+                  { key: t('billing.aiConversations'), icon: MessageSquare, stat: dashboard.usage.aiConvos },
+                  { key: t('billing.products'), icon: Package, stat: dashboard.usage.products },
+                  { key: t('billing.bots'), icon: Bot, stat: dashboard.usage.bots },
+                  { key: t('billing.teamMembers'), icon: Users, stat: dashboard.usage.teamMembers },
                 ].map(({ key, icon: Icon, stat }) => {
                   const pct = usagePercent(stat.current, stat.limit)
                   const isNear = pct > 80 && stat.limit !== -1
@@ -237,12 +236,12 @@ export default function BillingPage() {
                           <span className="font-medium">{key}</span>
                         </div>
                         <span className="text-sm text-muted-foreground">
-                          {stat.current.toLocaleString()} / {formatLimit(stat.limit)}
+                          {stat.current.toLocaleString()} / {formatLimit(stat.limit, t)}
                         </span>
                       </div>
                       <Progress value={pct} className={isNear ? "bg-red-100" : ""} />
                       {isNear && (
-                        <p className="text-xs text-red-600">⚠️ Approaching limit — consider upgrading</p>
+                        <p className="text-xs text-red-600">{t('billing.approachingLimit')}</p>
                       )}
                     </div>
                   )
@@ -256,35 +255,35 @@ export default function BillingPage() {
         <TabsContent value="invoices" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Invoice History</CardTitle>
-              <CardDescription>Your billing history for this subscription</CardDescription>
+              <CardTitle>{t('billing.invoiceHistory')}</CardTitle>
+              <CardDescription>{t('billing.invoiceHistoryDesc')}</CardDescription>
             </CardHeader>
             <CardContent>
               {invoicesLoading ? (
                 <Skeleton className="h-40 w-full" />
               ) : !invoices || invoices.length === 0 ? (
-                <p className="text-muted-foreground text-sm py-8 text-center">No invoices yet.</p>
+                <p className="text-muted-foreground text-sm py-8 text-center">{t('billing.noInvoices')}</p>
               ) : (
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Invoice</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Amount</TableHead>
-                      <TableHead>Period</TableHead>
-                      <TableHead>Due Date</TableHead>
+                      <TableHead>{t('billing.table.invoice')}</TableHead>
+                      <TableHead>{t('billing.table.status')}</TableHead>
+                      <TableHead>{t('billing.table.amount')}</TableHead>
+                      <TableHead>{t('billing.table.period')}</TableHead>
+                      <TableHead>{t('billing.table.dueDate')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {invoices.map((inv) => (
                       <TableRow key={inv.id}>
                         <TableCell className="font-medium">{inv.invoiceNumber}</TableCell>
-                        <TableCell>{getStatusBadge(inv.status)}</TableCell>
+                        <TableCell>{getStatusBadge(inv.status, t)}</TableCell>
                         <TableCell>
                           ${(inv.amountUsd + inv.overageAmountUsd).toFixed(2)}
                           {inv.overageAmountUsd > 0 && (
                             <span className="text-xs text-muted-foreground ml-1">
-                              (incl. ${inv.overageAmountUsd.toFixed(2)} overage)
+                              {t('billing.overageIncl', { amount: inv.overageAmountUsd.toFixed(2) })}
                             </span>
                           )}
                         </TableCell>
@@ -308,8 +307,8 @@ export default function BillingPage() {
       <Dialog open={isUpgradeDialogOpen} onOpenChange={setIsUpgradeDialogOpen}>
         <DialogContent className="sm:max-w-240 max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Choose Your Plan</DialogTitle>
-            <DialogDescription>Select the plan that best fits your business needs</DialogDescription>
+            <DialogTitle>{t('billing.chooseYourPlan')}</DialogTitle>
+            <DialogDescription>{t('billing.chooseYourPlanDesc')}</DialogDescription>
           </DialogHeader>
           {plansLoading || !plans ? (
             <div className="grid gap-6 md:grid-cols-4">
@@ -324,7 +323,7 @@ export default function BillingPage() {
                   <Card key={plan.id} className={`relative ${isPopular ? "border-primary" : ""}`}>
                     {isPopular && (
                       <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                        <Badge className="bg-primary">Most Popular</Badge>
+                        <Badge className="bg-primary">{t('billing.mostPopular')}</Badge>
                       </div>
                     )}
                     <CardHeader>
@@ -333,13 +332,13 @@ export default function BillingPage() {
                         {plan.name}
                       </CardTitle>
                       <div className="text-3xl font-bold">
-                        {plan.priceUsd === 0 ? "Free" : `$${plan.priceUsd}`}
-                        {plan.priceUsd > 0 && <span className="text-sm font-normal text-muted-foreground">/mo</span>}
+                        {plan.priceUsd === 0 ? t('billing.free') : `$${plan.priceUsd}`}
+                        {plan.priceUsd > 0 && <span className="text-sm font-normal text-muted-foreground">{t('billing.perMonthShort')}</span>}
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-4">
                       <ul className="space-y-2">
-                        {(PLAN_FEATURES[plan.tier] ?? []).map((f, i) => (
+                        {((t(`billing.planFeatures.${plan.tier}`, { returnObjects: true }) as string[]) ?? []).map((f, i) => (
                           <li key={i} className="flex items-center gap-2 text-sm">
                             <Check className="h-4 w-4 text-primary shrink-0" />
                             {f}
@@ -352,7 +351,7 @@ export default function BillingPage() {
                         disabled={isCurrent || changePlan.isPending}
                         onClick={() => handleChangePlan(plan.tier)}
                       >
-                        {isCurrent ? "Current Plan" : `Switch to ${plan.name}`}
+                        {isCurrent ? t('billing.currentPlanBtn') : t('billing.switchTo', { name: plan.name })}
                       </Button>
                     </CardContent>
                   </Card>
@@ -371,7 +370,7 @@ export default function BillingPage() {
                   onClick={() => cancelSub.mutate()}
                   disabled={cancelSub.isPending}
                 >
-                  Cancel subscription
+                  {t('billing.cancelSubscription')}
                 </Button>
               </div>
             )}

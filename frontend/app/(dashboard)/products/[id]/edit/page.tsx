@@ -1,6 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
+import { useTranslation } from "@/src/context/I18nContext"
 import { useParams, useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
@@ -14,6 +15,7 @@ import type { FormData } from "@/src/hooks/useDynamicProductForm"
 export default function EditProductPage() {
   const params = useParams()
   const router = useRouter()
+  const { t } = useTranslation()
   const idParam = params.id
   const productId = Number(idParam)
   const productQuery = useProductQuery(productId)
@@ -119,7 +121,7 @@ export default function EditProductPage() {
       <Alert variant="destructive">
         <AlertCircle className="h-4 w-4" />
         <AlertDescription>
-          Failed to load product. Please try again.
+          {t('products.loadFailedRetry')}
         </AlertDescription>
       </Alert>
     )
@@ -128,8 +130,8 @@ export default function EditProductPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Edit Product</h1>
-        <p className="text-muted-foreground">Update product details and fields</p>
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{t('products.editTitle')}</h1>
+        <p className="text-muted-foreground">{t('products.editDesc')}</p>
       </div>
       <Separator />
       <DynamicProductForm

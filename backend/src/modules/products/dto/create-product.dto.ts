@@ -77,12 +77,13 @@ export class CreateProductDto {
 
   @ApiProperty({
     description: 'The currency of the product',
-    example: Currency.USD,
+    example: Currency.UZS,
+    default: Currency.UZS,
   })
   @IsString()
   @IsNotEmpty()
   @IsEnum(Currency)
-  currency: Currency = Currency.USD;
+  currency: Currency = Currency.UZS;
 
   @ApiProperty({
     description: 'The status of the product',

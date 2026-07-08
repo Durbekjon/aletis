@@ -9,6 +9,7 @@ import { ActivityLogModule } from '../activity-log/activity-log.module';
 import { EmbadingModule } from '../embading/embading.module';
 import { CustomerIntelligenceModule } from '../customer-intelligence/customer-intelligence.module';
 import { UsageModule } from '../usage/usage.module';
+import { PostsModule } from '../posts/posts.module';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { UsageModule } from '../usage/usage.module';
     EmbadingModule,
     CustomerIntelligenceModule,
     UsageModule,
+    PostsModule,
   ],
   controllers: [ProductsController],
   providers: [ProductsService, ProductImportService],
