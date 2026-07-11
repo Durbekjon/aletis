@@ -1,39 +1,27 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { RetentionService } from './retention.service';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
+import { RETENTION_QUEUE } from '@core/queue/queue.module';
 
 /**
- * Daily sweep that detects dormant customers across all organizations and
- * enqueues win-back attempts. Mirrors AnalyticsScheduler's setTimeout/setInterval
- * approach (the project does not use @nestjs/schedule).
+ * Registers the daily dormant-customer sweep as a BullMQ repeatable job so
+ * the schedule persists in Redis and survives process restarts/deploys — the
+ * previous hand-rolled setTimeout/setInterval timer silently skipped a day
+ * whenever the process wasn't up at the scheduled hour. The actual scan runs
+ * in RetentionProcessor (job name 'daily-scan').
  */
 @Injectable()
-export class RetentionScheduler {
+export class RetentionScheduler implements OnModuleInit {
   private readonly logger = new Logger(RetentionScheduler.name);
 
-  constructor(private readonly service: RetentionService) {
-    this.scheduleDaily();
-  }
+  constructor(@InjectQueue(RETENTION_QUEUE) private readonly queue: Queue) {}
 
-  private scheduleDaily(): void {
-    const now = new Date();
-    // Run at 09:00 UTC daily — a sensible hour to reach customers.
-    const next = new Date(
-      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 9, 0, 0, 0),
+  async onModuleInit(): Promise<void> {
+    await this.queue.upsertJobScheduler(
+      'daily-retention-scan',
+      { pattern: '0 9 * * *', tz: 'UTC' }, // 09:00 UTC daily — a sensible hour to reach customers
+      { name: 'daily-scan', opts: { removeOnComplete: true, removeOnFail: 50 } },
     );
-    if (next <= now) next.setUTCDate(next.getUTCDate() + 1);
-    const delay = next.getTime() - now.getTime();
-    setTimeout(() => {
-      this.runScan();
-      setInterval(() => this.runScan(), 24 * 60 * 60 * 1000);
-    }, delay);
-    this.logger.log(
-      `Retention scan scheduled — first run in ${Math.round(delay / 60000)} min`,
-    );
-  }
-
-  private runScan(): void {
-    this.service
-      .scanAllOrganizations()
-      .catch((err) => this.logger.warn(`Daily retention scan failed: ${err.message}`));
+    this.logger.log('Daily retention scan registered (BullMQ repeatable, 09:00 UTC)');
   }
 }

@@ -24,6 +24,15 @@ export class RetentionProcessor extends WorkerHost {
         await this.service.runWinBack(attemptId);
         break;
       }
+      case 'daily-scan': {
+        this.logger.log(`[Job ${job.id}] Running daily retention scan (all orgs)`);
+        try {
+          await this.service.scanAllOrganizations();
+        } catch (err) {
+          this.logger.warn(`Daily retention scan failed: ${err.message}`);
+        }
+        break;
+      }
       default:
         this.logger.warn(`Unknown job name: ${job.name}`);
     }

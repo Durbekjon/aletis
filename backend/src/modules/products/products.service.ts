@@ -25,10 +25,12 @@ import { PaginationDto } from '@shared/dto';
 import { RedisService } from '@core/redis/redis.service';
 import { FileDeleteService } from '@core/file-delete/file-delete.service';
 import { ActivityLogService } from '../activity-log/activity-log.service';
-import { EmbadingService } from '@modules/embading/embading.service';
 import { CustomerIntelligenceService } from '@modules/customer-intelligence/customer-intelligence.service';
 import { UsageService } from '../usage/usage.service';
 import { PostsService } from '../posts/posts.service';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
+import { EMBEDDING_QUEUE } from '@core/queue/queue.module';
 
 @Injectable()
 export class ProductsService {
@@ -67,7 +69,7 @@ export class ProductsService {
     private readonly redis: RedisService,
     private readonly fileDeleteService: FileDeleteService,
     private readonly activityLogService: ActivityLogService,
-    private readonly embadingService: EmbadingService,
+    @InjectQueue(EMBEDDING_QUEUE) private readonly embeddingQueue: Queue,
     @Optional() private readonly customerIntelligenceService?: CustomerIntelligenceService,
     @Optional() private readonly usageService?: UsageService,
     @Optional() private readonly postsService?: PostsService,
@@ -194,7 +196,7 @@ export class ProductsService {
   /**
    * Invalidate all product-related caches for an organization
    */
-  private async invalidateOrganizationProductCaches(
+  async invalidateOrganizationProductCaches(
     organizationId: number,
   ): Promise<void> {
     const patterns = [
@@ -217,7 +219,7 @@ export class ProductsService {
   /**
    * Invalidate schema-related product caches
    */
-  private async invalidateSchemaProductCaches(schemaId: number): Promise<void> {
+  async invalidateSchemaProductCaches(schemaId: number): Promise<void> {
     const patterns = [`schema:${schemaId}:products`];
 
     await Promise.all(patterns.map((pattern) => this.invalidateCache(pattern)));
@@ -434,44 +436,68 @@ export class ProductsService {
           },
         });
 
-        // Create field values
-        const fieldValues = await Promise.all(
-          createProductDto.fields.map((fieldValue) => {
-            const field = fieldMap.get(fieldValue.fieldId)!;
-            const transformedValue = this.transformFieldValue(
-              field.type,
-              fieldValue.value,
-            );
-
-            return tx.fieldValue.create({
-              data: {
+        // Create field values in a single batched insert instead of N
+        // individual creates — matters most for schemas with many fields,
+        // and keeps the transaction open for less time.
+        if (createProductDto.fields.length > 0) {
+          await tx.fieldValue.createMany({
+            data: createProductDto.fields.map((fieldValue) => {
+              const field = fieldMap.get(fieldValue.fieldId)!;
+              const transformedValue = this.transformFieldValue(
+                field.type,
+                fieldValue.value,
+              );
+              return {
                 productId: product.id,
                 fieldId: fieldValue.fieldId,
                 ...transformedValue,
-              },
-            });
-          }),
-        );
+              };
+            }),
+          });
+        }
 
-        return { product, fieldValues };
+        return { product };
       });
 
       this.logger.log(`Product created successfully: ${result.product.id}`);
 
-      // Activity Log: Product Created
-      await this.activityLogService.createLog({
-        userId,
-        organizationId,
-        entityType: EntityType.PRODUCT,
-        entityId: result.product.id,
-        action: ActionType.CREATE,
-        templateKey: 'PRODUCT_CREATED',
-        data: { name: createProductDto.name },
-      });
+      // Activity log is fire-and-forget — it's an audit trail, not something
+      // the create-product response should ever wait on.
+      this.activityLogService
+        .createLog({
+          userId,
+          organizationId,
+          entityType: EntityType.PRODUCT,
+          entityId: result.product.id,
+          action: ActionType.CREATE,
+          templateKey: 'PRODUCT_CREATED',
+          data: { name: createProductDto.name },
+        })
+        .catch((err) =>
+          this.logger.warn(`Activity log failed: ${err.message}`),
+        );
 
       // Fetch full product details including images and dynamic fields
       const fullProduct = await this.getProductById(result.product.id, userId);
-      await this.embadingService.createProductEmbedding(fullProduct);
+
+      // Embedding generation calls out to Weaviate/CLIP per image (CDN fetch +
+      // inference) — queued in the background instead of blocking the
+      // response; see EmbeddingModule/EmbeddingProcessor.
+      this.embeddingQueue
+        .add(
+          'create-product-embedding',
+          { productId: result.product.id },
+          {
+            jobId: `embed-${result.product.id}`,
+            attempts: 3,
+            backoff: { type: 'exponential', delay: 5000 },
+            removeOnComplete: true,
+            removeOnFail: 50,
+          },
+        )
+        .catch((err) =>
+          this.logger.warn(`Failed to enqueue embedding job: ${err.message}`),
+        );
 
       // Invalidate organization product caches since a new product was created
       await this.invalidateOrganizationProductCaches(organizationId);
@@ -502,8 +528,7 @@ export class ProductsService {
           );
       }
 
-      // Return the created product with full details
-      return this.getProductById(result.product.id, userId);
+      return fullProduct;
     } catch (error) {
       if (
         error instanceof NotFoundException ||
@@ -797,37 +822,7 @@ export class ProductsService {
             );
           }
 
-          // Transform the response
-          const transformedFields: FieldValueResponseDto[] = product.fields.map(
-            (fieldValue) =>
-              this.transformFieldValueResponse(fieldValue, fieldValue.field),
-          );
-
-          const transformedImages: ProductImageResponseDto[] =
-            product.images.map((image) => ({
-              id: image.id,
-              key: image.key,
-              url: image.url,
-              originalName: image.originalName,
-              size: image.size,
-              mimeType: image.mimeType,
-            }));
-
-          return {
-            id: product.id,
-            name: product.name,
-            price: product.price,
-            quantity: product.quantity,
-            currency: product.currency,
-            status: product.status,
-            schemaId: product.schemaId,
-            schemaName: product.schema.name,
-            organizationId: product.organizationId,
-            images: transformedImages,
-            fields: transformedFields,
-            createdAt: product.createdAt,
-            updatedAt: product.updatedAt,
-          };
+          return this.toProductResponseDto(product);
         },
         lockKey, // Use lock key for stampede protection
       );
@@ -841,6 +836,81 @@ export class ProductsService {
       );
       throw new InternalServerErrorException('Failed to retrieve product');
     }
+  }
+
+  private toProductResponseDto(product: {
+    id: number;
+    name: string;
+    price: number;
+    quantity: number;
+    currency: any;
+    status: any;
+    schemaId: number;
+    schema: { name: string };
+    organizationId: number;
+    images: {
+      id: number;
+      key: string;
+      url: string;
+      originalName: string;
+      size: number;
+      mimeType: string;
+    }[];
+    fields: any[];
+    createdAt: Date;
+    updatedAt: Date;
+  }): ProductResponseDto {
+    const transformedFields: FieldValueResponseDto[] = product.fields.map(
+      (fieldValue) =>
+        this.transformFieldValueResponse(fieldValue, fieldValue.field),
+    );
+
+    const transformedImages: ProductImageResponseDto[] = product.images.map(
+      (image) => ({
+        id: image.id,
+        key: image.key,
+        url: image.url,
+        originalName: image.originalName,
+        size: image.size,
+        mimeType: image.mimeType,
+      }),
+    );
+
+    return {
+      id: product.id,
+      name: product.name,
+      price: product.price,
+      quantity: product.quantity,
+      currency: product.currency,
+      status: product.status,
+      schemaId: product.schemaId,
+      schemaName: product.schema.name,
+      organizationId: product.organizationId,
+      images: transformedImages,
+      fields: transformedFields,
+      createdAt: product.createdAt,
+      updatedAt: product.updatedAt,
+    };
+  }
+
+  /**
+   * Fetches a product with no organization/user scoping — for background
+   * jobs (e.g. embedding generation) that only have a productId and no
+   * request context. Not cached: called once per product, not a hot path.
+   */
+  async getProductForEmbedding(
+    productId: number,
+  ): Promise<ProductResponseDto | null> {
+    const product = await this.prisma.product.findUnique({
+      where: { id: productId },
+      include: {
+        schema: true,
+        images: true,
+        fields: { include: { field: true } },
+      },
+    });
+    if (!product) return null;
+    return this.toProductResponseDto(product);
   }
 
   /**

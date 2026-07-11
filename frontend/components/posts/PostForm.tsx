@@ -137,7 +137,7 @@ export function PostForm({ initialData, onSubmit, isLoading = false, isEditing =
                 <SelectContent>
                   {products?.items.map((product) => (
                     <SelectItem key={product.id} value={product.id}>
-                      {product.name} (${product.price})
+                      {product.name} ({product.currency === 'USD' ? '$' : ''}{product.price})
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -210,24 +210,8 @@ export function PostForm({ initialData, onSubmit, isLoading = false, isEditing =
             disabled={isLoading || !selectedChannel || !content.trim()}
           >
             <Save className="h-4 w-4 mr-2" />
-             {t('postForm.createPost')}
+             {isEditing ? t('postForm.editPost') : t('postForm.createPost')}
           </Button>
-          {/* <Button
-            onClick={() => handleSubmit("send")}
-            disabled={isLoading || !selectedChannel || !content.trim() || status === "SCHEDULED"}
-          >
-            <Send className="h-4 w-4 mr-2" />
-            Send Now
-          </Button>
-          {status === "SCHEDULED" && (
-            <Button
-              onClick={() => handleSubmit("schedule")}
-              disabled={isLoading || !selectedChannel || !content.trim() || !scheduledAt}
-            >
-              <Clock className="h-4 w-4 mr-2" />
-              Schedule
-            </Button>
-          )} */}
         </div>
       </div>
 

@@ -33,6 +33,10 @@ FROM node:20-alpine AS production
 
 WORKDIR /app
 
+# postgresql16-client provides pg_dump, used by the daily DB backup job
+# (must match the postgres:16-alpine version in docker-compose.prod.yml)
+RUN apk add --no-cache postgresql16-client
+
 # Install production dependencies only
 COPY package.json yarn.lock ./
 RUN yarn install --frozen-lockfile --production && \

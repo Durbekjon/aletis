@@ -38,14 +38,37 @@ function formatPrice(price: number, currency: Currency): string {
 
 export function generatePostContent(product: any): string {
   const fieldsText = product.fields
-    ?.map((field: any) => `${field.fieldName}: ${field.value}`)
+    ?.filter((field: any) => {
+      // description fieldini skip qilamiz (alohida ko'rsatiladi yoki umuman ko'rsatilmaydi)
+      if (field.fieldName?.toLowerCase() === 'description') {
+        return false;
+      }
+      // null, undefined yoki bo'sh string bo'lsa skip
+      const val = field.value;
+      return val !== null && val !== undefined && String(val).trim() !== '';
+    })
+    .map((field: any) => `${field.fieldName}: ${field.value}`)
     .join('\n');
+
+  // Description maydonini alohida olamiz (null bo'lsa ko'rsatmaymiz)
+  const descriptionField = product.fields?.find(
+    (f: any) => f.fieldName?.toLowerCase() === 'description'
+  );
+  const descriptionText =
+    descriptionField?.value !== null &&
+    descriptionField?.value !== undefined &&
+    String(descriptionField.value).trim() !== ''
+      ? String(descriptionField.value).trim()
+      : null;
 
   const priceText = formatPrice(product.price, product.currency);
 
-  return `${product.name}
-${fieldsText ? fieldsText + '\n' : ''}
-${priceText}`;
+  const parts = [product.name];
+  if (descriptionText) parts.push(descriptionText);
+  if (fieldsText) parts.push(fieldsText);
+  parts.push(priceText);
+
+  return parts.join('\n');
 }
 
 

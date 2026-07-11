@@ -9,10 +9,17 @@ export class ImageToBase64Service {
    * (e.g. an ImageKit CDN URL) which is fetched over HTTP, or a relative
    * filesystem path from the project root (legacy local uploads).
    */
-  async convert(source: string): Promise<string> {
+  async convert(source: string, timeoutMs: number = 10_000): Promise<string> {
     try {
       if (/^https?:\/\//i.test(source)) {
-        const response = await fetch(source);
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), timeoutMs);
+        let response: Response;
+        try {
+          response = await fetch(source, { signal: controller.signal });
+        } finally {
+          clearTimeout(timeout);
+        }
         if (!response.ok) {
           throw new Error(`HTTP ${response.status} fetching ${source}`);
         }

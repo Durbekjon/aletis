@@ -8,6 +8,7 @@ import * as XLSX from 'xlsx';
 import { PrismaService } from '@core/prisma/prisma.service';
 import { FieldType, ProductStatus, Currency } from '@prisma/client';
 import { ImportProductsResponseDto } from './dto/import-products.dto';
+import { ProductsService } from './products.service';
 
 // Columns that map directly to the Product model — not dynamic schema fields
 const RESERVED_COLUMNS = new Set([
@@ -26,7 +27,10 @@ const VALID_STATUSES = new Set(Object.values(ProductStatus));
 export class ProductImportService {
   private readonly logger = new Logger(ProductImportService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly productsService: ProductsService,
+  ) {}
 
   async importFromBuffer(
     buffer: Buffer,
@@ -51,10 +55,35 @@ export class ProductImportService {
       );
     }
 
-    // Determine all dynamic columns in the file
+    // Determine all dynamic columns in the file. Header text from real-world
+    // Excel/Sheets exports varies in case and whitespace ("NAME", "Name ",
+    // "name") — normalize once here and reuse everywhere below, otherwise a
+    // column that *should* map to a fixed field (name/price/...) gets treated
+    // as an unrecognized dynamic field AND its value never gets read for the
+    // fixed column, silently skipping every row.
     const allColumns = Object.keys(rows[0]);
+    const normalizedToActual = new Map<string, string>();
+    for (const col of allColumns) {
+      normalizedToActual.set(col.trim().toLowerCase(), col);
+    }
+    const getReserved = (
+      row: Record<string, any>,
+      ...names: string[]
+    ): any => {
+      for (const name of names) {
+        const actualKey = normalizedToActual.get(name);
+        if (
+          actualKey !== undefined &&
+          row[actualKey] !== undefined &&
+          row[actualKey] !== ''
+        ) {
+          return row[actualKey];
+        }
+      }
+      return undefined;
+    };
     const dynamicColumns = allColumns.filter(
-      (col) => !RESERVED_COLUMNS.has(col.toLowerCase()),
+      (col) => !RESERVED_COLUMNS.has(col.trim().toLowerCase()),
     );
 
     // Match or create schema fields for each dynamic column
@@ -100,14 +129,14 @@ export class ProductImportService {
       const rowNum = i + 2; // 1-based + header row
 
       try {
-        const name = String(row['name'] ?? row['Name'] ?? '').trim();
+        const name = String(getReserved(row, 'name') ?? '').trim();
         if (!name) {
           errors.push({ row: rowNum, message: '"name" ustuni bo\'sh' });
           skipped++;
           continue;
         }
 
-        const rawPrice = row['price'] ?? row['Price'];
+        const rawPrice = getReserved(row, 'price');
         const price = parseFloat(String(rawPrice));
         if (isNaN(price) || price < 0) {
           errors.push({
@@ -118,19 +147,17 @@ export class ProductImportService {
           continue;
         }
 
-        const rawCurrency = String(
-          row['currency'] ?? row['Currency'] ?? 'UZS',
-        )
+        const rawCurrency = String(getReserved(row, 'currency') ?? 'UZS')
           .trim()
           .toUpperCase();
         const currency = VALID_CURRENCIES.has(rawCurrency as Currency)
           ? (rawCurrency as Currency)
           : Currency.UZS;
 
-        const rawQty = row['quantity'] ?? row['qty'] ?? row['Quantity'] ?? row['Qty'];
+        const rawQty = getReserved(row, 'quantity', 'qty');
         const quantity = rawQty !== undefined ? parseInt(String(rawQty), 10) : 0;
 
-        const rawStatus = String(row['status'] ?? row['Status'] ?? 'ACTIVE')
+        const rawStatus = String(getReserved(row, 'status') ?? 'ACTIVE')
           .trim()
           .toUpperCase();
         const status = VALID_STATUSES.has(rawStatus as ProductStatus)
@@ -197,6 +224,17 @@ export class ProductImportService {
     this.logger.log(
       `Import done: org=${organizationId} imported=${imported} skipped=${skipped} newFields=${createdFieldNames.length}`,
     );
+
+    if (imported > 0) {
+      // Without this, the product list keeps serving its cached (pre-import)
+      // page for up to 15 minutes (ORG_PRODUCTS TTL) — imported rows exist in
+      // the DB but don't show up anywhere in the dashboard until the cache
+      // expires on its own.
+      await Promise.all([
+        this.productsService.invalidateOrganizationProductCaches(organizationId),
+        this.productsService.invalidateSchemaProductCaches(schema.id),
+      ]);
+    }
 
     return { imported, skipped, createdFields: createdFieldNames, errors };
   }

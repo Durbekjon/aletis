@@ -54,16 +54,19 @@ export class ImagekitService implements OnModuleInit {
 
   /**
    * Uploads a file buffer to ImageKit and returns its CDN URL + fileId.
+   * @param folder Overrides the default IMAGEKIT_FOLDER — e.g. for storing
+   * DB backups in a separate subfolder from product images.
    */
   async upload(
     buffer: Buffer,
     fileName: string,
+    folder?: string,
   ): Promise<ImagekitUploadResult> {
     try {
       const result = await this.getClient().upload({
         file: buffer,
         fileName,
-        folder: this.folder,
+        folder: folder ?? this.folder,
         useUniqueFileName: true,
       });
 
@@ -100,6 +103,30 @@ export class ImagekitService implements OnModuleInit {
       this.logger.warn(
         `Failed to delete ImageKit file ${fileId}: ${error.message}`,
       );
+    }
+  }
+
+  /**
+   * Lists files in a folder, newest first — used for backup rotation
+   * (keep the N most recent, delete the rest).
+   */
+  async listFiles(
+    folderPath: string,
+  ): Promise<{ fileId: string; name: string }[]> {
+    try {
+      const results = await this.getClient().listFiles({
+        path: folderPath,
+        sort: 'DESC_CREATED',
+        limit: 1000,
+      });
+      return results
+        .filter((f): f is typeof f & { fileId: string } => 'fileId' in f)
+        .map((f) => ({ fileId: f.fileId, name: f.name }));
+    } catch (error) {
+      this.logger.warn(
+        `Failed to list ImageKit files in ${folderPath}: ${error.message}`,
+      );
+      return [];
     }
   }
 }

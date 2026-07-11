@@ -33,6 +33,11 @@ export const customersApi = {
     const { data } = await axiosInstance.post<CustomerAiNote>(`/v1/customers/${id}/analyze`)
     return data
   },
+
+  async sendMessage(id: number, content: string) {
+    const { data } = await axiosInstance.post(`/v1/customers/${id}/messages`, { content })
+    return data
+  },
 }
 
 export default customersApi

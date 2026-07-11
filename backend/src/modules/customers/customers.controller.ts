@@ -1,5 +1,6 @@
-import { Controller, Get, Post, Param, Query, ParseIntPipe } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Query, ParseIntPipe } from '@nestjs/common';
 import { CustomersService } from './customers.service';
+import { CustomerMessagingService } from './customer-messaging.service';
 import { CustomerIntelligenceService } from '@modules/customer-intelligence/customer-intelligence.service';
 import { CurrentUser } from '@modules/auth/decorators/current-user.decorator';
 import type { JwtPayload } from '@modules/auth/strategies/jwt.strategy';
@@ -14,6 +15,7 @@ import { JwtAuthGuard } from '@guards/jwt-auth.guard';
 import { UseGuards } from '@nestjs/common';
 import { PaginationDto } from '@/shared/dto';
 import { CustomerPaginatedResponseDto } from './dto/customer-pagination.dto';
+import { SendCustomerMessageDto } from './dto/send-message.dto';
 
 @ApiTags('Customers')
 @ApiBearerAuth('bearer')
@@ -22,6 +24,7 @@ import { CustomerPaginatedResponseDto } from './dto/customer-pagination.dto';
 export class CustomersController {
   constructor(
     private readonly customersService: CustomersService,
+    private readonly customerMessagingService: CustomerMessagingService,
     private readonly customerIntelligenceService: CustomerIntelligenceService,
   ) {}
 
@@ -88,6 +91,20 @@ export class CustomersController {
   ) {
     await this.customersService.setCustomerLang(id, lang);
     return { success: true };
+  }
+
+  @Post(':id/messages')
+  @ApiOperation({ summary: "Send an admin reply to the customer via their bot channel" })
+  async sendMessage(
+    @CurrentUser() user: JwtPayload,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: SendCustomerMessageDto,
+  ) {
+    return this.customerMessagingService.sendMessageToCustomer(
+      Number(user.userId),
+      id,
+      dto.content,
+    );
   }
 
   @Post(':id/analyze')

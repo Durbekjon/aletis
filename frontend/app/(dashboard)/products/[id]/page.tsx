@@ -13,9 +13,9 @@ import { useProductQuery, useUpdateProductMutation } from "@/src/hooks/useProduc
 import type { FormData } from "@/src/hooks/useDynamicProductForm"
 
 export default function ProductDetailPage() {
+  const { t } = useTranslation()
   const params = useParams()
   const router = useRouter()
-  const { t } = useTranslation()
   const idParam = Array.isArray(params?.id) ? params.id[0] : (params?.id as string)
   const productId = Number(idParam)
 
