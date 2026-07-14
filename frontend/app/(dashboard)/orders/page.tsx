@@ -145,9 +145,9 @@ export default function OrdersPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">{t("orders.title")}</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{t("orders.title")}</h1>
           <p className="text-muted-foreground">{t("orders.subtitle")}</p>
         </div>
         <LanguageSwitcher />
@@ -316,20 +316,20 @@ export default function OrdersPage() {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-3">
-                        <Avatar className="h-8 w-8 rounded-lg">
-                          {/* <AvatarImage src="/diverse-user-avatars.png" /> */}
-                          <AvatarFallback className="rounded-lg bg-primary-foreground">
-                            {order.customer.name?.split(' ').map((name) => name[0]).join('')}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <div className="font-medium">{order.customer.name}</div>
-                          {order.customer.username && (
-                            <div className="text-sm text-muted-foreground">
-                              <a href={getCustomerLink(order.customer)} target="_blank" rel="noopener noreferrer">@{order.customer.username ? order.customer.username : order.customer.telegramId}</a>
-                            </div>
-                          )}
-                        </div>
+                        <Link href={`/customers/${order.customer.id}`} className="flex items-center gap-3 group">
+                          <Avatar className="h-8 w-8 rounded-lg">
+                            {/* <AvatarImage src="/diverse-user-avatars.png" /> */}
+                            <AvatarFallback className="rounded-lg bg-primary-foreground">
+                              {order.customer.name?.split(' ').map((name) => name[0]).join('')}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="font-medium group-hover:underline">{order.customer.name}</div>
+                        </Link>
+                        {order.customer.username && (
+                          <div className="text-sm text-muted-foreground">
+                            <a href={getCustomerLink(order.customer)} target="_blank" rel="noopener noreferrer">@{order.customer.username ? order.customer.username : order.customer.telegramId}</a>
+                          </div>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell>{getStatusBadge(order.status)}</TableCell>

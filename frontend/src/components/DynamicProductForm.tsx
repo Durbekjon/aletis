@@ -18,6 +18,7 @@
  */
 
 import { useState, useEffect, useRef } from "react"
+import { useTranslation } from "@/src/context/I18nContext"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -36,7 +37,6 @@ import { useCompleteBarcodeMutation } from "@/src/hooks/useBarcodeCatalogQuery"
 import { findMatchingField } from "@/src/lib/barcode-field-matching"
 import { BarcodeScanDialog, type BarcodeScanResolution } from "@/components/product/barcode-scan-dialog"
 import type { ProductSchemaField } from "@/lib/types/product"
-import { useTranslation } from "@/src/context/I18nContext"
 
 interface DynamicProductFormProps {
   initialValues?: Partial<FormData>
@@ -128,7 +128,7 @@ export function DynamicProductForm({ initialValues, initialSchemaId, onSubmitImp
       form.reset({
         name: initialValues.name ?? "",
         price: initialValues.price ?? '',
-        currency: initialValues.currency ?? "USD",
+        currency: initialValues.currency ?? "UZS",
         quantity: initialValues.quantity ?? '',
         images: initialValues.images ?? [],
         fields: nextFields,
@@ -271,11 +271,11 @@ export function DynamicProductForm({ initialValues, initialSchemaId, onSubmitImp
             <Input
               id={fieldName}
               {...register(fieldName, { 
-                required: required ? t('products.fieldRequired', { name: field.name }) : false
+                required: required ? t("productForm.fieldRequired", { field: field.name }) : false
               })}
               defaultValue={initialValues?.fields?.[field.id]}
               onChange={(e) => setValue(`fields.${field.id}`, e.target.value, { shouldDirty: true })}
-              placeholder={t('products.enterField', { name: field.name })}
+              placeholder={t("productForm.enterField", { field: field.name })}
             />
             {hasError && (
               <p className="text-sm text-destructive">{hasError.message}</p>
@@ -294,8 +294,8 @@ export function DynamicProductForm({ initialValues, initialSchemaId, onSubmitImp
               type="number"
               step="0.01"
               {...register(fieldName, { 
-                required: required ? t('products.fieldRequired', { name: field.name }) : false,
-                min: required ? { value: 0.01, message: t('products.fieldMustBeGreater', { name: field.name, min: 0 }) } : undefined
+                required: required ? t("productForm.fieldRequired", { field: field.name }) : false,
+                min: required ? { value: 0.01, message: t("productForm.fieldMin", { field: field.name }) } : undefined
               })}
               defaultValue={Number(initialValues?.fields?.[field.id])}
               onChange={(e) => setValue(`fields.${field.id}`, Number(e.target.value), { shouldDirty: true })}
@@ -315,7 +315,7 @@ export function DynamicProductForm({ initialValues, initialSchemaId, onSubmitImp
             <Switch
               id={fieldName}
               {...register(fieldName, { 
-                required: required ? t('products.fieldRequired', { name: field.name }) : false 
+                required: required ? t("productForm.fieldRequired", { field: field.name }) : false 
               })}
             />
             {hasError && (
@@ -334,7 +334,7 @@ export function DynamicProductForm({ initialValues, initialSchemaId, onSubmitImp
               id={fieldName}
               type="date"
               {...register(fieldName, { 
-                required: required ? t('products.fieldRequired', { name: field.name }) : false
+                required: required ? t("productForm.fieldRequired", { field: field.name }) : false
               })}
             />
             {hasError && (
@@ -351,13 +351,13 @@ export function DynamicProductForm({ initialValues, initialSchemaId, onSubmitImp
             </Label>
             <Select
               {...register(fieldName, { 
-                required: required ? t('products.fieldRequired', { name: field.name }) : false
+                required: required ? t("productForm.fieldRequired", { field: field.name }) : false
               })}
               defaultValue={initialValues?.fields?.[field.id]}
               onValueChange={(value) => setValue(`fields.${field.id}`, value, { shouldDirty: true })}
             >
               <SelectTrigger className="w-full">
-                <SelectValue placeholder={t('products.enterField', { name: field.name })} />
+                <SelectValue placeholder={t("productForm.selectField", { field: field.name })} />
               </SelectTrigger>
               <SelectContent>
                 {field.options?.map((option) => (
@@ -382,11 +382,11 @@ export function DynamicProductForm({ initialValues, initialSchemaId, onSubmitImp
             <Textarea
               id={fieldName}
               {...register(fieldName, { 
-                required: required ? t('products.fieldRequired', { name: field.name }) : false
+                required: required ? t("productForm.fieldRequired", { field: field.name }) : false
               })}
               defaultValue={initialValues?.fields?.[field.id]}
               onChange={(e) => setValue(`fields.${field.id}`, e.target.value, { shouldDirty: true })}
-              placeholder={t('products.enterField', { name: field.name })}
+              placeholder={t("productForm.enterFieldJson", { field: field.name })}
               rows={3}
             />
             {hasError && (
@@ -404,10 +404,10 @@ export function DynamicProductForm({ initialValues, initialSchemaId, onSubmitImp
             <Input
               id={fieldName}
               {...register(fieldName, { 
-                required: required ? t('products.fieldRequired', { name: field.name }) : false
+                required: required ? t("productForm.fieldRequired", { field: field.name }) : false
               })}
               defaultValue={initialValues?.fields?.[field.id]}
-              placeholder={t('products.enterField', { name: field.name })}
+              placeholder={t("productForm.enterField", { field: field.name })}
             />
             {hasError && (
               <p className="text-sm text-destructive">{hasError.message}</p>
@@ -422,7 +422,7 @@ export function DynamicProductForm({ initialValues, initialSchemaId, onSubmitImp
       <Alert variant="destructive">
         <AlertCircle className="h-4 w-4" />
         <AlertDescription>
-          {t('products.failedToLoadSchema', { error: schemaError.message })}
+          {t('productForm.schemaLoadFailed', { msg: schemaError.message })}
         </AlertDescription>
       </Alert>
     )
@@ -479,13 +479,13 @@ export function DynamicProductForm({ initialValues, initialSchemaId, onSubmitImp
         <Card className="lg:col-span-2">
           <CardHeader className="flex flex-row items-start justify-between gap-4">
             <div>
-              <CardTitle>{t('products.productInfo')}</CardTitle>
-              <CardDescription>{t('products.productInfoSubtitle')}</CardDescription>
+              <CardTitle>{t('productForm.info')}</CardTitle>
+              <CardDescription>{t('productForm.infoDesc')}</CardDescription>
             </div>
             {!initialValues && (
               <Button type="button" variant="outline" size="sm" onClick={() => setScanDialogOpen(true)}>
                 <ScanBarcode className="h-4 w-4 mr-2" />
-                {t('products.barcodeScan')}
+                {t('productForm.scanBarcode')}
               </Button>
             )}
           </CardHeader>
@@ -493,10 +493,10 @@ export function DynamicProductForm({ initialValues, initialSchemaId, onSubmitImp
             {/* Schema Selection */}
             {schemas.length > 1 && (
               <div className="space-y-2">
-                <Label htmlFor="schema">{t('products.productSchema')}</Label>
+                <Label htmlFor="schema">{t('productForm.schema')}</Label>
                 <Select value={selectedSchema?.toString()} onValueChange={(value) => setSelectedSchema(parseInt(value))}>
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder={t('products.selectSchema')} />
+                    <SelectValue placeholder={t('productForm.selectSchema')} />
                   </SelectTrigger>
                   <SelectContent>
                     {schemas.map((schema) => (
@@ -512,16 +512,16 @@ export function DynamicProductForm({ initialValues, initialSchemaId, onSubmitImp
             {/* Basic Fields */}
             <div className="space-y-2">
               <Label htmlFor="name">
-                {t('products.productName')} <span className="text-destructive">*</span>
+                {t('productForm.name')} <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="name"
                 {...register("name", { 
-                  required: t('products.nameRequired')
+                  required: t("productForm.nameRequired")
                 })}
                 defaultValue={initialValues?.name ?? ""}
                 onChange={(e) => setValue('name', e.target.value, { shouldDirty: true })}
-                placeholder={t('products.enterName')}
+                placeholder={t('productForm.namePlaceholder')}
               />
               {errors.name && <p className="text-sm text-destructive">{errors.name.message}</p>}
             </div>
@@ -529,38 +529,38 @@ export function DynamicProductForm({ initialValues, initialSchemaId, onSubmitImp
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="price">
-                  {t('products.price')} <span className="text-destructive">*</span>
+                  {t('productForm.price')} <span className="text-destructive">*</span>
                 </Label>
                 <Input
                   id="price"
                   type="number"
                   step="1"
                   {...register("price", { 
-                    required: t('products.priceRequired'), 
-                    min: { value: 0.01, message: t('products.priceMin') }
+                    required: t("productForm.priceRequired"), 
+                    min: { value: 0.01, message: t("productForm.priceMin") }
                   })}
                   defaultValue={initialValues?.price ?? ''}
                   onChange={(e) => setValue('price', Number(e.target.value), { shouldDirty: true })}
-                  placeholder="0.00"
+                  placeholder={t('productForm.pricePlaceholder')}
                 />
                 {errors.price && <p className="text-sm text-destructive">{errors.price.message}</p>}
               </div>
 
               <div className="space-y-2">
               <Label htmlFor="quantity">
-                {t('products.quantity')} <span className="text-destructive">*</span>
+                {t('productForm.quantity')} <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="quantity"
                 type="number"
                 step="1"
                 {...register("quantity", { 
-                  required: t('products.quantityRequired'),
-                  min: { value: 0, message: t('products.quantityMin') }
+                  required: t("productForm.quantityRequired"),
+                  min: { value: 0, message: t("productForm.quantityNegative") }
                 })}
                 defaultValue={initialValues?.quantity ?? ''}
                 onChange={(e) => setValue('quantity', Number(e.target.value), { shouldDirty: true })}
-                placeholder="0"
+                placeholder={t('productForm.quantityPlaceholder')}
               />
               {errors.quantity && <p className="text-sm text-destructive">{(errors as any).quantity?.message}</p>}
             </div>
@@ -569,47 +569,47 @@ export function DynamicProductForm({ initialValues, initialSchemaId, onSubmitImp
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="currency">
-                  {t('products.currency')} <span className="text-destructive">*</span>
+                  {t('productForm.currency')} <span className="text-destructive">*</span>
                 </Label>
                 <Select
                   {...register("currency", { 
-                    required: t('products.currencyRequired')
+                    required: t("productForm.currencyRequired")
                   })}
-                  defaultValue={initialValues?.currency ?? "USD"}
+                  defaultValue={initialValues?.currency ?? "UZS"}
                   onValueChange={(value) => setValue('currency', value as "USD" | "EUR" | "UZS" | "RUB" | "KZT" | "GBP" | "JPY", { shouldDirty: true })}
                 >
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder={t('products.selectCurrency')} />
+                    <SelectValue placeholder={t('productForm.selectCurrency')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="USD">{t('products.currencyUSD')}</SelectItem>
-                    <SelectItem value="EUR">{t('products.currencyEUR')}</SelectItem>
-                    <SelectItem value="UZS">{t('products.currencyUZS')}</SelectItem>
-                    <SelectItem value="RUB">{t('products.currencyRUB')}</SelectItem>
-                    <SelectItem value="KZT">{t('products.currencyKZT')}</SelectItem>
-                    <SelectItem value="GBP">{t('products.currencyGBP')}</SelectItem>
-                    <SelectItem value="JPY">{t('products.currencyJPY')}</SelectItem>
+                    <SelectItem value="USD">{t('productForm.currencies.USD')}</SelectItem>
+                    <SelectItem value="EUR">{t('productForm.currencies.EUR')}</SelectItem>
+                    <SelectItem value="UZS">{t('productForm.currencies.UZS')}</SelectItem>
+                    <SelectItem value="RUB">{t('productForm.currencies.RUB')}</SelectItem>
+                    <SelectItem value="KZT">{t('productForm.currencies.KZT')}</SelectItem>
+                    <SelectItem value="GBP">{t('productForm.currencies.GBP')}</SelectItem>
+                    <SelectItem value="JPY">{t('productForm.currencies.JPY')}</SelectItem>
                   </SelectContent>
                 </Select>
                 {errors.currency && <p className="text-sm text-destructive">{errors.currency.message}</p>}
               </div>
 
               <div className="space-y-2">
-              <Label htmlFor="status">{t('products.status')}</Label>
+              <Label htmlFor="status">{t('productForm.status')}</Label>
               <Select
                 {...register("status", { 
-                  required: t('products.statusRequired')
+                  required: t("productForm.statusRequired")
                 })}
                 defaultValue={initialValues?.status?.toUpperCase() as "ACTIVE" | "DRAFT" | "ARCHIVED" ?? "DRAFT"}
                 onValueChange={(value) => setValue('status', value as "ACTIVE" | "DRAFT" | "ARCHIVED", { shouldDirty: true })}
               >
                 <SelectTrigger className="w-full">
-                  <SelectValue placeholder={t('products.selectStatus')} />
+                  <SelectValue placeholder={t('productForm.selectStatus')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="ACTIVE">{t('products.statusActive')}</SelectItem>
-                  <SelectItem value="DRAFT">{t('products.statusDraft')}</SelectItem>
-                  <SelectItem value="ARCHIVED">{t('products.statusArchived')}</SelectItem>
+                  <SelectItem value="ACTIVE">{t('productForm.statusActive')}</SelectItem>
+                  <SelectItem value="DRAFT">{t('productForm.statusDraft')}</SelectItem>
+                  <SelectItem value="ARCHIVED">{t('productForm.statusArchived')}</SelectItem>
                 </SelectContent>
               </Select>
               </div>
@@ -629,7 +629,7 @@ export function DynamicProductForm({ initialValues, initialSchemaId, onSubmitImp
 
             {currentSchema && currentSchema.fields.length === 0 && (
               <div className="text-center py-4 text-muted-foreground">
-                <p className="text-sm">{t('products.noAdditionalFields')}</p>
+                <p className="text-sm">{t('productForm.noFields')}</p>
               </div>
             )}
           </CardContent>
@@ -638,8 +638,8 @@ export function DynamicProductForm({ initialValues, initialSchemaId, onSubmitImp
         {/* Product Images */}
         <Card>
           <CardHeader>
-            <CardTitle>{t('products.images')}</CardTitle>
-            <CardDescription>{t('products.uploadImagesSubtitle')}</CardDescription>
+            <CardTitle>{t('productForm.images')}</CardTitle>
+            <CardDescription>{t('productForm.imagesDesc')}</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="space-y-4 ">
@@ -657,13 +657,13 @@ export function DynamicProductForm({ initialValues, initialSchemaId, onSubmitImp
                   className="flex items-center gap-2 px-4 py-2 border border-dashed border-muted-foreground rounded-lg cursor-pointer hover:bg-muted"
                 >
                   <Upload className="h-4 w-4" />
-                  {t('products.uploadImagesBtn')}
+                  {t('productForm.uploadImages')}
                 </Label>
-                <span className="text-sm text-muted-foreground">{t('products.imagesCount', { count: images.length })}</span>
+                <span className="text-sm text-muted-foreground">{t('productForm.imagesCount', { count: images.length })}</span>
                 {uploadFilesMutation.isPending && (
                   <div className="flex items-center gap-2 text-sm text-blue-600">
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    {t('products.uploading')}
+                    {t('productForm.uploading')}
                   </div>
                 )}
               </div>
@@ -705,7 +705,7 @@ export function DynamicProductForm({ initialValues, initialSchemaId, onSubmitImp
                               />
                             ) : (
                               <div className="w-full h-full flex items-center justify-center">
-                                <span className="text-sm text-muted-foreground">Image {images[index] ?? index + 1}</span>
+                                <span className="text-sm text-muted-foreground">{t('productForm.imageN', { n: images[index] ?? index + 1 })}</span>
                               </div>
                             )}
                           </div>
@@ -733,17 +733,17 @@ export function DynamicProductForm({ initialValues, initialSchemaId, onSubmitImp
       {/* Form Actions */}
       <div className="flex justify-end gap-4">
         <Button type="button" variant="outline" onClick={onCancel}>
-          {t('common.cancel')}
+          {t('productForm.cancel')}
         </Button>
         {(!hideSubmitUntilDirty || form.formState.isDirty) && (
           <Button type="submit" disabled={isLoading}>
             {isLoading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                {t('products.saving')}
+                {t('productForm.saving')}
               </>
             ) : (
-              initialValues ? t('products.updateProduct') : t('products.createProduct')
+              initialValues ? t('productForm.updateProduct') : t('productForm.createProduct')
             )}
           </Button>
         )}

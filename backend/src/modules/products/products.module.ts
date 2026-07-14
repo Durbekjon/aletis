@@ -11,6 +11,7 @@ import { ActivityLogModule } from '../activity-log/activity-log.module';
 import { EmbadingModule } from '../embading/embading.module';
 import { CustomerIntelligenceModule } from '../customer-intelligence/customer-intelligence.module';
 import { UsageModule } from '../usage/usage.module';
+import { PostsModule } from '../posts/posts.module';
 import { EMBEDDING_QUEUE } from '@core/queue/queue.module';
 
 @Module({
@@ -22,6 +23,7 @@ import { EMBEDDING_QUEUE } from '@core/queue/queue.module';
     EmbadingModule,
     CustomerIntelligenceModule,
     UsageModule,
+    PostsModule,
     BullModule.registerQueue({ name: EMBEDDING_QUEUE }),
   ],
   controllers: [ProductsController],

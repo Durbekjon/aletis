@@ -1,6 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
+import { useTranslation } from "@/src/context/I18nContext"
 import { useParams, useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
@@ -10,7 +11,6 @@ import { AlertCircle } from "lucide-react"
 import { DynamicProductForm } from "@/src/components/DynamicProductForm"
 import { useProductQuery, useUpdateProductMutation } from "@/src/hooks/useProductsQuery"
 import type { FormData } from "@/src/hooks/useDynamicProductForm"
-import { useTranslation } from "@/src/context/I18nContext"
 
 export default function EditProductPage() {
   const { t } = useTranslation()
@@ -121,7 +121,7 @@ export default function EditProductPage() {
       <Alert variant="destructive">
         <AlertCircle className="h-4 w-4" />
         <AlertDescription>
-          {t('products.failedToLoadProduct')}
+          {t('products.loadFailedRetry')}
         </AlertDescription>
       </Alert>
     )
@@ -130,8 +130,8 @@ export default function EditProductPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">{t('products.editProductTitle')}</h1>
-        <p className="text-muted-foreground">{t('products.editProductSubtitle')}</p>
+        <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{t('products.editTitle')}</h1>
+        <p className="text-muted-foreground">{t('products.editDesc')}</p>
       </div>
       <Separator />
       <DynamicProductForm

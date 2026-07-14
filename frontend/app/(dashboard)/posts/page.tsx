@@ -34,7 +34,6 @@ import {
 import { type PostStatus } from '@/lib/types/post';
 import { useTranslation } from '@/src/context/I18nContext';
 import { useDeletePostMutation, usePostsQuery } from '@/src/hooks/usePostsQuery';
-import { useChannelsQuery } from '@/src/hooks/useChannelsQuery';
 import { Edit, Eye, MoreHorizontal, Plus, RefreshCw, Search, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
@@ -57,7 +56,6 @@ export default function PostsPage() {
   };
 
   const { data: postsData, isLoading, error, refetch, isFetching } = usePostsQuery(queryParams);
-  const { data: channelsData, isLoading: isChannelsLoading } = useChannelsQuery();
   const deletePostMutation = useDeletePostMutation();
   const locale = i18n.language === 'ru' ? 'ru-RU' : i18n.language === 'en' ? 'en-US' : 'uz-UZ';
 
@@ -136,12 +134,12 @@ export default function PostsPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">{t('posts.title')}</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{t('posts.title')}</h1>
           <p className="text-muted-foreground">{t('posts.subtitle')}</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <LanguageSwitcher />
 
           <RefreshButton
@@ -153,14 +151,12 @@ export default function PostsPage() {
           >
             {t('common.refresh')}
           </RefreshButton>
-          {channelsData?.items && channelsData.items.length === 0 ? null : (
-            <Button asChild className="lp-glow-btn">
-              <Link href="/posts/create">
-                <Plus className="h-4 w-4 mr-2" />
-                {t('posts.createPost')}
-              </Link>
-            </Button>
-          )}
+          <Button asChild className="lp-glow-btn">
+            <Link href="/posts/create">
+              <Plus className="h-4 w-4 mr-2" />
+              {t('posts.createPost')}
+            </Link>
+          </Button>
         </div>
       </div>
 
@@ -208,33 +204,19 @@ export default function PostsPage() {
           <CardTitle>{t('posts.tableTitle', { count: postsData?.total || 0 })}</CardTitle>
         </CardHeader>
         <CardContent>
-          {isLoading || isChannelsLoading ? (
+          {isLoading ? (
             <div className="text-center py-8">
               <p className="text-muted-foreground">{t('posts.loading')}</p>
             </div>
           ) : postsData?.items.length === 0 ? (
             <div className="text-center py-8">
-              {channelsData?.items && channelsData.items.length === 0 ? (
-                <>
-                  <p className="text-muted-foreground">{t('posts.noChannelsDescription')}</p>
-                  <Button asChild className="mt-4">
-                    <Link href="/bots?tab=channels">
-                      <Plus className="h-4 w-4 mr-2" />
-                      {t('posts.noChannelsCta')}
-                    </Link>
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <p className="text-muted-foreground">{t('posts.emptyDescription')}</p>
-                  <Button asChild className="mt-4">
-                    <Link href="/posts/create">
-                      <Plus className="h-4 w-4 mr-2" />
-                      {t('posts.emptyCta')}
-                    </Link>
-                  </Button>
-                </>
-              )}
+              <p className="text-muted-foreground">{t('posts.emptyDescription')}</p>
+              <Button asChild className="mt-4">
+                <Link href="/posts/create">
+                  <Plus className="h-4 w-4 mr-2" />
+                  {t('posts.emptyCta')}
+                </Link>
+              </Button>
             </div>
           ) : (
             <>

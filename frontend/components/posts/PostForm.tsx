@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useTranslation } from "@/src/context/I18nContext"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -13,7 +14,6 @@ import { useProductsQuery } from "@/src/hooks/useProductsQuery"
 import { generatePostContent } from "@/lib/utils/post-template"
 import { type Post, type PostStatus, type CreatePostRequest, type UpdatePostRequest } from "@/lib/types/post"
 import { PostPreview } from "./PostPreview"
-import { useTranslation } from "@/src/context/I18nContext"
 
 interface PostFormProps {
   initialData?: Post
@@ -96,8 +96,8 @@ export function PostForm({ initialData, onSubmit, isLoading = false, isEditing =
           {/* Channel Selection */}
           <Card>
             <CardHeader>
-              <CardTitle>{t('posts.channelCardTitle')}</CardTitle>
-              <CardDescription>{t('posts.channelCardDescription')}</CardDescription>
+              <CardTitle>{t('postForm.channel')}</CardTitle>
+              <CardDescription>{t('postForm.channelDesc')}</CardDescription>
             </CardHeader>
             <CardContent>
               <Select 
@@ -106,7 +106,7 @@ export function PostForm({ initialData, onSubmit, isLoading = false, isEditing =
                 disabled={isLoading}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder={t('posts.selectChannelPlaceholder')} />
+                  <SelectValue placeholder={t('postForm.selectChannel')} />
                 </SelectTrigger>
                 <SelectContent>
                   {channels?.items.map((channel) => (
@@ -122,8 +122,8 @@ export function PostForm({ initialData, onSubmit, isLoading = false, isEditing =
           {/* Product Selection */}
           <Card>
             <CardHeader>
-              <CardTitle>{t('posts.productCardTitle')}</CardTitle>
-              <CardDescription>{t('posts.productCardDescription')}</CardDescription>
+              <CardTitle>{t('postForm.product')}</CardTitle>
+              <CardDescription>{t('postForm.productDesc')}</CardDescription>
             </CardHeader>
             <CardContent>
               <Select 
@@ -132,7 +132,7 @@ export function PostForm({ initialData, onSubmit, isLoading = false, isEditing =
                 disabled={isLoading}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder={t('posts.selectProductPlaceholder')} />
+                  <SelectValue placeholder={t('postForm.selectProduct')} />
                 </SelectTrigger>
                 <SelectContent>
                   {products?.items.map((product) => (
@@ -149,30 +149,30 @@ export function PostForm({ initialData, onSubmit, isLoading = false, isEditing =
         {/* Content Editor */}
         <Card>
           <CardHeader>
-            <CardTitle>{t('posts.contentCardTitle')}</CardTitle>
-            <CardDescription>{t('posts.contentCardDescription')}</CardDescription>
+            <CardTitle>{t('postForm.content')}</CardTitle>
+            <CardDescription>{t('postForm.contentDesc')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <Textarea
-              placeholder={t('posts.contentPlaceholder')}
+              placeholder={t('postForm.contentPlaceholder')}
               value={content}
               onChange={(e) => setContent(e.target.value)}
               className="min-h-[200px] font-mono text-sm"
               disabled={!isContentEditable || isLoading}
             />
-            <div className="text-sm text-muted-foreground">{t('posts.charactersCount', { count: content.length })}</div>
+            <div className="text-sm text-muted-foreground">{t('postForm.charactersCount', { count: content.length })}</div>
           </CardContent>
         </Card>
 
         {/* Status and Scheduling */}
         <Card>
           <CardHeader>
-            <CardTitle>{t('posts.publishingCardTitle')}</CardTitle>
-            <CardDescription>{t('posts.publishingCardDescription')}</CardDescription>
+            <CardTitle>{t('postForm.publishing')}</CardTitle>
+            <CardDescription>{t('postForm.publishingDesc')}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label>{t('posts.statusLabel')}</Label>
+              <Label>{t('postForm.status')}</Label>
               <Select 
                 value={status} 
                 onValueChange={(value: PostStatus) => setStatus(value)}
@@ -182,16 +182,16 @@ export function PostForm({ initialData, onSubmit, isLoading = false, isEditing =
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="DRAFT">{t('posts.statusDraft')}</SelectItem>
-                  <SelectItem value="SENT">{t('posts.actionSendNow')}</SelectItem>
-                  <SelectItem value="SCHEDULED">{t('posts.statusScheduled')}</SelectItem>
+                  <SelectItem value="DRAFT">{t('postForm.statusDraft')}</SelectItem>
+                  <SelectItem value="SENT">{t('postForm.statusSend')}</SelectItem>
+                  <SelectItem value="SCHEDULED">{t('postForm.statusSchedule')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             {status === "SCHEDULED" && (
               <div className="space-y-2">
-                <Label>{t('posts.scheduledAtLabel')}</Label>
+                <Label>{t('postForm.scheduledAt')}</Label>
                 <Input 
                   type="datetime-local" 
                   value={scheduledAt} 
@@ -210,7 +210,7 @@ export function PostForm({ initialData, onSubmit, isLoading = false, isEditing =
             disabled={isLoading || !selectedChannel || !content.trim()}
           >
             <Save className="h-4 w-4 mr-2" />
-             {isEditing ? t('posts.editPost') : t('posts.createPost')}
+             {isEditing ? t('postForm.editPost') : t('postForm.createPost')}
           </Button>
         </div>
       </div>

@@ -1,7 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { useSearchParams } from "next/navigation"
+import { useState } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import {
@@ -39,17 +38,7 @@ import { LanguageSwitcher } from "@/components/language-switcher"
 
 export default function BotsPage() {
   const { t } = useTranslation()
-  const searchParams = useSearchParams()
-  const tabParam = searchParams.get("tab")
-  const [activeTab, setActiveTab] = useState<"bots" | "channels">(
-    tabParam === "channels" ? "channels" : "bots"
-  )
-
-  useEffect(() => {
-    if (tabParam === "channels" || tabParam === "bots") {
-      setActiveTab(tabParam)
-    }
-  }, [tabParam])
+  const [activeTab, setActiveTab] = useState<"bots" | "channels">("bots")
   
   // Separate search states for each tab
   const [botsSearchQuery, setBotsSearchQuery] = useState("")
@@ -224,12 +213,12 @@ export default function BotsPage() {
   return (
     <div className="space-y-6">
       {/* Dynamic Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold">{currentConfig.title}</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold">{currentConfig.title}</h1>
           <p className="text-muted-foreground">{currentConfig.subtitle}</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <LanguageSwitcher />
           <RefreshButton
             variant="outline"

@@ -12,6 +12,7 @@ import {
   ActionType,
   EntityType,
   MemberRole,
+  ConnectionStatus,
 } from '@prisma/client';
 import { PrismaService } from '@core/prisma/prisma.service';
 import { EncryptionService } from '@core/encryption/encryption.service';
@@ -162,6 +163,76 @@ export class PostsService {
     return post;
   }
 
+  /**
+   * Auto-publish a newly created product to the organization's connected
+   * channel. No-op when the organization has no channel, the channel has no
+   * connected bot, or the connection is not fully established (status DONE).
+   * Designed to be called fire-and-forget from product creation.
+   */
+  async autoPostProduct(
+    productId: number,
+    organizationId: number,
+  ): Promise<void> {
+    const channel = await this.prisma.channel.findUnique({
+      where: { organizationId },
+    });
+    if (
+      !channel ||
+      !channel.connectedBotId ||
+      channel.status !== ConnectionStatus.DONE
+    ) {
+      return; // no usable channel connected — nothing to post
+    }
+
+    const product = await this.prisma.product.findUnique({
+      where: { id: productId },
+    });
+    if (!product || product.organizationId !== organizationId) return;
+
+    const content = this.buildProductPostContent(product);
+
+    const post = await this.prisma.post.create({
+      data: {
+        productId,
+        channelId: channel.id,
+        content,
+        status: PostStatus.DRAFT,
+        organizationId,
+      },
+    });
+
+    // Reuses the existing Telegram delivery path (handles images/caption/link
+    // and flips the post to SENT).
+    await this.sendPostToTelegram(post.id);
+  }
+
+  /**
+   * Builds a default Telegram caption (HTML) for an auto-published product.
+   * The bot "More Info" link is appended later by sendPostToTelegram.
+   */
+  private buildProductPostContent(product: {
+    name: string;
+    price: number | null;
+    currency: string | null;
+  }): string {
+    const lines: string[] = [`🆕 <b>${this.escapeHtml(product.name)}</b>`];
+    if (product.price != null) {
+      const price = new Intl.NumberFormat('en-US').format(
+        Number(product.price),
+      );
+      lines.push('');
+      lines.push(`💰 ${price}${product.currency ? ` ${product.currency}` : ''}`);
+    }
+    return lines.join('\n');
+  }
+
+  private escapeHtml(text: string): string {
+    return text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+
   async updatePost(userId: number, postId: number, dto: UpdatePostDto) {
     const organizationId = await this.getUserOrganizationId(userId);
     await this.ensureAdmin(userId, organizationId);
@@ -180,15 +251,35 @@ export class PostsService {
     const scheduledAt = dto.scheduledAt
       ? new Date(dto.scheduledAt)
       : post.scheduledAt;
+    const status: PostStatus = dto.status ?? post.status;
 
     const updated = await this.prisma.post.update({
       where: { id: postId },
       data: {
         content: dto.content ?? post.content,
-        status: dto.status ?? post.status,
+        status,
         scheduledAt,
       },
     });
+
+    // Keep Telegram in sync with the edit, mirroring createPost:
+    // - already sent  -> edit the existing Telegram message
+    // - newly sent     -> send it now (draft/edit -> SENT was never delivered before)
+    // - newly scheduled-> (re)schedule delivery
+    if (status === PostStatus.SENT) {
+      if (post.telegramId) {
+        await this.editPostOnTelegram(updated.id);
+      } else {
+        await this.sendPostToTelegram(updated.id);
+      }
+    } else if (
+      status === PostStatus.SCHEDULED &&
+      scheduledAt &&
+      !post.telegramId
+    ) {
+      await this.schedulePost(userId, updated.id, scheduledAt.toISOString());
+    }
+
     return updated;
   }
 
@@ -379,21 +470,12 @@ export class PostsService {
 
     const token = this.encryption.decrypt(connectedBot.token);
     const images = post.product.images || [];
-    const botStartUrl = `https://t.me/${connectedBot.username}?start=product_${post.productId}`;
-
-    const reply_markup = post.productId
-      ? {
-          inline_keyboard: [
-            [{ text: "📋 Ma'lumot olish", url: botStartUrl, style: 'primary' }],
-            [{ text: '🛒 Sotib olish', url: botStartUrl, style: 'success' }],
-          ],
-        }
-      : undefined;
+    const botLink = `<a href="https://t.me/${connectedBot.username}?start=product_${post.productId}">More Info</a>`;
 
     let telegramId: string | null = null;
     let meta: any = {};
 
-    const caption = post.content;
+    const caption = `${post.content}\n\n👉 ${botLink}`;
 
     if (images.length > 1) {
       const media = images.slice(0, 10).map((img, idx) => ({
@@ -421,7 +503,6 @@ export class PostsService {
         photo: images[0].url,
         caption,
         parse_mode: 'HTML',
-        ...(reply_markup ? { reply_markup } : {}),
       });
 
       if (!res.ok) {
@@ -435,7 +516,6 @@ export class PostsService {
         chat_id: post.channel.telegramId,
         text: caption,
         parse_mode: 'HTML',
-        ...(reply_markup ? { reply_markup } : {}),
       });
 
       if (!res.ok) {

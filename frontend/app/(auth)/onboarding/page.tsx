@@ -15,7 +15,17 @@ import { CompletionStep } from "@/components/onboarding/completion-step"
 import { OnboardingProvider } from "@/src/context/OnboardingContext"
 import { OnboardingStep as BackendOnboardingStep } from "@/src/api/authApi"
 import authApi from "@/src/api/authApi"
+import { useTranslation } from "@/src/context/I18nContext"
 import Image from "next/image"
+
+const STEP_I18N: Record<number, { titleKey: string; descKey: string }> = {
+  1: { titleKey: "onboarding.steps.organizationTitle", descKey: "onboarding.steps.organizationDesc" },
+  2: { titleKey: "onboarding.steps.categoryTitle", descKey: "onboarding.steps.categoryDesc" },
+  3: { titleKey: "onboarding.steps.schemaTitle", descKey: "onboarding.steps.schemaDesc" },
+  4: { titleKey: "onboarding.steps.firstProductTitle", descKey: "onboarding.steps.firstProductDesc" },
+  5: { titleKey: "onboarding.steps.botTitle", descKey: "onboarding.steps.botDesc" },
+  6: { titleKey: "onboarding.steps.completionTitle", descKey: "onboarding.steps.completionDesc" },
+}
 
 const ONBOARDING_STEPS: OnboardingStep[] = [
   { id: 1, title: "Organization Name", description: "Tell us about your business", isComplete: false },
@@ -59,6 +69,7 @@ export default function OnboardingPage() {
   })
   const router = useRouter()
   const searchParams = useSearchParams()
+  const { t } = useTranslation()
 
   useEffect(() => {
     const stepParam = searchParams.get("step")
@@ -119,7 +130,8 @@ export default function OnboardingPage() {
   }
 
   const currentStepData = steps.find((step) => step.id === currentStep)
-  const progress = ((currentStep - 1) / 6) * 100
+  const totalSteps = ONBOARDING_STEPS.length
+  const progress = ((currentStep - 1) / (totalSteps - 1)) * 100
 
   const renderStepContent = () => {
     switch (currentStep) {
@@ -160,8 +172,12 @@ export default function OnboardingPage() {
           {/* Progress */}
           <div className="mb-8">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-sm font-medium">Step {currentStep} of 6</span>
-              <span className="text-sm text-muted-foreground">{Math.round(progress)}% complete</span>
+              <span className="text-sm font-medium">
+                {t("onboarding.stepOf", { current: currentStep, total: totalSteps })}
+              </span>
+              <span className="text-sm text-muted-foreground">
+                {t("onboarding.percentComplete", { percent: Math.round(progress) })}
+              </span>
             </div>
             <Progress value={progress} className="h-2" />
           </div>
@@ -170,12 +186,16 @@ export default function OnboardingPage() {
           <Card className="lp-auth-card">
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                {currentStepData?.title}
+                {STEP_I18N[currentStep] ? t(STEP_I18N[currentStep].titleKey) : currentStepData?.title}
                 {currentStepData?.isOptional && (
-                  <span className="text-sm font-normal text-muted-foreground">(Optional)</span>
+                  <span className="text-sm font-normal text-muted-foreground">
+                    ({t("onboarding.optional")})
+                  </span>
                 )}
               </CardTitle>
-              <p className="text-muted-foreground">{currentStepData?.description}</p>
+              <p className="text-muted-foreground">
+                {STEP_I18N[currentStep] ? t(STEP_I18N[currentStep].descKey) : currentStepData?.description}
+              </p>
             </CardHeader>
             <CardContent>{renderStepContent()}</CardContent>
           </Card>
@@ -186,7 +206,7 @@ export default function OnboardingPage() {
               <div className="flex items-center gap-2">
                 {currentStepData?.isOptional && (
                   <Button variant="ghost" onClick={handleSkip}>
-                    Skip
+                    {t("onboarding.skip")}
                   </Button>
                 )}
               </div>

@@ -1,6 +1,7 @@
 "use client"
 
 import { useMemo } from "react"
+import { useTranslation } from "@/src/context/I18nContext"
 import { useParams, useRouter } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -10,7 +11,6 @@ import { AlertCircle, ArrowLeft } from "lucide-react"
 import { DynamicProductForm } from "@/src/components/DynamicProductForm"
 import { useProductQuery, useUpdateProductMutation } from "@/src/hooks/useProductsQuery"
 import type { FormData } from "@/src/hooks/useDynamicProductForm"
-import { useTranslation } from "@/src/context/I18nContext"
 
 export default function ProductDetailPage() {
   const { t } = useTranslation()
@@ -88,7 +88,7 @@ export default function ProductDetailPage() {
     return (
       <Alert variant="destructive">
         <AlertCircle className="h-4 w-4" />
-        <AlertDescription>{t('products.failedToLoadProduct')}</AlertDescription>
+        <AlertDescription>{t('products.loadFailed')}</AlertDescription>
       </Alert>
     )
   }

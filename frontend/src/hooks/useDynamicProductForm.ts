@@ -22,7 +22,7 @@ export function useDynamicProductForm(options?: {
     defaultValues: {
       name: options?.initialValues?.name ?? "",
       price: options?.initialValues?.price ?? 0,
-      currency: options?.initialValues?.currency ?? "USD",
+      currency: options?.initialValues?.currency ?? "UZS",
       quantity: options?.initialValues?.quantity ?? 0,
       images: options?.initialValues?.images ?? [],
       status: options?.initialValues?.status ?? "DRAFT",
