@@ -1,6 +1,8 @@
 "use client"
 
 import { useState } from "react"
+import { useTranslation } from "@/src/context/I18nContext"
+import { LanguageSwitcher } from "@/components/language-switcher"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -190,6 +192,7 @@ const mockInvitations: TeamInvitation[] = [
 ]
 
 export default function TeamPage() {
+  const { t } = useTranslation()
   const [teamMembers] = useState(mockTeamMembers)
   const [invitations] = useState(mockInvitations)
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false)
@@ -217,10 +220,10 @@ export default function TeamPage() {
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
-      active: { label: "Active", color: "bg-primary", icon: CheckCircle },
-      pending: { label: "Pending", color: "bg-yellow-500", icon: Clock },
-      suspended: { label: "Suspended", color: "bg-red-500", icon: XCircle },
-      expired: { label: "Expired", color: "bg-gray-500", icon: XCircle },
+      active: { label: t("team.status.active"), color: "bg-primary", icon: CheckCircle },
+      pending: { label: t("team.status.pending"), color: "bg-yellow-500", icon: Clock },
+      suspended: { label: t("team.status.suspended"), color: "bg-red-500", icon: XCircle },
+      expired: { label: t("team.status.expired"), color: "bg-gray-500", icon: XCircle },
     }
 
     const config = statusConfig[status as keyof typeof statusConfig]
@@ -237,16 +240,16 @@ export default function TeamPage() {
   }
 
   const formatLastActive = (date?: Date) => {
-    if (!date) return "Never"
+    if (!date) return t("team.lastActive.never")
     const now = new Date()
     const diff = now.getTime() - date.getTime()
     const minutes = Math.floor(diff / (1000 * 60))
     const hours = Math.floor(diff / (1000 * 60 * 60))
     const days = Math.floor(diff / (1000 * 60 * 60 * 24))
 
-    if (minutes < 60) return `${minutes}m ago`
-    if (hours < 24) return `${hours}h ago`
-    if (days < 30) return `${days}d ago`
+    if (minutes < 60) return t("team.lastActive.minutesAgo", { count: minutes })
+    if (hours < 24) return t("team.lastActive.hoursAgo", { count: hours })
+    if (days < 30) return t("team.lastActive.daysAgo", { count: days })
     return date.toLocaleDateString()
   }
 
@@ -278,36 +281,38 @@ export default function TeamPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Team Management</h1>
-          <p className="text-muted-foreground">Manage team members, roles, and permissions</p>
+          <h1 className="text-2xl sm:text-3xl font-bold">{t('team.title')}</h1>
+          <p className="text-muted-foreground">{t('team.subtitle')}</p>
         </div>
+        <div className="flex flex-wrap items-center gap-2">
+        <LanguageSwitcher />
         <Dialog open={isInviteDialogOpen} onOpenChange={setIsInviteDialogOpen}>
           <DialogTrigger asChild>
             <Button>
               <Plus className="h-4 w-4 mr-2" />
-              Invite Member
+              {t('team.inviteMember')}
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[600px] max-h-[80vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Invite Team Member</DialogTitle>
-              <DialogDescription>Send an invitation to join your team</DialogDescription>
+              <DialogTitle>{t('team.inviteDialog.title')}</DialogTitle>
+              <DialogDescription>{t('team.inviteDialog.desc')}</DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="email">Email Address</Label>
+                <Label htmlFor="email">{t('team.inviteDialog.emailLabel')}</Label>
                 <Input
                   id="email"
                   type="email"
-                  placeholder="colleague@example.com"
+                  placeholder={t('team.inviteDialog.emailPlaceholder')}
                   value={inviteForm.email}
                   onChange={(e) => setInviteForm({ ...inviteForm, email: e.target.value })}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="role">Role</Label>
+                <Label htmlFor="role">{t('team.inviteDialog.roleLabel')}</Label>
                 <Select value={inviteForm.role} onValueChange={handleRoleChange}>
                   <SelectTrigger>
                     <SelectValue />
@@ -328,7 +333,7 @@ export default function TeamPage() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Permissions</Label>
+                <Label>{t('team.inviteDialog.permissionsLabel')}</Label>
                 <div className="space-y-4 max-h-60 overflow-y-auto border rounded-lg p-4">
                   {Object.entries(groupedPermissions).map(([category, permissions]) => (
                     <div key={category} className="space-y-2">
@@ -365,51 +370,52 @@ export default function TeamPage() {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="message">Personal Message (Optional)</Label>
+                <Label htmlFor="message">{t('team.inviteDialog.messageLabel')}</Label>
                 <Textarea
                   id="message"
-                  placeholder="Welcome to our team! We're excited to have you join us."
+                  placeholder={t('team.inviteDialog.messagePlaceholder')}
                   value={inviteForm.message}
                   onChange={(e) => setInviteForm({ ...inviteForm, message: e.target.value })}
                 />
               </div>
               <div className="flex justify-end space-x-2">
                 <Button variant="outline" onClick={() => setIsInviteDialogOpen(false)}>
-                  Cancel
+                  {t('team.inviteDialog.cancel')}
                 </Button>
                 <Button onClick={handleInvite}>
                   <Mail className="h-4 w-4 mr-2" />
-                  Send Invitation
+                  {t('team.inviteDialog.send')}
                 </Button>
               </div>
             </div>
           </DialogContent>
         </Dialog>
+        </div>
       </div>
 
       <Tabs defaultValue="members" className="space-y-6">
         <TabsList>
-          <TabsTrigger value="members">Team Members</TabsTrigger>
-          <TabsTrigger value="invitations">Pending Invitations</TabsTrigger>
-          <TabsTrigger value="roles">Roles & Permissions</TabsTrigger>
+          <TabsTrigger value="members">{t('team.tabs.members')}</TabsTrigger>
+          <TabsTrigger value="invitations">{t('team.tabs.invitations')}</TabsTrigger>
+          <TabsTrigger value="roles">{t('team.tabs.roles')}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="members" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Team Members ({teamMembers.length})</CardTitle>
-              <CardDescription>Manage your team members and their access</CardDescription>
+              <CardTitle>{t('team.membersCard.title', { count: teamMembers.length })}</CardTitle>
+              <CardDescription>{t('team.membersCard.desc')}</CardDescription>
             </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Member</TableHead>
-                    <TableHead>Role</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Departments</TableHead>
-                    <TableHead>Last Active</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead>{t('team.table.member')}</TableHead>
+                    <TableHead>{t('team.table.role')}</TableHead>
+                    <TableHead>{t('team.table.status')}</TableHead>
+                    <TableHead>{t('team.table.departments')}</TableHead>
+                    <TableHead>{t('team.table.lastActive')}</TableHead>
+                    <TableHead className="text-right">{t('team.table.actions')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -464,16 +470,16 @@ export default function TeamPage() {
                               }}
                             >
                               <Edit className="h-4 w-4 mr-2" />
-                              Edit Member
+                              {t('team.actions.editMember')}
                             </DropdownMenuItem>
                             <DropdownMenuItem>
                               <Settings className="h-4 w-4 mr-2" />
-                              Manage Permissions
+                              {t('team.actions.managePermissions')}
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem className="text-red-600">
                               <Trash2 className="h-4 w-4 mr-2" />
-                              Remove Member
+                              {t('team.actions.removeMember')}
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -489,20 +495,20 @@ export default function TeamPage() {
         <TabsContent value="invitations" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Pending Invitations ({invitations.length})</CardTitle>
-              <CardDescription>Track sent invitations and their status</CardDescription>
+              <CardTitle>{t('team.invitationsCard.title', { count: invitations.length })}</CardTitle>
+              <CardDescription>{t('team.invitationsCard.desc')}</CardDescription>
             </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Role</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Invited By</TableHead>
-                    <TableHead>Sent</TableHead>
-                    <TableHead>Expires</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                    <TableHead>{t('team.table.email')}</TableHead>
+                    <TableHead>{t('team.table.role')}</TableHead>
+                    <TableHead>{t('team.table.status')}</TableHead>
+                    <TableHead>{t('team.table.invitedBy')}</TableHead>
+                    <TableHead>{t('team.table.sent')}</TableHead>
+                    <TableHead>{t('team.table.expires')}</TableHead>
+                    <TableHead className="text-right">{t('team.table.actions')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -518,7 +524,7 @@ export default function TeamPage() {
                           </div>
                         </TableCell>
                         <TableCell>{getStatusBadge(invitation.status)}</TableCell>
-                        <TableCell>{inviter ? `${inviter.firstName} ${inviter.lastName}` : "Unknown"}</TableCell>
+                        <TableCell>{inviter ? `${inviter.firstName} ${inviter.lastName}` : t('team.unknown')}</TableCell>
                         <TableCell>{invitation.invitedAt.toLocaleDateString()}</TableCell>
                         <TableCell>{invitation.expiresAt.toLocaleDateString()}</TableCell>
                         <TableCell className="text-right">
@@ -531,11 +537,11 @@ export default function TeamPage() {
                             <DropdownMenuContent align="end">
                               <DropdownMenuItem>
                                 <Mail className="h-4 w-4 mr-2" />
-                                Resend Invitation
+                                {t('team.actions.resendInvitation')}
                               </DropdownMenuItem>
                               <DropdownMenuItem className="text-red-600">
                                 <XCircle className="h-4 w-4 mr-2" />
-                                Cancel Invitation
+                                {t('team.actions.cancelInvitation')}
                               </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
@@ -557,13 +563,13 @@ export default function TeamPage() {
                   <CardTitle className="flex items-center gap-2">
                     {getRoleIcon(role.id)}
                     {role.name}
-                    {role.isDefault && <Badge variant="secondary">Default</Badge>}
+                    {role.isDefault && <Badge variant="secondary">{t('team.rolesCard.default')}</Badge>}
                   </CardTitle>
                   <CardDescription>{role.description}</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2">
-                    <div className="text-sm font-medium">Permissions ({role.permissions.length})</div>
+                    <div className="text-sm font-medium">{t('team.rolesCard.permissionsCount', { count: role.permissions.length })}</div>
                     <div className="space-y-1 max-h-40 overflow-y-auto">
                       {Object.entries(
                         role.permissions.reduce(
@@ -593,10 +599,10 @@ export default function TeamPage() {
                   {role.isCustom && (
                     <div className="mt-4 flex gap-2">
                       <Button variant="outline" size="sm">
-                        Edit Role
+                        {t('team.rolesCard.editRole')}
                       </Button>
                       <Button variant="outline" size="sm" className="text-red-600 bg-transparent">
-                        Delete
+                        {t('team.rolesCard.delete')}
                       </Button>
                     </div>
                   )}
@@ -611,8 +617,8 @@ export default function TeamPage() {
       <Dialog open={isEditMemberDialogOpen} onOpenChange={setIsEditMemberDialogOpen}>
         <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle>Edit Team Member</DialogTitle>
-            <DialogDescription>Update member role and permissions</DialogDescription>
+            <DialogTitle>{t('team.editDialog.title')}</DialogTitle>
+            <DialogDescription>{t('team.editDialog.desc')}</DialogDescription>
           </DialogHeader>
           {selectedMember && (
             <div className="space-y-4">
@@ -632,7 +638,7 @@ export default function TeamPage() {
                 </div>
               </div>
               <div className="space-y-2">
-                <Label>Role</Label>
+                <Label>{t('team.editDialog.roleLabel')}</Label>
                 <Select value={selectedMember.role}>
                   <SelectTrigger>
                     <SelectValue />
@@ -650,22 +656,22 @@ export default function TeamPage() {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label>Status</Label>
+                <Label>{t('team.editDialog.statusLabel')}</Label>
                 <Select value={selectedMember.status}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="suspended">Suspended</SelectItem>
+                    <SelectItem value="active">{t('team.editDialog.statusActive')}</SelectItem>
+                    <SelectItem value="suspended">{t('team.editDialog.statusSuspended')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="flex justify-end space-x-2">
                 <Button variant="outline" onClick={() => setIsEditMemberDialogOpen(false)}>
-                  Cancel
+                  {t('team.editDialog.cancel')}
                 </Button>
-                <Button>Save Changes</Button>
+                <Button>{t('team.editDialog.save')}</Button>
               </div>
             </div>
           )}

@@ -154,6 +154,63 @@
 }
 
 /* ══════════════════════════════════════
+   LOADING — SKELETON SHIMMER & SPINNER
+   ══════════════════════════════════════ */
+
+:root {
+  --skeleton-highlight: rgba(0, 0, 0, 0.06);
+}
+.dark {
+  --skeleton-highlight: rgba(255, 255, 255, 0.08);
+}
+
+/* Sweeping highlight that reads as a polished loading state instead of a
+   flat opacity pulse. Applied by the Skeleton component. */
+.skeleton-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+.skeleton-shimmer::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--skeleton-highlight),
+    transparent
+  );
+  animation: skeleton-shimmer 1.6s ease-in-out infinite;
+}
+@keyframes skeleton-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+/* Branded ring spinner (see components/ui/spinner.tsx). */
+@keyframes spinner-rotate {
+  to {
+    transform: rotate(360deg);
+  }
+}
+.aletis-spinner {
+  border-radius: 9999px;
+  border-style: solid;
+  border-color: color-mix(in srgb, var(--primary) 22%, transparent);
+  border-top-color: var(--primary);
+  animation: spinner-rotate 0.7s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-shimmer::after,
+  .aletis-spinner {
+    animation: none;
+  }
+}
+
+/* ══════════════════════════════════════
    LANDING PAGE — GLASS & ANIMATION
    ══════════════════════════════════════ */
 

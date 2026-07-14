@@ -1,6 +1,8 @@
 "use client"
 
 import { useState } from "react"
+import { useTranslation } from "@/src/context/I18nContext"
+import { LanguageSwitcher } from "@/components/language-switcher"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -125,6 +127,7 @@ const priorityConfig = {
 }
 
 export default function ConversationsPage() {
+  const { t } = useTranslation()
   const [conversations, setConversations] = useState(mockConversations)
   const [searchQuery, setSearchQuery] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>("all")
@@ -150,9 +153,9 @@ export default function ConversationsPage() {
     const hours = Math.floor(diff / (1000 * 60 * 60))
     const days = Math.floor(diff / (1000 * 60 * 60 * 24))
 
-    if (minutes < 60) return `${minutes}m ago`
-    if (hours < 24) return `${hours}h ago`
-    return `${days}d ago`
+    if (minutes < 60) return t("conversations.time.minutesAgo", { count: minutes })
+    if (hours < 24) return t("conversations.time.hoursAgo", { count: hours })
+    return t("conversations.time.daysAgo", { count: days })
   }
 
   const getSenderIcon = (senderType: string) => {
@@ -168,11 +171,12 @@ export default function ConversationsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Conversations</h1>
-          <p className="text-muted-foreground">Manage customer conversations and provide support</p>
+          <h1 className="text-2xl sm:text-3xl font-bold">{t('conversations.title')}</h1>
+          <p className="text-muted-foreground">{t('conversations.subtitle')}</p>
         </div>
+        <LanguageSwitcher />
       </div>
 
       {/* Filters */}
@@ -182,7 +186,7 @@ export default function ConversationsPage() {
             <div className="relative flex-1">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Search conversations..."
+                placeholder={t('conversations.searchPlaceholder')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-10"
@@ -191,26 +195,26 @@ export default function ConversationsPage() {
             <div className="flex gap-2">
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="w-[140px]">
-                  <SelectValue placeholder="Status" />
+                  <SelectValue placeholder={t('conversations.statusPlaceholder')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="waiting">Waiting</SelectItem>
-                  <SelectItem value="resolved">Resolved</SelectItem>
-                  <SelectItem value="archived">Archived</SelectItem>
+                  <SelectItem value="all">{t('conversations.filters.allStatus')}</SelectItem>
+                  <SelectItem value="active">{t('conversations.status.active')}</SelectItem>
+                  <SelectItem value="waiting">{t('conversations.status.waiting')}</SelectItem>
+                  <SelectItem value="resolved">{t('conversations.status.resolved')}</SelectItem>
+                  <SelectItem value="archived">{t('conversations.status.archived')}</SelectItem>
                 </SelectContent>
               </Select>
               <Select value={priorityFilter} onValueChange={setPriorityFilter}>
                 <SelectTrigger className="w-[140px]">
-                  <SelectValue placeholder="Priority" />
+                  <SelectValue placeholder={t('conversations.priorityPlaceholder')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Priority</SelectItem>
-                  <SelectItem value="urgent">Urgent</SelectItem>
-                  <SelectItem value="high">High</SelectItem>
-                  <SelectItem value="medium">Medium</SelectItem>
-                  <SelectItem value="low">Low</SelectItem>
+                  <SelectItem value="all">{t('conversations.filters.allPriority')}</SelectItem>
+                  <SelectItem value="urgent">{t('conversations.priority.urgent')}</SelectItem>
+                  <SelectItem value="high">{t('conversations.priority.high')}</SelectItem>
+                  <SelectItem value="medium">{t('conversations.priority.medium')}</SelectItem>
+                  <SelectItem value="low">{t('conversations.priority.low')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -249,11 +253,11 @@ export default function ConversationsPage() {
                       </div>
                       <div className="flex items-center gap-2">
                         <Badge variant="outline" className={`${priorityInfo.color} text-white`}>
-                          {priorityInfo.label}
+                          {t(`conversations.priority.${conversation.priority}`)}
                         </Badge>
                         <Badge variant="outline" className="flex items-center gap-1">
                           <StatusIcon className="h-3 w-3" />
-                          {statusInfo.label}
+                          {t(`conversations.status.${conversation.status}`)}
                         </Badge>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
@@ -262,9 +266,9 @@ export default function ConversationsPage() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem>Mark as resolved</DropdownMenuItem>
-                            <DropdownMenuItem>Assign to operator</DropdownMenuItem>
-                            <DropdownMenuItem>Archive</DropdownMenuItem>
+                            <DropdownMenuItem>{t('conversations.actions.markResolved')}</DropdownMenuItem>
+                            <DropdownMenuItem>{t('conversations.actions.assignOperator')}</DropdownMenuItem>
+                            <DropdownMenuItem>{t('conversations.actions.archive')}</DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </div>
@@ -286,7 +290,7 @@ export default function ConversationsPage() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-4 text-sm text-muted-foreground">
                         <span>{formatTime(conversation.updatedAt)}</span>
-                        <span>{conversation.totalMessages} messages</span>
+                        <span>{t('conversations.messagesCount', { count: conversation.totalMessages })}</span>
                         {conversation.assignedOperator && (
                           <div className="flex items-center gap-1">
                             <User className="h-3 w-3" />
@@ -304,7 +308,7 @@ export default function ConversationsPage() {
                           </Badge>
                         )}
                         <Button asChild size="sm">
-                          <Link href={`/dashboard/conversations/${conversation.id}`}>Open Chat</Link>
+                          <Link href={`/dashboard/conversations/${conversation.id}`}>{t('conversations.openChat')}</Link>
                         </Button>
                       </div>
                     </div>
@@ -330,11 +334,11 @@ export default function ConversationsPage() {
         <Card>
           <CardContent className="p-12 text-center">
             <MessageSquare className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No conversations found</h3>
+            <h3 className="text-lg font-semibold mb-2">{t('conversations.empty.title')}</h3>
             <p className="text-muted-foreground">
               {searchQuery || statusFilter !== "all" || priorityFilter !== "all"
-                ? "Try adjusting your filters to see more conversations."
-                : "Customer conversations will appear here when they start chatting with your bot."}
+                ? t('conversations.empty.filtersHint')
+                : t('conversations.empty.defaultHint')}
             </p>
           </CardContent>
         </Card>

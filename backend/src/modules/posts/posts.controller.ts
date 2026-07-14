@@ -51,12 +51,9 @@ export class PostsController {
     @Param('id') id: string,
     @Body() dto: UpdatePostDto,
   ) {
-    const updated = await this.postsService.updatePost(+user.userId, +id, dto);
-    // If already sent, sync Telegram
-    if (updated.telegramId) {
-      await this.postsService.editPostOnTelegram(updated.id);
-    }
-    return updated;
+    // Telegram sync (send on newly-SENT, edit on already-sent) is handled
+    // inside updatePost so draft->SENT edits are actually delivered.
+    return this.postsService.updatePost(+user.userId, +id, dto);
   }
 
   @Delete(':id')

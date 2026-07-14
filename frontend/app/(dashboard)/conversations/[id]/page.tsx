@@ -3,6 +3,7 @@
 import type React from "react"
 
 import { useState, useRef, useEffect } from "react"
+import { useTranslation } from "@/src/context/I18nContext"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -102,6 +103,7 @@ const mockMessages: Message[] = [
 ]
 
 export default function ConversationDetailPage({ params }: { params: { id: string } }) {
+  const { t } = useTranslation()
   const [messages, setMessages] = useState(mockMessages)
   const [newMessage, setNewMessage] = useState("")
   const [conversation, setConversation] = useState(mockConversation)
@@ -151,9 +153,9 @@ export default function ConversationDetailPage({ params }: { params: { id: strin
     yesterday.setDate(yesterday.getDate() - 1)
 
     if (date.toDateString() === today.toDateString()) {
-      return "Today"
+      return t("conversations.detail.today")
     } else if (date.toDateString() === yesterday.toDateString()) {
-      return "Yesterday"
+      return t("conversations.detail.yesterday")
     } else {
       return date.toLocaleDateString()
     }
@@ -206,17 +208,17 @@ export default function ConversationDetailPage({ params }: { params: { id: strin
                 {conversation.customer.firstName} {conversation.customer.lastName}
               </h2>
               <p className="text-sm text-muted-foreground">
-                @{conversation.customer.username} • Telegram ID: {conversation.customer.telegramId}
+                @{conversation.customer.username} • {t('conversations.detail.telegramId', { id: conversation.customer.telegramId })}
               </p>
             </div>
           </div>
           <div className="flex items-center gap-2">
             <Badge variant="outline" className="bg-orange-500 text-white">
-              High Priority
+              {t('conversations.priority.high')}
             </Badge>
             <Badge variant="outline" className="bg-primary text-white flex items-center gap-1">
               <MessageSquare className="h-3 w-3" />
-              Active
+              {t('conversations.status.active')}
             </Badge>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -225,10 +227,10 @@ export default function ConversationDetailPage({ params }: { params: { id: strin
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem>Mark as resolved</DropdownMenuItem>
-                <DropdownMenuItem>Change priority</DropdownMenuItem>
-                <DropdownMenuItem>Assign to operator</DropdownMenuItem>
-                <DropdownMenuItem>Archive conversation</DropdownMenuItem>
+                <DropdownMenuItem>{t('conversations.actions.markResolved')}</DropdownMenuItem>
+                <DropdownMenuItem>{t('conversations.actions.changePriority')}</DropdownMenuItem>
+                <DropdownMenuItem>{t('conversations.actions.assignOperator')}</DropdownMenuItem>
+                <DropdownMenuItem>{t('conversations.actions.archiveConversation')}</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -295,7 +297,7 @@ export default function ConversationDetailPage({ params }: { params: { id: strin
               </Button>
               <div className="flex-1">
                 <Textarea
-                  placeholder="Type your message..."
+                  placeholder={t('conversations.detail.typeMessage')}
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
                   onKeyPress={handleKeyPress}
@@ -313,7 +315,7 @@ export default function ConversationDetailPage({ params }: { params: { id: strin
         <div className="w-80 border-l bg-muted/30 p-4 space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Customer Info</CardTitle>
+              <CardTitle className="text-lg">{t('conversations.detail.customerInfo')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center gap-3">
@@ -334,11 +336,11 @@ export default function ConversationDetailPage({ params }: { params: { id: strin
               <div className="space-y-2 text-sm">
                 <div className="flex items-center gap-2">
                   <MessageSquare className="h-4 w-4 text-muted-foreground" />
-                  <span>Telegram ID: {conversation.customer.telegramId}</span>
+                  <span>{t('conversations.detail.telegramId', { id: conversation.customer.telegramId })}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <Clock className="h-4 w-4 text-muted-foreground" />
-                  <span>Joined: {formatDate(conversation.createdAt)}</span>
+                  <span>{t('conversations.detail.joined', { date: formatDate(conversation.createdAt) })}</span>
                 </div>
               </div>
             </CardContent>
@@ -346,42 +348,42 @@ export default function ConversationDetailPage({ params }: { params: { id: strin
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Conversation Details</CardTitle>
+              <CardTitle className="text-lg">{t('conversations.detail.conversationDetails')}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="space-y-2">
-                <label className="text-sm font-medium">Status</label>
+                <label className="text-sm font-medium">{t('conversations.detail.statusLabel')}</label>
                 <Select value={conversation.status}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="waiting">Waiting</SelectItem>
-                    <SelectItem value="resolved">Resolved</SelectItem>
-                    <SelectItem value="archived">Archived</SelectItem>
+                    <SelectItem value="active">{t('conversations.status.active')}</SelectItem>
+                    <SelectItem value="waiting">{t('conversations.status.waiting')}</SelectItem>
+                    <SelectItem value="resolved">{t('conversations.status.resolved')}</SelectItem>
+                    <SelectItem value="archived">{t('conversations.status.archived')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Priority</label>
+                <label className="text-sm font-medium">{t('conversations.detail.priorityLabel')}</label>
                 <Select value={conversation.priority}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="low">Low</SelectItem>
-                    <SelectItem value="medium">Medium</SelectItem>
-                    <SelectItem value="high">High</SelectItem>
-                    <SelectItem value="urgent">Urgent</SelectItem>
+                    <SelectItem value="low">{t('conversations.priority.low')}</SelectItem>
+                    <SelectItem value="medium">{t('conversations.priority.medium')}</SelectItem>
+                    <SelectItem value="high">{t('conversations.priority.high')}</SelectItem>
+                    <SelectItem value="urgent">{t('conversations.priority.urgent')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Assigned Operator</label>
+                <label className="text-sm font-medium">{t('conversations.detail.assignedOperator')}</label>
                 <Select value={conversation.assignedOperatorId || ""}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select operator" />
+                    <SelectValue placeholder={t('conversations.detail.selectOperator')} />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="op-1">Sarah Wilson</SelectItem>
@@ -395,7 +397,7 @@ export default function ConversationDetailPage({ params }: { params: { id: strin
 
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Tags</CardTitle>
+              <CardTitle className="text-lg">{t('conversations.detail.tags')}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="flex flex-wrap gap-2">

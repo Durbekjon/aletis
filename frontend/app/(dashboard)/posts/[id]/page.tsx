@@ -1,6 +1,7 @@
 "use client"
 
 import { useParams, useRouter } from "next/navigation"
+import { useTranslation } from "@/src/context/I18nContext"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -8,6 +9,7 @@ import { ArrowLeft, Edit, Trash2 } from "lucide-react"
 import Link from "next/link"
 import { usePostQuery, useUpdatePostMutation, useDeletePostMutation } from "@/src/hooks/usePostsQuery"
 import { PostForm } from "@/components/posts/PostForm"
+import { PageLoader } from "@/components/ui/spinner"
 import { PostStatusBadge } from "@/components/posts/PostStatusBadge"
 import { PostPreview } from "@/components/posts/PostPreview"
 import { type CreatePostRequest, type UpdatePostRequest } from "@/lib/types/post"
@@ -16,6 +18,7 @@ import { formatPostDate } from "@/lib/utils/post-template"
 export default function PostDetailPage() {
   const params = useParams()
   const router = useRouter()
+  const { t } = useTranslation()
   const postId = parseInt(params.id as string)
   
   const { data: post, isLoading, error } = usePostQuery(postId)
@@ -34,7 +37,7 @@ export default function PostDetailPage() {
   }
 
   const handleDelete = async () => {
-    if (confirm("Are you sure you want to delete this post?")) {
+    if (confirm(t("posts.detail.confirmDelete"))) {
       try {
         await deletePostMutation.mutateAsync(postId)
         router.push("/posts")
@@ -59,13 +62,11 @@ export default function PostDetailPage() {
             </Link>
           </Button>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Post Details</h1>
-            <p className="text-muted-foreground">Loading post details...</p>
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{t('posts.detail.title')}</h1>
+            <p className="text-muted-foreground">{t('posts.detail.loadingDesc')}</p>
           </div>
         </div>
-        <div className="text-center py-8">
-          <p className="text-muted-foreground">Loading...</p>
-        </div>
+        <PageLoader label={t('posts.detail.loading')} />
       </div>
     )
   }
@@ -80,16 +81,16 @@ export default function PostDetailPage() {
             </Link>
           </Button>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Post Details</h1>
-            <p className="text-muted-foreground">Post not found</p>
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{t('posts.detail.title')}</h1>
+            <p className="text-muted-foreground">{t('posts.detail.notFound')}</p>
           </div>
         </div>
         <Card>
           <CardContent className="pt-6">
             <div className="text-center py-8">
-              <p className="text-destructive">Failed to load post. Please try again.</p>
+              <p className="text-destructive">{t('posts.detail.loadFailed')}</p>
               <Button asChild className="mt-4">
-                <Link href="/posts">Back to Posts</Link>
+                <Link href="/posts">{t('posts.detail.backToPosts')}</Link>
               </Button>
             </div>
           </CardContent>
@@ -103,7 +104,7 @@ export default function PostDetailPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" asChild>
             <Link href="/posts">
@@ -111,9 +112,9 @@ export default function PostDetailPage() {
             </Link>
           </Button>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Post Details</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{t('posts.detail.title')}</h1>
             <p className="text-muted-foreground">
-              {post.channel?.title || "Unknown Channel"} • {formatPostDate(post.createdAt)}
+              {post.channel?.title || t('posts.detail.unknownChannel')} • {formatPostDate(post.createdAt)}
             </p>
           </div>
         </div>
@@ -122,7 +123,7 @@ export default function PostDetailPage() {
             <Button variant="outline" asChild>
               <Link href={`/posts/${post.id}/edit`}>
                 <Edit className="h-4 w-4 mr-2" />
-                Edit
+                {t('posts.detail.edit')}
               </Link>
             </Button>
           )}
@@ -132,7 +133,7 @@ export default function PostDetailPage() {
             disabled={deletePostMutation.isPending}
           >
             <Trash2 className="h-4 w-4 mr-2" />
-            Delete
+            {t('posts.detail.delete')}
           </Button>
         </div>
       </div>
@@ -142,19 +143,19 @@ export default function PostDetailPage() {
         <div className="lg:col-span-2 space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Post Information</CardTitle>
-              <CardDescription>Details about this post</CardDescription>
+              <CardTitle>{t('posts.detail.info')}</CardTitle>
+              <CardDescription>{t('posts.detail.infoDesc')}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm font-medium text-muted-foreground">Status</label>
+                  <label className="text-sm font-medium text-muted-foreground">{t('posts.detail.status')}</label>
                   <div className="mt-1">
                     <PostStatusBadge status={post.status} />
                   </div>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-muted-foreground">Channel</label>
+                  <label className="text-sm font-medium text-muted-foreground">{t('posts.detail.channel')}</label>
                   <div className="mt-1">
                     {post.channel ? (
                       <Badge className="bg-blue-500">
@@ -169,32 +170,32 @@ export default function PostDetailPage() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="text-sm font-medium text-muted-foreground">Created</label>
+                  <label className="text-sm font-medium text-muted-foreground">{t('posts.detail.created')}</label>
                   <div className="mt-1 text-sm">{formatPostDate(post.createdAt)}</div>
                 </div>
                 <div>
-                  <label className="text-sm font-medium text-muted-foreground">Updated</label>
+                  <label className="text-sm font-medium text-muted-foreground">{t('posts.detail.updated')}</label>
                   <div className="mt-1 text-sm">{formatPostDate(post.updatedAt)}</div>
                 </div>
               </div>
 
               {post.sentAt && (
                 <div>
-                  <label className="text-sm font-medium text-muted-foreground">Sent At</label>
+                  <label className="text-sm font-medium text-muted-foreground">{t('posts.detail.sentAt')}</label>
                   <div className="mt-1 text-sm">{formatPostDate(post.sentAt)}</div>
                 </div>
               )}
 
               {post.scheduledAt && (
                 <div>
-                  <label className="text-sm font-medium text-muted-foreground">Scheduled For</label>
+                  <label className="text-sm font-medium text-muted-foreground">{t('posts.detail.scheduledFor')}</label>
                   <div className="mt-1 text-sm">{formatPostDate(post.scheduledAt)}</div>
                 </div>
               )}
 
               {post.telegramMessageId && (
                 <div>
-                  <label className="text-sm font-medium text-muted-foreground">Telegram Message ID</label>
+                  <label className="text-sm font-medium text-muted-foreground">{t('posts.detail.telegramMessageId')}</label>
                   <div className="mt-1 text-sm font-mono">{post.telegramMessageId}</div>
                 </div>
               )}
@@ -203,8 +204,8 @@ export default function PostDetailPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Content</CardTitle>
-              <CardDescription>The post content</CardDescription>
+              <CardTitle>{t('posts.detail.content')}</CardTitle>
+              <CardDescription>{t('posts.detail.contentDesc')}</CardDescription>
             </CardHeader>
             <CardContent>
               <div className="whitespace-pre-wrap break-words text-sm">
@@ -216,8 +217,8 @@ export default function PostDetailPage() {
           {post.product && (
             <Card>
               <CardHeader>
-                <CardTitle>Product</CardTitle>
-                <CardDescription>Associated product information</CardDescription>
+                <CardTitle>{t('posts.detail.product')}</CardTitle>
+                <CardDescription>{t('posts.detail.productDesc')}</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="flex items-center gap-4">
@@ -243,8 +244,8 @@ export default function PostDetailPage() {
           {isEditable && (
             <Card>
               <CardHeader>
-                <CardTitle>Edit Post</CardTitle>
-                <CardDescription>Update the post content and settings</CardDescription>
+                <CardTitle>{t('posts.detail.editPost')}</CardTitle>
+                <CardDescription>{t('posts.detail.editPostDesc')}</CardDescription>
               </CardHeader>
               <CardContent>
                 <PostForm

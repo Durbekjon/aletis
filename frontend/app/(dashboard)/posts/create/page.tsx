@@ -1,13 +1,13 @@
 "use client"
 
 import { useRouter } from "next/navigation"
+import { useTranslation } from "@/src/context/I18nContext"
 import { Button } from "@/components/ui/button"
 import { ArrowLeft } from "lucide-react"
 import Link from "next/link"
 import { PostForm } from "@/components/posts/PostForm"
 import { useCreatePostMutation } from "@/src/hooks/usePostsQuery"
 import { useChannelsQuery } from "@/src/hooks/useChannelsQuery"
-import { useTranslation } from "@/src/context/I18nContext"
 import { type CreatePostRequest, type UpdatePostRequest } from "@/lib/types/post"
 
 export default function CreatePostPage() {
@@ -60,12 +60,9 @@ export default function CreatePostPage() {
           </Link>
         </Button>
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">{t('posts.createPost')}</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{t('posts.createTitle')}</h1>
           <p className="text-muted-foreground">
-            {noChannels
-              ? t('posts.noChannelsDescription')
-              : t('posts.subtitle')
-            }
+            {noChannels ? t('posts.noChannelsDescription') : t('posts.createDesc')}
           </p>
         </div>
       </div>

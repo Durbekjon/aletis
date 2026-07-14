@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useTranslation } from "@/src/context/I18nContext"
 import { useParams } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -32,6 +33,7 @@ import { useToast } from "@/hooks/use-toast"
 
 export default function OrderDetailPage() {
   const params = useParams()
+  const { t } = useTranslation()
   const { toast } = useToast()
   const orderId = parseInt(params.id as string)
   
@@ -57,8 +59,8 @@ export default function OrderDetailPage() {
   // Handle API errors
   if (error) {
     toast({
-      title: "Error",
-      description: "Failed to load order details. Please try again.",
+      title: t("orders.detail.toast.errorTitle"),
+      description: t("orders.detail.toast.loadFailed"),
       variant: "destructive",
     })
   }
@@ -80,7 +82,7 @@ export default function OrderDetailPage() {
     return (
       <Badge variant={config.variant} className="gap-1">
         <Icon className="h-3 w-3" />
-        {status.charAt(0).toUpperCase() + status.slice(1).toLowerCase()}
+        {t(`orders.status${status.charAt(0).toUpperCase() + status.slice(1).toLowerCase()}`)}
       </Badge>
     )
   }
@@ -88,13 +90,13 @@ export default function OrderDetailPage() {
   const getPaymentBadge = (paymentStatus: PaymentStatus) => {
     switch (paymentStatus) {
       case PaymentStatus.PAID:
-        return <Badge className="bg-primary">Paid</Badge>
+        return <Badge className="bg-primary">{t('orders.paymentPaid')}</Badge>
       case PaymentStatus.PENDING:
-        return <Badge variant="secondary">Pending</Badge>
+        return <Badge variant="secondary">{t('orders.paymentPending')}</Badge>
       case PaymentStatus.FAILED:
-        return <Badge variant="destructive">Failed</Badge>
+        return <Badge variant="destructive">{t('orders.paymentFailed')}</Badge>
       case PaymentStatus.REFUNDED:
-        return <Badge variant="outline">Refunded</Badge>
+        return <Badge variant="outline">{t('orders.paymentRefunded')}</Badge>
       default:
         return <Badge variant="secondary">{paymentStatus}</Badge>
     }
@@ -119,13 +121,13 @@ export default function OrderDetailPage() {
           updateData: { orderStatus: newStatus }
         })
         toast({
-          title: "Success",
-          description: "Order status updated successfully",
+          title: t("orders.detail.toast.successTitle"),
+          description: t("orders.detail.toast.statusUpdated"),
         })
       } catch (error) {
         toast({
-          title: "Error",
-          description: "Failed to update order status",
+          title: t("orders.detail.toast.errorTitle"),
+          description: t("orders.detail.toast.statusFailed"),
           variant: "destructive",
         })
       }
@@ -140,13 +142,13 @@ export default function OrderDetailPage() {
           updateData: { paymentStatus: newPaymentStatus }
         })
         toast({
-          title: "Success",
-          description: "Payment status updated successfully",
+          title: t("orders.detail.toast.successTitle"),
+          description: t("orders.detail.toast.paymentUpdated"),
         })
       } catch (error) {
         toast({
-          title: "Error",
-          description: "Failed to update payment status",
+          title: t("orders.detail.toast.errorTitle"),
+          description: t("orders.detail.toast.paymentFailed"),
           variant: "destructive",
         })
       }
@@ -165,14 +167,14 @@ export default function OrderDetailPage() {
         updateData: { notes }
       })
       toast({
-        title: "Success",
-        description: "Notes updated successfully",
+        title: t("orders.detail.toast.successTitle"),
+        description: t("orders.detail.toast.notesUpdated"),
       })
       setNotesChanged(false)
     } catch (error) {
       toast({
-        title: "Error",
-        description: "Failed to update notes",
+        title: t("orders.detail.toast.errorTitle"),
+        description: t("orders.detail.toast.notesFailed"),
         variant: "destructive",
       })
     }
@@ -196,12 +198,12 @@ export default function OrderDetailPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">
           <Button variant="outline" size="sm" asChild>
             <Link href="/orders">
               <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Orders
+              {t('orders.detail.backToOrders')}
             </Link>
           </Button>
           <div>
@@ -212,19 +214,19 @@ export default function OrderDetailPage() {
               </div>
             ) : error ? (
               <div>
-                <h1 className="text-3xl font-bold tracking-tight text-red-600">Error Loading Order</h1>
-                <p className="text-muted-foreground">Failed to load order details</p>
+                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-red-600">{t('orders.detail.errorLoading')}</h1>
+                <p className="text-muted-foreground">{t('orders.detail.failedLoad')}</p>
               </div>
             ) : (
               <>
-                <h1 className="text-3xl font-bold tracking-tight">{order?.orderNumber}</h1>
-                <p className="text-muted-foreground">Order details and management</p>
+                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">{order?.orderNumber}</h1>
+                <p className="text-muted-foreground">{t('orders.detail.subtitle')}</p>
               </>
             )}
           </div>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline">Print</Button>
+          <Button variant="outline">{t('orders.detail.print')}</Button>
           {/* <Button>Contact Customer</Button> */}
         </div>
       </div>
@@ -276,10 +278,10 @@ export default function OrderDetailPage() {
           <CardContent className="py-8">
             <div className="text-center">
               <AlertCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Failed to Load Order</h3>
-              <p className="text-muted-foreground mb-4">There was an error loading the order details.</p>
+              <h3 className="text-lg font-semibold mb-2">{t('orders.detail.failedTitle')}</h3>
+              <p className="text-muted-foreground mb-4">{t('orders.detail.failedDesc')}</p>
               <Button onClick={() => window.location.reload()}>
-                Try Again
+                {t('orders.detail.tryAgain')}
               </Button>
             </div>
           </CardContent>
@@ -292,7 +294,7 @@ export default function OrderDetailPage() {
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Package className="h-5 w-5" />
-                Order Items
+                {t('orders.detail.orderItems')}
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -307,11 +309,11 @@ export default function OrderDetailPage() {
                     />
                     <div className="flex-1">
                       <h4 className="font-medium">{item.product.name}</h4>
-                      <p className="text-sm text-muted-foreground">Quantity: {item.quantity}</p>
+                      <p className="text-sm text-muted-foreground">{t('orders.detail.quantity', { count: item.quantity })}</p>
                     </div>
                     <div className="text-right">
                       <p className="font-medium">${item.price * item.quantity}</p>
-                      <p className="text-sm text-muted-foreground">${item.price} each</p>
+                      <p className="text-sm text-muted-foreground">{t('orders.detail.each', { price: item.price })}</p>
                     </div>
                   </div>
                   </Link>
@@ -321,12 +323,12 @@ export default function OrderDetailPage() {
 
                 <div className="space-y-2">
                   <div className="flex justify-between px-4">
-                    <span>Subtotal</span>
+                    <span>{t('orders.detail.subtotal')}</span>
                     <span>${order.totalPrice}</span>
                   </div>
                   <Separator />
                   <div className="flex justify-between text-lg font-semibold px-4">
-                    <span>Total</span>
+                    <span>{t('orders.detail.total')}</span>
                     <span>${order.totalPrice}</span>
                   </div>
                 </div>
@@ -338,11 +340,11 @@ export default function OrderDetailPage() {
           <div className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Order Status</CardTitle>
+                <CardTitle>{t('orders.detail.orderStatus')}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <span>Current Status</span>
+                  <span>{t('orders.detail.currentStatus')}</span>
                   {orderStatus && getStatusBadge(orderStatus)}
                 </div>
 
@@ -359,25 +361,25 @@ export default function OrderDetailPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value={OrderStatus.NEW}>New</SelectItem>
-                      <SelectItem value={OrderStatus.PENDING}>Pending</SelectItem>
-                      <SelectItem value={OrderStatus.CONFIRMED}>Confirmed</SelectItem>
-                      <SelectItem value={OrderStatus.SHIPPED}>Shipped</SelectItem>
-                      <SelectItem value={OrderStatus.DELIVERED}>Delivered</SelectItem>
-                      <SelectItem value={OrderStatus.CANCELLED}>Cancelled</SelectItem>
-                      <SelectItem value={OrderStatus.REFUNDED}>Refunded</SelectItem>
+                      <SelectItem value={OrderStatus.NEW}>{t('orders.statusNew')}</SelectItem>
+                      <SelectItem value={OrderStatus.PENDING}>{t('orders.statusPending')}</SelectItem>
+                      <SelectItem value={OrderStatus.CONFIRMED}>{t('orders.statusConfirmed')}</SelectItem>
+                      <SelectItem value={OrderStatus.SHIPPED}>{t('orders.statusShipped')}</SelectItem>
+                      <SelectItem value={OrderStatus.DELIVERED}>{t('orders.statusDelivered')}</SelectItem>
+                      <SelectItem value={OrderStatus.CANCELLED}>{t('orders.statusCancelled')}</SelectItem>
+                      <SelectItem value={OrderStatus.REFUNDED}>{t('orders.statusRefunded')}</SelectItem>
                     </SelectContent>
                   </Select>
                   {updateOrderMutation.isPending && (
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Loader2 className="h-4 w-4 animate-spin" />
-                      Updating...
+                      {t('orders.detail.updating')}
                     </div>
                   )}
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Payment Status</label>
+                  <label className="text-sm font-medium">{t('orders.detail.paymentStatus')}</label>
                   <Select 
                     value={paymentStatus} 
                     onValueChange={(value) => {
@@ -390,21 +392,21 @@ export default function OrderDetailPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value={PaymentStatus.PENDING}>Pending</SelectItem>
-                      <SelectItem value={PaymentStatus.PAID}>Paid</SelectItem>
-                      <SelectItem value={PaymentStatus.FAILED}>Failed</SelectItem>
-                      <SelectItem value={PaymentStatus.REFUNDED}>Refunded</SelectItem>
+                      <SelectItem value={PaymentStatus.PENDING}>{t('orders.paymentPending')}</SelectItem>
+                      <SelectItem value={PaymentStatus.PAID}>{t('orders.paymentPaid')}</SelectItem>
+                      <SelectItem value={PaymentStatus.FAILED}>{t('orders.paymentFailed')}</SelectItem>
+                      <SelectItem value={PaymentStatus.REFUNDED}>{t('orders.paymentRefunded')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Notes</label>
+                  <label className="text-sm font-medium">{t('orders.detail.notes')}</label>
                   <Textarea
                     value={notes}
                     defaultValue={order.notes || ""}
                     onChange={(e) => handleNotesChange(e.target.value)}
-                    placeholder="Add notes about this order..."
+                    placeholder={t('orders.detail.notesPlaceholder')}
                     rows={3}
                   />
                   {notesChanged && (
@@ -417,10 +419,10 @@ export default function OrderDetailPage() {
                       {updateOrderMutation.isPending ? (
                         <>
                           <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          Saving...
+                          {t('orders.detail.saving')}
                         </>
                       ) : (
-                        "Save Notes"
+                        t('orders.detail.saveNotes')
                       )}
                     </Button>
                   )}
@@ -433,50 +435,55 @@ export default function OrderDetailPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <User className="h-5 w-5" />
-                  Customer Information
+                  {t('orders.detail.customerInfo')}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center gap-3">
-                  <Avatar>
-                    <AvatarFallback className="rounded-md">
-                      {order.customer.name?.split(' ').map((name) => name[0]).join('')}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="font-medium">{order.customer.name}</p>
-                    {order.customer.username && (
-                      <p className="text-sm text-muted-foreground">
-                        <a href={`https://t.me/${order.customer.username}`} target="_blank" rel="noopener noreferrer">
-                          @{order.customer.username}
-                        </a>
-                      </p>
-                    )}
-                  </div>
+                  <Link
+                    href={`/customers/${order.customer.id}`}
+                    className="flex items-center gap-3 group"
+                  >
+                    <Avatar>
+                      <AvatarFallback className="rounded-md">
+                        {order.customer.name?.split(' ').map((name) => name[0]).join('')}
+                      </AvatarFallback>
+                    </Avatar>
+                    <p className="font-medium group-hover:underline">{order.customer.name}</p>
+                  </Link>
+                  {order.customer.username && (
+                    <p className="text-sm text-muted-foreground">
+                      <a href={`https://t.me/${order.customer.username}`} target="_blank" rel="noopener noreferrer">
+                        @{order.customer.username}
+                      </a>
+                    </p>
+                  )}
                 </div>
 
                 <div className="space-y-2 text-sm">
                   <div className="flex items-center gap-2">
-                    <span className="text-muted-foreground">Telegram ID:</span>
+                    <span className="text-muted-foreground">{t('orders.detail.telegramId')}</span>
                     <span className="font-mono">{order.customer.telegramId}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-muted-foreground">Phone Number:</span>
+                    <span className="text-muted-foreground">{t('orders.detail.phoneNumber')}</span>
                     <span className="font-mono">{order.details?.phoneNumber}</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-muted-foreground">Location:</span>
+                    <span className="text-muted-foreground">{t('orders.detail.location')}</span>
                     <span className="font-mono">{order.details?.location}</span>
                       </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-muted-foreground">notes:</span>
+                    <span className="text-muted-foreground">{t('orders.detail.notesLabel')}</span>
                     <span className="font-mono">{order.details?.notes}</span>
                   </div>
                 </div>
 
-                <Button variant="outline" size="sm" className="w-full bg-transparent">
-                  <MessageSquare className="h-4 w-4 mr-2" />
-                  View Conversation
+                <Button asChild variant="outline" size="sm" className="w-full bg-transparent">
+                  <Link href={`/customers/${order.customer.id}`}>
+                    <MessageSquare className="h-4 w-4 mr-2" />
+                    {t('orders.detail.viewConversation')}
+                  </Link>
                 </Button>
               </CardContent>
             </Card>
@@ -485,7 +492,7 @@ export default function OrderDetailPage() {
 
           <Card className="lg:col-span-3">
             <CardHeader>
-              <CardTitle>Order Timeline</CardTitle>
+              <CardTitle>{t('orders.detail.timeline')}</CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-6">
@@ -498,7 +505,7 @@ export default function OrderDetailPage() {
                         <Clock className="h-4 w-4 text-blue-600" />
                       </div>
                       <div>
-                        <p className="font-medium">Order Created</p>
+                        <p className="font-medium">{t('orders.detail.orderCreated')}</p>
                         <p className="text-muted-foreground">{formatDate(order.createdAt)}</p>
                       </div>
                     </div>

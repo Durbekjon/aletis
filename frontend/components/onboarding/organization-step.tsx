@@ -9,6 +9,7 @@ import type { OnboardingData } from "@/lib/types/onboarding"
 import { ArrowRight } from "lucide-react"
 import { useOnboarding } from "@/src/hooks/useOnboarding"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { useTranslation } from "@/src/context/I18nContext"
 
 interface OrganizationStepProps {
   data: OnboardingData
@@ -19,6 +20,7 @@ interface OrganizationStepProps {
 const MAX_DESCRIPTION_LENGTH = 500
 
 export function OrganizationStep({ data, onUpdate, onNext }: OrganizationStepProps) {
+  const { t } = useTranslation()
   const [organizationName, setOrganizationName] = useState(data.organizationName)
   const [description, setDescription] = useState(data.organizationDescription ?? "")
   const { createOrganization, loading, error } = useOnboarding()
@@ -52,22 +54,22 @@ export function OrganizationStep({ data, onUpdate, onNext }: OrganizationStepPro
   return (
     <div className="space-y-6">
       <div className="space-y-2">
-        <Label htmlFor="organizationName">Organization Name *</Label>
+        <Label htmlFor="organizationName">{t("onboarding.org.nameLabel")} *</Label>
         <Input
           id="organizationName"
           ref={inputRef}
-          placeholder="Enter your business name"
+          placeholder={t("onboarding.org.namePlaceholder")}
           value={organizationName}
           onChange={(e) => setOrganizationName(e.target.value)}
           onKeyDown={handleKeyPress}
           className="text-lg"
         />
-        <p className="text-sm text-muted-foreground">This will be displayed to your customers and used in your bot</p>
+        <p className="text-sm text-muted-foreground">{t("onboarding.org.nameHelp")}</p>
       </div>
 
       <div className="space-y-2">
         <Label htmlFor="organizationDescription">
-          About your business <span className="text-muted-foreground font-normal">(optional)</span>
+          {t("onboarding.org.descLabel")} <span className="text-muted-foreground font-normal">(optional)</span>
         </Label>
         <Textarea
           id="organizationDescription"
@@ -79,7 +81,7 @@ export function OrganizationStep({ data, onUpdate, onNext }: OrganizationStepPro
         />
         <div className="flex justify-between items-center">
           <p className="text-sm text-muted-foreground">
-            Help the AI understand your business so it can answer as your sales agent
+            {t("onboarding.org.descHelp")}
           </p>
           <span className={`text-xs ${description.length >= MAX_DESCRIPTION_LENGTH ? "text-destructive" : "text-muted-foreground"}`}>
             {description.length}/{MAX_DESCRIPTION_LENGTH}
@@ -94,7 +96,7 @@ export function OrganizationStep({ data, onUpdate, onNext }: OrganizationStepPro
       )}
 
       <Button onClick={handleNext} disabled={!organizationName.trim() || loading} className="w-full flex items-center gap-2">
-        Continue
+        {t("onboarding.continue")}
         <ArrowRight className="h-4 w-4" />
       </Button>
     </div>

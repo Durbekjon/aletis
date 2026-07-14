@@ -353,7 +353,13 @@
     "currencyRUB": "RUB - Russian Ruble",
     "currencyKZT": "KZT - Kazakhstani Tenge",
     "currencyGBP": "GBP - British Pound",
-    "currencyJPY": "JPY - Japanese Yen"
+    "currencyJPY": "JPY - Japanese Yen",
+    "newTitle": "Add New Product",
+    "newDesc": "Create a new product using your organization's schema",
+    "editTitle": "Edit Product",
+    "editDesc": "Update product details and fields",
+    "loadFailed": "Failed to load product.",
+    "loadFailedRetry": "Failed to load product. Please try again."
   },
   "orders": {
     "title": "Orders",
@@ -401,7 +407,49 @@
     "paginationSummary": "Showing {{start}} to {{end}} of {{total}} orders",
     "previous": "Previous",
     "next": "Next",
-    "itemsCount": "{{count}} items"
+    "itemsCount": "{{count}} items",
+    "detail": {
+      "backToOrders": "Back to Orders",
+      "errorLoading": "Error Loading Order",
+      "failedLoad": "Failed to load order details",
+      "subtitle": "Order details and management",
+      "print": "Print",
+      "failedTitle": "Failed to Load Order",
+      "failedDesc": "There was an error loading the order details.",
+      "tryAgain": "Try Again",
+      "orderItems": "Order Items",
+      "quantity": "Quantity: {{count}}",
+      "each": "${{price}} each",
+      "subtotal": "Subtotal",
+      "total": "Total",
+      "orderStatus": "Order Status",
+      "currentStatus": "Current Status",
+      "updating": "Updating...",
+      "paymentStatus": "Payment Status",
+      "notes": "Notes",
+      "notesPlaceholder": "Add notes about this order...",
+      "saving": "Saving...",
+      "saveNotes": "Save Notes",
+      "customerInfo": "Customer Information",
+      "telegramId": "Telegram ID:",
+      "phoneNumber": "Phone Number:",
+      "location": "Location:",
+      "notesLabel": "notes:",
+      "viewConversation": "View Conversation",
+      "timeline": "Order Timeline",
+      "orderCreated": "Order Created",
+      "toast": {
+        "errorTitle": "Error",
+        "successTitle": "Success",
+        "loadFailed": "Failed to load order details. Please try again.",
+        "statusUpdated": "Order status updated successfully",
+        "statusFailed": "Failed to update order status",
+        "paymentUpdated": "Payment status updated successfully",
+        "paymentFailed": "Failed to update payment status",
+        "notesUpdated": "Notes updated successfully",
+        "notesFailed": "Failed to update notes"
+      }
+    }
   },
   "bots": {
     "title": "Bot Management",
@@ -514,7 +562,36 @@
     "error": "Failed to load posts",
     "errorMessage": "Failed to load posts. Please try again.",
     "deleteConfirm": "Are you sure you want to delete this post?",
-    "deleteConfirmDescription": "This action cannot be undone."
+    "deleteConfirmDescription": "This action cannot be undone.",
+    "createTitle": "Create Post",
+    "createDesc": "Create and schedule a new Telegram channel post",
+    "detail": {
+      "confirmDelete": "Are you sure you want to delete this post?",
+      "title": "Post Details",
+      "loadingDesc": "Loading post details...",
+      "loading": "Loading...",
+      "notFound": "Post not found",
+      "loadFailed": "Failed to load post. Please try again.",
+      "backToPosts": "Back to Posts",
+      "unknownChannel": "Unknown Channel",
+      "edit": "Edit",
+      "delete": "Delete",
+      "info": "Post Information",
+      "infoDesc": "Details about this post",
+      "status": "Status",
+      "channel": "Channel",
+      "created": "Created",
+      "updated": "Updated",
+      "sentAt": "Sent At",
+      "scheduledFor": "Scheduled For",
+      "telegramMessageId": "Telegram Message ID",
+      "content": "Content",
+      "contentDesc": "The post content",
+      "product": "Product",
+      "productDesc": "Associated product information",
+      "editPost": "Edit Post",
+      "editPostDesc": "Update the post content and settings"
+    }
   },
   "settings": {
     "pageTitle": "Settings",
@@ -635,7 +712,84 @@
     "continue": "Continue",
     "skip": "Skip",
     "back": "Back",
-    "next": "Next"
+    "next": "Next",
+    "skipForNow": "Skip for now",
+    "optional": "Optional",
+    "stepOf": "Step {{current}} of {{total}}",
+    "percentComplete": "{{percent}}% complete",
+    "steps": {
+      "organizationTitle": "Organization Name",
+      "organizationDesc": "Tell us about your business",
+      "categoryTitle": "Choose Category",
+      "categoryDesc": "Select your business type",
+      "schemaTitle": "Configure Product Schema",
+      "schemaDesc": "Set up your product fields",
+      "firstProductTitle": "Create First Product",
+      "firstProductDesc": "Add your first product",
+      "botTitle": "Connect Telegram Bot",
+      "botDesc": "Connect your Telegram bot using Telegram Bot Token",
+      "completionTitle": "Completion",
+      "completionDesc": "You're all set!"
+    },
+    "org": {
+      "nameLabel": "Organization Name",
+      "namePlaceholder": "Enter your business name",
+      "nameHelp": "This will be displayed to your customers and used in your bot",
+      "descLabel": "About your business",
+      "descHelp": "Help the AI understand your business so it can answer as your sales agent"
+    },
+    "categoryStep": {
+      "label": "Business Category",
+      "placeholder": "Select your business category",
+      "help": "This helps us suggest the right product fields for your business"
+    },
+    "schema": {
+      "title": "Product Schema Configuration",
+      "desc": "Define the fields that describe your products",
+      "fieldName": "Field Name",
+      "fieldType": "Field Type",
+      "typeText": "Text",
+      "typeNumber": "Number",
+      "typeDate": "Date",
+      "typeBool": "Yes/No",
+      "typeSelect": "Select",
+      "required": "Required field",
+      "options": "Field Options",
+      "addNew": "Add New Field",
+      "addField": "Add Field"
+    },
+    "product": {
+      "nameLabel": "Product Name",
+      "namePlaceholder": "Enter product name",
+      "priceLabel": "Price",
+      "currencyLabel": "Currency",
+      "quantityLabel": "Quantity",
+      "additionalFields": "Additional Fields",
+      "images": "Product Images (up to 3)",
+      "dragDrop": "Drag and drop images here, or click to select",
+      "selectImages": "Select Images",
+      "preview": "Preview"
+    },
+    "bot": {
+      "recommend": "Connecting your Telegram bot is optional but recommended. You can always add it later in settings.",
+      "tokenLabel": "Telegram Bot Token",
+      "tokenPlaceholder": "Enter your Telegram bot token",
+      "needHelp": "Need help getting a bot token?",
+      "howToGet": "How to get a Telegram Bot Token"
+    },
+    "completionStep": {
+      "congrats": "🎉 Congratulations!",
+      "subtitle": "Your organization and first product are ready to go!",
+      "summary": "Setup Summary",
+      "organization": "Organization",
+      "category": "Category",
+      "botConnected": "Bot Connected",
+      "yes": "Yes",
+      "no": "No",
+      "goDashboard": "Go to Dashboard",
+      "previewBot": "Preview in Telegram Bot",
+      "footer": "You can always modify these settings later in your dashboard."
+    }
   },
   "errors": {
     "generic": "An error occurred",
@@ -713,5 +867,361 @@
       "FAILED": "Failed",
       "SKIPPED": "Skipped"
     }
+  },
+  "analytics": {
+    "title": "Analytics",
+    "subtitle": "Insights and performance metrics for your store",
+    "export": "Export",
+    "timeRange": {
+      "last7Days": "Last 7 days",
+      "last30Days": "Last 30 days",
+      "last90Days": "Last 90 days",
+      "lastYear": "Last year"
+    },
+    "metrics": {
+      "totalRevenue": "Total Revenue",
+      "totalOrders": "Total Orders",
+      "newCustomers": "New Customers",
+      "conversionRate": "Conversion Rate",
+      "fromLastPeriod": "from last period"
+    },
+    "tabs": {
+      "overview": "Overview",
+      "products": "Products",
+      "customers": "Customers",
+      "funnel": "Funnel"
+    },
+    "revenueTrend": "Revenue Trend",
+    "revenueTrendDesc": "Daily revenue over the selected period",
+    "ordersCustomers": "Orders & Customers",
+    "ordersCustomersDesc": "Daily orders and new customers",
+    "salesByCategory": "Sales by Category",
+    "salesByCategoryDesc": "Revenue distribution across product categories",
+    "topProducts": "Top Performing Products",
+    "topProductsDesc": "Products ranked by sales volume and revenue",
+    "unitsSold": "units sold",
+    "inStock": "in stock",
+    "productComparison": "Product Sales Comparison",
+    "productComparisonDesc": "Revenue comparison across top products",
+    "customerAcquisition": "Customer Acquisition",
+    "customerAcquisitionDesc": "New customers over time",
+    "customerMetrics": "Customer Metrics",
+    "customerMetricsDesc": "Key customer performance indicators",
+    "totalCustomers": "Total Customers",
+    "avgOrdersCustomer": "Avg Orders/Customer",
+    "avgOrderValue": "Avg Order Value",
+    "repeatRate": "Repeat Rate",
+    "conversionFunnel": "Conversion Funnel",
+    "conversionFunnelDesc": "Customer journey from conversation to completed order",
+    "conversionRates": "Conversion Rates",
+    "dropOffAnalysis": "Drop-off Analysis",
+    "optimizationTips": "Optimization Tips",
+    "funnel": {
+      "conversationInquiry": "Conversation → Inquiry",
+      "inquiryCart": "Inquiry → Cart",
+      "cartOrder": "Cart → Order",
+      "orderCompletion": "Order → Completion"
+    },
+    "dropoff": {
+      "lostInquiry": "Lost at Inquiry",
+      "lostCart": "Lost at Cart",
+      "lostCheckout": "Lost at Checkout",
+      "incompleteOrders": "Incomplete Orders"
+    },
+    "tips": {
+      "descriptions": "Improve product descriptions to reduce inquiry drop-off",
+      "checkout": "Simplify checkout process to reduce cart abandonment",
+      "followup": "Follow up on incomplete orders within 24 hours"
+    }
+  },
+  "billing": {
+    "title": "Billing & Plans",
+    "subtitle": "Manage your subscription and billing information",
+    "upgradePlan": "Upgrade Plan",
+    "tabs": {
+      "overview": "Overview",
+      "usage": "Usage",
+      "invoices": "Invoices"
+    },
+    "status": {
+      "active": "Active",
+      "trial": "Trial",
+      "pastDue": "Past Due",
+      "cancelled": "Cancelled",
+      "paid": "Paid",
+      "pending": "Pending",
+      "draft": "Draft",
+      "void": "Void"
+    },
+    "currentPlan": "Current Plan",
+    "trialEnds": "Trial ends {{date}}",
+    "free": "Free",
+    "perMonth": "/month",
+    "perMonthShort": "/mo",
+    "perMonthLabel": "per month",
+    "renews": "Renews {{date}}",
+    "cancels": "Cancels {{date}}",
+    "aiConversations": "AI Conversations",
+    "products": "Products",
+    "bots": "Bots",
+    "teamMembers": "Team Members",
+    "unlimited": "Unlimited",
+    "usageDetails": "Usage Details",
+    "usageDetailsDesc": "Current billing period usage",
+    "approachingLimit": "⚠️ Approaching limit — consider upgrading",
+    "invoiceHistory": "Invoice History",
+    "invoiceHistoryDesc": "Your billing history for this subscription",
+    "noInvoices": "No invoices yet.",
+    "table": {
+      "invoice": "Invoice",
+      "status": "Status",
+      "amount": "Amount",
+      "period": "Period",
+      "dueDate": "Due Date"
+    },
+    "overageIncl": "(incl. ${{amount}} overage)",
+    "chooseYourPlan": "Choose Your Plan",
+    "chooseYourPlanDesc": "Select the plan that best fits your business needs",
+    "mostPopular": "Most Popular",
+    "currentPlanBtn": "Current Plan",
+    "switchTo": "Switch to {{name}}",
+    "cancelSubscription": "Cancel subscription",
+    "planFeatures": {
+      "FREE": [
+        "100 AI conversations/mo",
+        "50 products",
+        "1 bot",
+        "1 team member"
+      ],
+      "STARTER": [
+        "500 AI conversations/mo",
+        "500 products",
+        "1 bot",
+        "3 team members",
+        "$0.04/extra convo"
+      ],
+      "GROWTH": [
+        "2,000 AI conversations/mo",
+        "2,000 products",
+        "3 bots",
+        "10 team members",
+        "$0.04/extra convo"
+      ],
+      "SCALE": [
+        "8,000 AI conversations/mo",
+        "Unlimited products",
+        "Unlimited bots",
+        "Unlimited team members",
+        "$0.04/extra convo"
+      ]
+    }
+  },
+  "team": {
+    "title": "Team Management",
+    "subtitle": "Manage team members, roles, and permissions",
+    "inviteMember": "Invite Member",
+    "inviteDialog": {
+      "title": "Invite Team Member",
+      "desc": "Send an invitation to join your team",
+      "emailLabel": "Email Address",
+      "emailPlaceholder": "colleague@example.com",
+      "roleLabel": "Role",
+      "permissionsLabel": "Permissions",
+      "messageLabel": "Personal Message (Optional)",
+      "messagePlaceholder": "Welcome to our team! We're excited to have you join us.",
+      "cancel": "Cancel",
+      "send": "Send Invitation"
+    },
+    "tabs": {
+      "members": "Team Members",
+      "invitations": "Pending Invitations",
+      "roles": "Roles & Permissions"
+    },
+    "membersCard": {
+      "title": "Team Members ({{count}})",
+      "desc": "Manage your team members and their access"
+    },
+    "table": {
+      "member": "Member",
+      "role": "Role",
+      "status": "Status",
+      "departments": "Departments",
+      "lastActive": "Last Active",
+      "actions": "Actions",
+      "email": "Email",
+      "invitedBy": "Invited By",
+      "sent": "Sent",
+      "expires": "Expires"
+    },
+    "actions": {
+      "editMember": "Edit Member",
+      "managePermissions": "Manage Permissions",
+      "removeMember": "Remove Member",
+      "resendInvitation": "Resend Invitation",
+      "cancelInvitation": "Cancel Invitation"
+    },
+    "status": {
+      "active": "Active",
+      "pending": "Pending",
+      "suspended": "Suspended",
+      "expired": "Expired"
+    },
+    "lastActive": {
+      "never": "Never",
+      "minutesAgo": "{{count}}m ago",
+      "hoursAgo": "{{count}}h ago",
+      "daysAgo": "{{count}}d ago"
+    },
+    "invitationsCard": {
+      "title": "Pending Invitations ({{count}})",
+      "desc": "Track sent invitations and their status"
+    },
+    "unknown": "Unknown",
+    "rolesCard": {
+      "permissionsCount": "Permissions ({{count}})",
+      "default": "Default",
+      "editRole": "Edit Role",
+      "delete": "Delete"
+    },
+    "editDialog": {
+      "title": "Edit Team Member",
+      "desc": "Update member role and permissions",
+      "roleLabel": "Role",
+      "statusLabel": "Status",
+      "statusActive": "Active",
+      "statusSuspended": "Suspended",
+      "cancel": "Cancel",
+      "save": "Save Changes"
+    }
+  },
+  "conversations": {
+    "title": "Conversations",
+    "subtitle": "Manage customer conversations and provide support",
+    "searchPlaceholder": "Search conversations...",
+    "statusPlaceholder": "Status",
+    "priorityPlaceholder": "Priority",
+    "filters": {
+      "allStatus": "All Status",
+      "allPriority": "All Priority"
+    },
+    "status": {
+      "active": "Active",
+      "waiting": "Waiting",
+      "resolved": "Resolved",
+      "archived": "Archived"
+    },
+    "priority": {
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High",
+      "urgent": "Urgent"
+    },
+    "actions": {
+      "markResolved": "Mark as resolved",
+      "assignOperator": "Assign to operator",
+      "archive": "Archive",
+      "changePriority": "Change priority",
+      "archiveConversation": "Archive conversation"
+    },
+    "messagesCount": "{{count}} messages",
+    "openChat": "Open Chat",
+    "time": {
+      "minutesAgo": "{{count}}m ago",
+      "hoursAgo": "{{count}}h ago",
+      "daysAgo": "{{count}}d ago"
+    },
+    "empty": {
+      "title": "No conversations found",
+      "filtersHint": "Try adjusting your filters to see more conversations.",
+      "defaultHint": "Customer conversations will appear here when they start chatting with your bot."
+    },
+    "detail": {
+      "customerInfo": "Customer Info",
+      "conversationDetails": "Conversation Details",
+      "statusLabel": "Status",
+      "priorityLabel": "Priority",
+      "assignedOperator": "Assigned Operator",
+      "selectOperator": "Select operator",
+      "tags": "Tags",
+      "telegramId": "Telegram ID: {{id}}",
+      "joined": "Joined: {{date}}",
+      "typeMessage": "Type your message...",
+      "today": "Today",
+      "yesterday": "Yesterday"
+    }
+  },
+  "productForm": {
+    "info": "Product Information",
+    "infoDesc": "Fill in the product details based on your schema",
+    "scanBarcode": "Scan barcode",
+    "schema": "Product Schema",
+    "selectSchema": "Select a schema",
+    "name": "Product Name",
+    "namePlaceholder": "Enter product name",
+    "nameRequired": "Product name is required",
+    "price": "Price",
+    "priceRequired": "Price is required",
+    "priceMin": "Price must be greater than 0",
+    "pricePlaceholder": "0.00",
+    "quantity": "Quantity",
+    "quantityRequired": "Quantity is required",
+    "quantityNegative": "Quantity cannot be negative",
+    "quantityPlaceholder": "0",
+    "currency": "Currency",
+    "currencyRequired": "Currency is required",
+    "selectCurrency": "Select currency",
+    "status": "Status",
+    "statusRequired": "Status is required",
+    "selectStatus": "Select status",
+    "statusActive": "Active",
+    "statusDraft": "Draft",
+    "statusArchived": "Archived",
+    "noFields": "No additional fields defined in this schema",
+    "images": "Product Images",
+    "imagesDesc": "Upload product images",
+    "uploadImages": "Upload Images",
+    "imagesCount": "{{count}} images",
+    "uploading": "Uploading...",
+    "imageN": "Image {{n}}",
+    "cancel": "Cancel",
+    "saving": "Saving...",
+    "updateProduct": "Update Product",
+    "createProduct": "Create Product",
+    "schemaLoadFailed": "Failed to load product schema: {{msg}}",
+    "fieldRequired": "{{field}} is required",
+    "fieldMin": "{{field}} must be greater than 0",
+    "enterField": "Enter {{field}}",
+    "selectField": "Select {{field}}",
+    "enterFieldJson": "Enter {{field}} as JSON",
+    "currencies": {
+      "USD": "USD - US Dollar",
+      "EUR": "EUR - Euro",
+      "UZS": "UZS - Uzbek Som",
+      "RUB": "RUB - Russian Ruble",
+      "KZT": "KZT - Kazakhstani Tenge",
+      "GBP": "GBP - British Pound",
+      "JPY": "JPY - Japanese Yen"
+    }
+  },
+  "postForm": {
+    "channel": "Channel",
+    "channelDesc": "Select the channel where you want to post",
+    "selectChannel": "Select a channel",
+    "product": "Product",
+    "productDesc": "Select a product to auto-generate post content",
+    "selectProduct": "Select a product",
+    "content": "Content",
+    "contentDesc": "Edit your post content",
+    "contentPlaceholder": "Post content...",
+    "charactersCount": "{{count}} characters",
+    "publishing": "Publishing",
+    "publishingDesc": "Choose how and when to publish this post",
+    "status": "Status",
+    "statusDraft": "Draft",
+    "statusSend": "Send Now",
+    "statusSchedule": "Schedule",
+    "scheduledAt": "Scheduled At",
+    "createPost": "Create Post",
+    "editPost": "Edit Post"
   }
 }

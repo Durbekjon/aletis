@@ -353,7 +353,13 @@
     "currencyRUB": "RUB - Rossiya rubli",
     "currencyKZT": "KZT - Qozog'iston tengesi",
     "currencyGBP": "GBP - Britaniya funti",
-    "currencyJPY": "JPY - Yaponiya iyenasi"
+    "currencyJPY": "JPY - Yaponiya iyenasi",
+    "newTitle": "Yangi mahsulot",
+    "newDesc": "Tashkilotingiz sxemasi bo'yicha mahsulot yarating",
+    "editTitle": "Mahsulotni tahrirlash",
+    "editDesc": "Mahsulot ma'lumotlari va maydonlarini yangilang",
+    "loadFailed": "Mahsulotni yuklab bo'lmadi.",
+    "loadFailedRetry": "Mahsulotni yuklab bo'lmadi. Qayta urinib ko'ring."
   },
   "orders": {
     "title": "Buyurtmalar",
@@ -401,7 +407,49 @@
     "paginationSummary": "Ko'rsatilmoqda: {{start}}-{{end}} / {{total}} ta buyurtma",
     "previous": "Oldingi",
     "next": "Keyingi",
-    "itemsCount": "{{count}} ta mahsulot"
+    "itemsCount": "{{count}} ta mahsulot",
+    "detail": {
+      "backToOrders": "Buyurtmalarga qaytish",
+      "errorLoading": "Buyurtmani yuklashda xatolik",
+      "failedLoad": "Buyurtma tafsilotlarini yuklab bo'lmadi",
+      "subtitle": "Buyurtma tafsilotlari va boshqaruvi",
+      "print": "Chop etish",
+      "failedTitle": "Buyurtmani yuklab bo'lmadi",
+      "failedDesc": "Buyurtma tafsilotlarini yuklashda xatolik yuz berdi.",
+      "tryAgain": "Qayta urinish",
+      "orderItems": "Buyurtma mahsulotlari",
+      "quantity": "Miqdor: {{count}}",
+      "each": "${{price}} donasi",
+      "subtotal": "Oraliq jami",
+      "total": "Jami",
+      "orderStatus": "Buyurtma holati",
+      "currentStatus": "Joriy holat",
+      "updating": "Yangilanmoqda...",
+      "paymentStatus": "To'lov holati",
+      "notes": "Izohlar",
+      "notesPlaceholder": "Ushbu buyurtma haqida izoh qo'shing...",
+      "saving": "Saqlanmoqda...",
+      "saveNotes": "Izohlarni saqlash",
+      "customerInfo": "Mijoz ma'lumotlari",
+      "telegramId": "Telegram ID:",
+      "phoneNumber": "Telefon raqami:",
+      "location": "Manzil:",
+      "notesLabel": "izohlar:",
+      "viewConversation": "Suhbatni ko'rish",
+      "timeline": "Buyurtma tarixi",
+      "orderCreated": "Buyurtma yaratildi",
+      "toast": {
+        "errorTitle": "Xatolik",
+        "successTitle": "Muvaffaqiyatli",
+        "loadFailed": "Buyurtma tafsilotlarini yuklab bo'lmadi. Qayta urinib ko'ring.",
+        "statusUpdated": "Buyurtma holati yangilandi",
+        "statusFailed": "Buyurtma holatini yangilab bo'lmadi",
+        "paymentUpdated": "To'lov holati yangilandi",
+        "paymentFailed": "To'lov holatini yangilab bo'lmadi",
+        "notesUpdated": "Izohlar yangilandi",
+        "notesFailed": "Izohlarni yangilab bo'lmadi"
+      }
+    }
   },
   "bots": {
     "title": "Bot boshqaruvi",
@@ -514,7 +562,36 @@
     "error": "Postlar yuklanmadi",
     "errorMessage": "Postlarni yuklash muvaffaqiyatsiz. Qayta urinib ko'ring.",
     "deleteConfirm": "Ushbu postni o'chirishni xohlaysizmi?",
-    "deleteConfirmDescription": "Bu amalni qaytarib bo'lmaydi."
+    "deleteConfirmDescription": "Bu amalni qaytarib bo'lmaydi.",
+    "createTitle": "Post yaratish",
+    "createDesc": "Telegram kanaliga yangi post yarating va rejalashtiring",
+    "detail": {
+      "confirmDelete": "Ushbu postni o'chirishni xohlaysizmi?",
+      "title": "Post tafsilotlari",
+      "loadingDesc": "Post tafsilotlari yuklanmoqda...",
+      "loading": "Yuklanmoqda...",
+      "notFound": "Post topilmadi",
+      "loadFailed": "Postni yuklab bo'lmadi. Qayta urinib ko'ring.",
+      "backToPosts": "Postlarga qaytish",
+      "unknownChannel": "Noma'lum kanal",
+      "edit": "Tahrirlash",
+      "delete": "O'chirish",
+      "info": "Post ma'lumotlari",
+      "infoDesc": "Ushbu post haqida tafsilotlar",
+      "status": "Holat",
+      "channel": "Kanal",
+      "created": "Yaratilgan",
+      "updated": "Yangilangan",
+      "sentAt": "Yuborilgan",
+      "scheduledFor": "Rejalashtirilgan",
+      "telegramMessageId": "Telegram xabar ID",
+      "content": "Matn",
+      "contentDesc": "Post matni",
+      "product": "Mahsulot",
+      "productDesc": "Bog'langan mahsulot ma'lumoti",
+      "editPost": "Postni tahrirlash",
+      "editPostDesc": "Post matni va sozlamalarini yangilang"
+    }
   },
   "settings": {
     "pageTitle": "Sozlamalar",
@@ -635,7 +712,84 @@
     "continue": "Davom etish",
     "skip": "O'tkazib yuborish",
     "back": "Orqaga",
-    "next": "Keyingisi"
+    "next": "Keyingisi",
+    "skipForNow": "Hozircha o'tkazib yuborish",
+    "optional": "Ixtiyoriy",
+    "stepOf": "{{total}} dan {{current}}-qadam",
+    "percentComplete": "{{percent}}% bajarildi",
+    "steps": {
+      "organizationTitle": "Tashkilot nomi",
+      "organizationDesc": "Biznesingiz haqida gapirib bering",
+      "categoryTitle": "Kategoriyani tanlang",
+      "categoryDesc": "Biznes turini tanlang",
+      "schemaTitle": "Mahsulot sxemasini sozlash",
+      "schemaDesc": "Mahsulot maydonlarini sozlang",
+      "firstProductTitle": "Birinchi mahsulotni yarating",
+      "firstProductDesc": "Birinchi mahsulotingizni qo'shing",
+      "botTitle": "Telegram botni ulash",
+      "botDesc": "Telegram Bot Token orqali botingizni ulang",
+      "completionTitle": "Yakunlash",
+      "completionDesc": "Hammasi tayyor!"
+    },
+    "org": {
+      "nameLabel": "Tashkilot nomi",
+      "namePlaceholder": "Biznesingiz nomini kiriting",
+      "nameHelp": "Bu mijozlaringizga ko'rsatiladi va botingizda ishlatiladi",
+      "descLabel": "Biznesingiz haqida",
+      "descHelp": "AI biznesingizni tushunib, sotuvchi agent sifatida javob bera olishi uchun yordam bering"
+    },
+    "categoryStep": {
+      "label": "Biznes kategoriyasi",
+      "placeholder": "Biznes kategoriyangizni tanlang",
+      "help": "Bu biznesingiz uchun to'g'ri mahsulot maydonlarini taklif qilishga yordam beradi"
+    },
+    "schema": {
+      "title": "Mahsulot sxemasini sozlash",
+      "desc": "Mahsulotlaringizni tavsiflovchi maydonlarni belgilang",
+      "fieldName": "Maydon nomi",
+      "fieldType": "Maydon turi",
+      "typeText": "Matn",
+      "typeNumber": "Raqam",
+      "typeDate": "Sana",
+      "typeBool": "Ha/Yo'q",
+      "typeSelect": "Tanlov",
+      "required": "Majburiy maydon",
+      "options": "Maydon variantlari",
+      "addNew": "Yangi maydon qo'shish",
+      "addField": "Maydon qo'shish"
+    },
+    "product": {
+      "nameLabel": "Mahsulot nomi",
+      "namePlaceholder": "Mahsulot nomini kiriting",
+      "priceLabel": "Narxi",
+      "currencyLabel": "Valyuta",
+      "quantityLabel": "Miqdori",
+      "additionalFields": "Qo'shimcha maydonlar",
+      "images": "Mahsulot rasmlari (3 tagacha)",
+      "dragDrop": "Rasmlarni shu yerga tashlang yoki tanlash uchun bosing",
+      "selectImages": "Rasmlarni tanlash",
+      "preview": "Ko'rib chiqish"
+    },
+    "bot": {
+      "recommend": "Telegram botni ulash ixtiyoriy, lekin tavsiya etiladi. Uni keyinroq sozlamalardan ham qo'shishingiz mumkin.",
+      "tokenLabel": "Telegram Bot Token",
+      "tokenPlaceholder": "Telegram bot tokeningizni kiriting",
+      "needHelp": "Bot token olishda yordam kerakmi?",
+      "howToGet": "Telegram Bot Token qanday olinadi"
+    },
+    "completionStep": {
+      "congrats": "🎉 Tabriklaymiz!",
+      "subtitle": "Tashkilotingiz va birinchi mahsulotingiz tayyor!",
+      "summary": "Sozlash xulosasi",
+      "organization": "Tashkilot",
+      "category": "Kategoriya",
+      "botConnected": "Bot ulangan",
+      "yes": "Ha",
+      "no": "Yo'q",
+      "goDashboard": "Boshqaruv paneliga o'tish",
+      "previewBot": "Telegram botda ko'rish",
+      "footer": "Bu sozlamalarni keyinroq boshqaruv panelingizdan o'zgartirishingiz mumkin."
+    }
   },
   "errors": {
     "generic": "Xatolik yuz berdi",
@@ -713,5 +867,361 @@
       "FAILED": "Xato",
       "SKIPPED": "O‘tkazildi"
     }
+  },
+  "analytics": {
+    "title": "Analitika",
+    "subtitle": "Do'koningiz uchun tahlil va samaradorlik ko'rsatkichlari",
+    "export": "Eksport",
+    "timeRange": {
+      "last7Days": "Oxirgi 7 kun",
+      "last30Days": "Oxirgi 30 kun",
+      "last90Days": "Oxirgi 90 kun",
+      "lastYear": "Oxirgi yil"
+    },
+    "metrics": {
+      "totalRevenue": "Umumiy daromad",
+      "totalOrders": "Umumiy buyurtmalar",
+      "newCustomers": "Yangi mijozlar",
+      "conversionRate": "Konversiya darajasi",
+      "fromLastPeriod": "o'tgan davrga nisbatan"
+    },
+    "tabs": {
+      "overview": "Umumiy",
+      "products": "Mahsulotlar",
+      "customers": "Mijozlar",
+      "funnel": "Voronka"
+    },
+    "revenueTrend": "Daromad tendensiyasi",
+    "revenueTrendDesc": "Tanlangan davrdagi kunlik daromad",
+    "ordersCustomers": "Buyurtmalar va mijozlar",
+    "ordersCustomersDesc": "Kunlik buyurtmalar va yangi mijozlar",
+    "salesByCategory": "Kategoriya bo'yicha sotuv",
+    "salesByCategoryDesc": "Mahsulot kategoriyalari bo'yicha daromad taqsimoti",
+    "topProducts": "Eng ko'p sotilgan mahsulotlar",
+    "topProductsDesc": "Sotuv hajmi va daromad bo'yicha mahsulotlar",
+    "unitsSold": "dona sotilgan",
+    "inStock": "omborda",
+    "productComparison": "Mahsulotlar sotuvini taqqoslash",
+    "productComparisonDesc": "Eng yaxshi mahsulotlar bo'yicha daromadni taqqoslash",
+    "customerAcquisition": "Mijozlarni jalb qilish",
+    "customerAcquisitionDesc": "Vaqt o'tishi bilan yangi mijozlar",
+    "customerMetrics": "Mijoz ko'rsatkichlari",
+    "customerMetricsDesc": "Asosiy mijoz samaradorligi ko'rsatkichlari",
+    "totalCustomers": "Jami mijozlar",
+    "avgOrdersCustomer": "O'rtacha buyurtma/mijoz",
+    "avgOrderValue": "O'rtacha buyurtma qiymati",
+    "repeatRate": "Takroriy xaridlar",
+    "conversionFunnel": "Konversiya voronkasi",
+    "conversionFunnelDesc": "Suhbatdan yakunlangan buyurtmagacha mijoz yo'li",
+    "conversionRates": "Konversiya darajalari",
+    "dropOffAnalysis": "Chiqib ketish tahlili",
+    "optimizationTips": "Optimallashtirish maslahatlari",
+    "funnel": {
+      "conversationInquiry": "Suhbat → So'rov",
+      "inquiryCart": "So'rov → Savat",
+      "cartOrder": "Savat → Buyurtma",
+      "orderCompletion": "Buyurtma → Yakunlash"
+    },
+    "dropoff": {
+      "lostInquiry": "So'rovda yo'qotildi",
+      "lostCart": "Savatda yo'qotildi",
+      "lostCheckout": "To'lovda yo'qotildi",
+      "incompleteOrders": "Tugallanmagan buyurtmalar"
+    },
+    "tips": {
+      "descriptions": "So'rovdagi chiqib ketishni kamaytirish uchun mahsulot tavsiflarini yaxshilang",
+      "checkout": "Savatni tashlab ketishni kamaytirish uchun to'lov jarayonini soddalashtiring",
+      "followup": "Tugallanmagan buyurtmalar bo'yicha 24 soat ichida bog'laning"
+    }
+  },
+  "billing": {
+    "title": "To'lov va tariflar",
+    "subtitle": "Obuna va to'lov ma'lumotlarini boshqarish",
+    "upgradePlan": "Tarifni oshirish",
+    "tabs": {
+      "overview": "Umumiy",
+      "usage": "Foydalanish",
+      "invoices": "Hisob-fakturalar"
+    },
+    "status": {
+      "active": "Faol",
+      "trial": "Sinov",
+      "pastDue": "Muddati o'tgan",
+      "cancelled": "Bekor qilingan",
+      "paid": "To'langan",
+      "pending": "Kutilmoqda",
+      "draft": "Qoralama",
+      "void": "Bekor"
+    },
+    "currentPlan": "Joriy tarif",
+    "trialEnds": "Sinov muddati {{date}} da tugaydi",
+    "free": "Bepul",
+    "perMonth": "/oy",
+    "perMonthShort": "/oy",
+    "perMonthLabel": "oyiga",
+    "renews": "Yangilanadi {{date}}",
+    "cancels": "Bekor qilinadi {{date}}",
+    "aiConversations": "AI suhbatlar",
+    "products": "Mahsulotlar",
+    "bots": "Botlar",
+    "teamMembers": "Jamoa a'zolari",
+    "unlimited": "Cheksiz",
+    "usageDetails": "Foydalanish tafsilotlari",
+    "usageDetailsDesc": "Joriy to'lov davridagi foydalanish",
+    "approachingLimit": "⚠️ Limitga yaqinlashyapsiz — tarifni oshiring",
+    "invoiceHistory": "Hisob-fakturalar tarixi",
+    "invoiceHistoryDesc": "Ushbu obuna bo'yicha to'lovlar tarixi",
+    "noInvoices": "Hozircha hisob-fakturalar yo'q.",
+    "table": {
+      "invoice": "Hisob-faktura",
+      "status": "Holat",
+      "amount": "Summa",
+      "period": "Davr",
+      "dueDate": "To'lov muddati"
+    },
+    "overageIncl": "(shu jumladan ${{amount}} ortiqcha)",
+    "chooseYourPlan": "Tarifni tanlang",
+    "chooseYourPlanDesc": "Biznesingizga eng mos tarifni tanlang",
+    "mostPopular": "Ommabop",
+    "currentPlanBtn": "Joriy tarif",
+    "switchTo": "{{name}} ga o'tish",
+    "cancelSubscription": "Obunani bekor qilish",
+    "planFeatures": {
+      "FREE": [
+        "Oyiga 100 AI suhbat",
+        "50 mahsulot",
+        "1 bot",
+        "1 a'zo"
+      ],
+      "STARTER": [
+        "Oyiga 500 AI suhbat",
+        "500 mahsulot",
+        "1 bot",
+        "3 a'zo",
+        "$0.04/qo'shimcha suhbat"
+      ],
+      "GROWTH": [
+        "Oyiga 2 000 AI suhbat",
+        "2 000 mahsulot",
+        "3 bot",
+        "10 a'zo",
+        "$0.04/qo'shimcha suhbat"
+      ],
+      "SCALE": [
+        "Oyiga 8 000 AI suhbat",
+        "Cheksiz mahsulot",
+        "Cheksiz bot",
+        "Cheksiz a'zo",
+        "$0.04/qo'shimcha suhbat"
+      ]
+    }
+  },
+  "team": {
+    "title": "Jamoani boshqarish",
+    "subtitle": "Jamoa a'zolari, rollar va ruxsatlarni boshqaring",
+    "inviteMember": "Taklif qilish",
+    "inviteDialog": {
+      "title": "Jamoaga a'zo taklif qilish",
+      "desc": "Jamoaga qo'shilish uchun taklif yuboring",
+      "emailLabel": "Email manzil",
+      "emailPlaceholder": "colleague@example.com",
+      "roleLabel": "Rol",
+      "permissionsLabel": "Ruxsatlar",
+      "messageLabel": "Shaxsiy xabar (ixtiyoriy)",
+      "messagePlaceholder": "Jamoamizga xush kelibsiz! Siz bilan ishlashdan mamnunmiz.",
+      "cancel": "Bekor qilish",
+      "send": "Taklif yuborish"
+    },
+    "tabs": {
+      "members": "Jamoa a'zolari",
+      "invitations": "Kutilayotgan takliflar",
+      "roles": "Rollar va ruxsatlar"
+    },
+    "membersCard": {
+      "title": "Jamoa a'zolari ({{count}})",
+      "desc": "Jamoa a'zolari va ularning kirish huquqlarini boshqaring"
+    },
+    "table": {
+      "member": "A'zo",
+      "role": "Rol",
+      "status": "Holat",
+      "departments": "Bo'limlar",
+      "lastActive": "So'nggi faollik",
+      "actions": "Amallar",
+      "email": "Email",
+      "invitedBy": "Taklif qilgan",
+      "sent": "Yuborilgan",
+      "expires": "Muddati"
+    },
+    "actions": {
+      "editMember": "Tahrirlash",
+      "managePermissions": "Ruxsatlarni boshqarish",
+      "removeMember": "A'zoni o'chirish",
+      "resendInvitation": "Qayta yuborish",
+      "cancelInvitation": "Taklifni bekor qilish"
+    },
+    "status": {
+      "active": "Faol",
+      "pending": "Kutilmoqda",
+      "suspended": "Bloklangan",
+      "expired": "Muddati o'tgan"
+    },
+    "lastActive": {
+      "never": "Hech qachon",
+      "minutesAgo": "{{count}} daqiqa oldin",
+      "hoursAgo": "{{count}} soat oldin",
+      "daysAgo": "{{count}} kun oldin"
+    },
+    "invitationsCard": {
+      "title": "Kutilayotgan takliflar ({{count}})",
+      "desc": "Yuborilgan takliflar va ularning holatini kuzating"
+    },
+    "unknown": "Noma'lum",
+    "rolesCard": {
+      "permissionsCount": "Ruxsatlar ({{count}})",
+      "default": "Standart",
+      "editRole": "Rolni tahrirlash",
+      "delete": "O'chirish"
+    },
+    "editDialog": {
+      "title": "Jamoa a'zosini tahrirlash",
+      "desc": "A'zoning roli va ruxsatlarini yangilang",
+      "roleLabel": "Rol",
+      "statusLabel": "Holat",
+      "statusActive": "Faol",
+      "statusSuspended": "Bloklangan",
+      "cancel": "Bekor qilish",
+      "save": "Saqlash"
+    }
+  },
+  "conversations": {
+    "title": "Suhbatlar",
+    "subtitle": "Mijozlar bilan suhbatlarni boshqaring va yordam bering",
+    "searchPlaceholder": "Suhbatlarni qidirish...",
+    "statusPlaceholder": "Holat",
+    "priorityPlaceholder": "Muhimlik",
+    "filters": {
+      "allStatus": "Barcha holatlar",
+      "allPriority": "Barcha muhimliklar"
+    },
+    "status": {
+      "active": "Faol",
+      "waiting": "Kutilmoqda",
+      "resolved": "Hal qilingan",
+      "archived": "Arxivlangan"
+    },
+    "priority": {
+      "low": "Past",
+      "medium": "O'rta",
+      "high": "Yuqori",
+      "urgent": "Shoshilinch"
+    },
+    "actions": {
+      "markResolved": "Hal qilindi deb belgilash",
+      "assignOperator": "Operatorga biriktirish",
+      "archive": "Arxivlash",
+      "changePriority": "Muhimlikni o'zgartirish",
+      "archiveConversation": "Suhbatni arxivlash"
+    },
+    "messagesCount": "{{count}} ta xabar",
+    "openChat": "Chatni ochish",
+    "time": {
+      "minutesAgo": "{{count}} daqiqa oldin",
+      "hoursAgo": "{{count}} soat oldin",
+      "daysAgo": "{{count}} kun oldin"
+    },
+    "empty": {
+      "title": "Suhbatlar topilmadi",
+      "filtersHint": "Ko'proq suhbatlarni ko'rish uchun filtrlarni o'zgartiring.",
+      "defaultHint": "Mijozlar botingizga yozganda ular bilan suhbatlar shu yerda paydo bo'ladi."
+    },
+    "detail": {
+      "customerInfo": "Mijoz ma'lumoti",
+      "conversationDetails": "Suhbat tafsilotlari",
+      "statusLabel": "Holat",
+      "priorityLabel": "Muhimlik",
+      "assignedOperator": "Biriktirilgan operator",
+      "selectOperator": "Operatorni tanlang",
+      "tags": "Teglar",
+      "telegramId": "Telegram ID: {{id}}",
+      "joined": "Qo'shilgan: {{date}}",
+      "typeMessage": "Xabar yozing...",
+      "today": "Bugun",
+      "yesterday": "Kecha"
+    }
+  },
+  "productForm": {
+    "info": "Mahsulot ma'lumotlari",
+    "infoDesc": "Sxemangiz bo'yicha mahsulot ma'lumotlarini to'ldiring",
+    "scanBarcode": "Shtrix-kodni skanerlash",
+    "schema": "Mahsulot sxemasi",
+    "selectSchema": "Sxemani tanlang",
+    "name": "Mahsulot nomi",
+    "namePlaceholder": "Mahsulot nomini kiriting",
+    "nameRequired": "Mahsulot nomi majburiy",
+    "price": "Narx",
+    "priceRequired": "Narx majburiy",
+    "priceMin": "Narx 0 dan katta bo'lishi kerak",
+    "pricePlaceholder": "0.00",
+    "quantity": "Miqdor",
+    "quantityRequired": "Miqdor majburiy",
+    "quantityNegative": "Miqdor manfiy bo'lishi mumkin emas",
+    "quantityPlaceholder": "0",
+    "currency": "Valyuta",
+    "currencyRequired": "Valyuta majburiy",
+    "selectCurrency": "Valyutani tanlang",
+    "status": "Holat",
+    "statusRequired": "Holat majburiy",
+    "selectStatus": "Holatni tanlang",
+    "statusActive": "Faol",
+    "statusDraft": "Qoralama",
+    "statusArchived": "Arxivlangan",
+    "noFields": "Bu sxemada qo'shimcha maydonlar yo'q",
+    "images": "Mahsulot rasmlari",
+    "imagesDesc": "Mahsulot rasmlarini yuklang",
+    "uploadImages": "Rasmlarni yuklash",
+    "imagesCount": "{{count}} ta rasm",
+    "uploading": "Yuklanmoqda...",
+    "imageN": "Rasm {{n}}",
+    "cancel": "Bekor qilish",
+    "saving": "Saqlanmoqda...",
+    "updateProduct": "Mahsulotni yangilash",
+    "createProduct": "Mahsulot yaratish",
+    "schemaLoadFailed": "Mahsulot sxemasini yuklab bo'lmadi: {{msg}}",
+    "fieldRequired": "«{{field}}» majburiy",
+    "fieldMin": "«{{field}}» 0 dan katta bo'lishi kerak",
+    "enterField": "Kiriting: {{field}}",
+    "selectField": "Tanlang: {{field}}",
+    "enterFieldJson": "{{field}} ni JSON ko'rinishida kiriting",
+    "currencies": {
+      "USD": "USD — AQSh dollari",
+      "EUR": "EUR — yevro",
+      "UZS": "UZS — o'zbek so'mi",
+      "RUB": "RUB — rossiya rubli",
+      "KZT": "KZT — qozog'iston tengesi",
+      "GBP": "GBP — funt sterling",
+      "JPY": "JPY — yapon iyenasi"
+    }
+  },
+  "postForm": {
+    "channel": "Kanal",
+    "channelDesc": "Post joylash uchun kanalni tanlang",
+    "selectChannel": "Kanalni tanlang",
+    "product": "Mahsulot",
+    "productDesc": "Post matnini avtomatik yaratish uchun mahsulot tanlang",
+    "selectProduct": "Mahsulotni tanlang",
+    "content": "Matn",
+    "contentDesc": "Post matnini tahrirlang",
+    "contentPlaceholder": "Post matni...",
+    "charactersCount": "{{count}} ta belgi",
+    "publishing": "Nashr qilish",
+    "publishingDesc": "Postni qanday va qachon nashr qilishni tanlang",
+    "status": "Holat",
+    "statusDraft": "Qoralama",
+    "statusSend": "Hozir yuborish",
+    "statusSchedule": "Rejalashtirish",
+    "scheduledAt": "Rejalashtirilgan vaqt",
+    "createPost": "Post yaratish",
+    "editPost": "Postni tahrirlash"
   }
 }
