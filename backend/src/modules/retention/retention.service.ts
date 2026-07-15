@@ -14,6 +14,9 @@ import {
   WinBackStatus,
 } from '@prisma/client';
 import { RETENTION_QUEUE } from '@core/queue/queue.module';
+import { computeChurnScore, HealthTier } from './retention.scoring';
+
+export type { HealthTier };
 
 export type DormantCustomer = {
   id: number;
@@ -28,6 +31,10 @@ export type DormantCustomer = {
   currency: string;
   aiTags: string[];
   lastWinBackAt: Date | null;
+  // Churn scoring (RFM-based): how likely they've churned and how worth saving.
+  churnRisk: number; // 0-100, rises with time since last activity
+  priorityScore: number; // churnRisk weighted by recoverable value (spend/frequency)
+  healthTier: HealthTier;
 };
 
 @Injectable()
@@ -57,6 +64,28 @@ export class RetentionService {
   private get recoveryWindowDays(): number {
     return this.configService.get<number>('WINBACK_RECOVERY_DAYS') ?? 30;
   }
+
+  /** Delay between escalation steps of a win-back sequence (days). */
+  private get stepDelayDays(): number {
+    return this.configService.get<number>('WINBACK_STEP_DELAY_DAYS') ?? 3;
+  }
+
+  /** Map a sequence step number to its message stage/angle. */
+  private stageForStep(
+    step: number,
+  ): 'reminder' | 'value' | 'incentive' | 'last_chance' {
+    switch (step) {
+      case 1:
+        return 'reminder';
+      case 2:
+        return 'value';
+      case 3:
+        return 'incentive';
+      default:
+        return 'last_chance';
+    }
+  }
+
 
   async resolveOrgId(userId: number): Promise<number> {
     const user = await this.prisma.user.findUnique({
@@ -128,6 +157,11 @@ export class RetentionService {
       if (recentlyTargeted && !opts.includeRecentlyTargeted) continue;
 
       const totalSpent = c.orders.reduce((s, o) => s + (o.totalPrice ?? 0), 0);
+      const dormantDays = Math.floor(
+        (Date.now() - lastActivityAt.getTime()) / (24 * 60 * 60 * 1000),
+      );
+      const orderCount = c.orders.length;
+      const score = computeChurnScore({ dormantDays, orderCount, totalSpent });
       result.push({
         id: c.id,
         name: c.name,
@@ -135,18 +169,18 @@ export class RetentionService {
         channel: c.channel,
         lang: c.lang,
         lastActivityAt,
-        dormantDays: Math.floor(
-          (Date.now() - lastActivityAt.getTime()) / (24 * 60 * 60 * 1000),
-        ),
-        orderCount: c.orders.length,
+        dormantDays,
+        orderCount,
         totalSpent,
         currency: c.orders[0]?.currency ?? 'USD',
         aiTags: c.aiNote?.aiTags ?? [],
         lastWinBackAt: lastWb?.createdAt ?? null,
+        ...score,
       });
     }
 
-    result.sort((a, b) => b.dormantDays - a.dormantDays);
+    // Prioritise highest-value at-risk customers first, not merely the most dormant.
+    result.sort((a, b) => b.priorityScore - a.priorityScore);
     return result;
   }
 
@@ -191,21 +225,31 @@ export class RetentionService {
       },
     });
 
+    await this.scheduleStep(attempt.id, 1, 0);
+    this.logger.log(
+      `Enqueued win-back #${attempt.id} for customer ${customerId} (sequence of ${attempt.maxSteps})`,
+    );
+    return attempt;
+  }
+
+  /** Queue one step of a win-back sequence (delayMs=0 sends immediately). */
+  private async scheduleStep(
+    attemptId: number,
+    step: number,
+    delayMs = 0,
+  ): Promise<void> {
     await this.queue.add(
       'send-win-back',
-      { attemptId: attempt.id },
+      { attemptId, step },
       {
-        jobId: `winback-${attempt.id}`,
+        jobId: `winback-${attemptId}-step-${step}`,
+        delay: delayMs,
         attempts: 2,
         backoff: { type: 'fixed', delay: 60_000 },
         removeOnComplete: true,
         removeOnFail: { count: 5 },
       },
     );
-    this.logger.log(
-      `Enqueued win-back #${attempt.id} for customer ${customerId}`,
-    );
-    return attempt;
   }
 
   /** Scan an org for dormant customers and enqueue win-backs for each. */
@@ -249,7 +293,13 @@ export class RetentionService {
   // Execution (called by the processor)
   // ──────────────────────────────────────────────────────────────────────────
 
-  async runWinBack(attemptId: number): Promise<void> {
+  /**
+   * Send one step of a win-back sequence and, if the customer hasn't responded
+   * and steps remain, schedule the next step. The sequence self-terminates once
+   * the customer replies (RESPONDED) or buys (RECOVERED) — later step jobs see
+   * the resolved status and no-op.
+   */
+  async runWinBackStep(attemptId: number, step: number): Promise<void> {
     const attempt = await this.prisma.winBackAttempt.findUnique({
       where: { id: attemptId },
       include: {
@@ -259,24 +309,47 @@ export class RetentionService {
         organization: { select: { name: true } },
       },
     });
-    if (!attempt || attempt.status !== WinBackStatus.QUEUED) return;
+    if (!attempt) return;
+
+    // Sequence already resolved or stopped — nothing to do.
+    if (
+      attempt.status === WinBackStatus.RESPONDED ||
+      attempt.status === WinBackStatus.RECOVERED ||
+      attempt.status === WinBackStatus.SKIPPED ||
+      attempt.status === WinBackStatus.FAILED
+    ) {
+      return;
+    }
+    // Stale/duplicate job for a step we've already advanced past.
+    if (attempt.step !== step) return;
+
     const { customer } = attempt;
     if (!customer) {
       await this.fail(attemptId, 'customer missing');
       return;
     }
 
-    // If the customer became active again since we queued, skip gracefully.
+    // If the customer re-engaged since the last touch, stop the sequence.
+    const sinceAt = attempt.sentAt ?? attempt.createdAt;
     const recentMsg = await this.prisma.message.findFirst({
-      where: { customerId: customer.id, createdAt: { gt: attempt.createdAt } },
+      where: {
+        customerId: customer.id,
+        sender: 'USER',
+        createdAt: { gt: sinceAt },
+      },
       select: { id: true },
     });
     if (recentMsg) {
+      const alreadySent = attempt.status === WinBackStatus.SENT;
       await this.prisma.winBackAttempt.update({
         where: { id: attemptId },
-        data: { status: WinBackStatus.SKIPPED },
+        data: alreadySent
+          ? { status: WinBackStatus.RESPONDED, respondedAt: new Date() }
+          : { status: WinBackStatus.SKIPPED },
       });
-      this.logger.log(`Win-back #${attemptId} skipped — customer re-engaged`);
+      this.logger.log(
+        `Win-back #${attemptId} stopped at step ${step} — customer re-engaged`,
+      );
       return;
     }
 
@@ -291,6 +364,7 @@ export class RetentionService {
       salesOpportunities: note?.salesOpportunities,
       aiSummary: note?.aiSummary,
       incentive: attempt.incentive,
+      stage: this.stageForStep(step),
     });
 
     try {
@@ -300,17 +374,26 @@ export class RetentionService {
       return;
     }
 
+    const hasNext = step < attempt.maxSteps;
+    const delayMs = this.stepDelayDays * 24 * 60 * 60 * 1000;
+
     await this.prisma.winBackAttempt.update({
       where: { id: attemptId },
       data: {
         status: WinBackStatus.SENT,
         sentAt: new Date(),
         generatedMessage: text,
+        step: hasNext ? step + 1 : step,
+        nextStepAt: hasNext ? new Date(Date.now() + delayMs) : null,
       },
     });
     this.logger.log(
-      `Win-back #${attemptId} sent to customer ${customer.id} via ${attempt.channel}`,
+      `Win-back #${attemptId} step ${step}/${attempt.maxSteps} (${this.stageForStep(step)}) sent to customer ${customer.id} via ${attempt.channel}`,
     );
+
+    if (hasNext) {
+      await this.scheduleStep(attemptId, step + 1, delayMs);
+    }
   }
 
   private async sendToCustomer(
@@ -467,6 +550,17 @@ export class RetentionService {
       count(WinBackStatus.RESPONDED) + count(WinBackStatus.RECOVERED);
     const recovered = count(WinBackStatus.RECOVERED);
 
+    // Churn distribution across the current dormant/at-risk base.
+    const tierCounts = { cooling: 0, at_risk: 0, lost: 0 };
+    let churnRiskSum = 0;
+    for (const d of dormant) {
+      tierCounts[d.healthTier]++;
+      churnRiskSum += d.churnRisk;
+    }
+    const avgChurnRisk = dormant.length
+      ? Math.round(churnRiskSum / dormant.length)
+      : 0;
+
     return {
       dormantCount: dormant.length,
       queued: count(WinBackStatus.QUEUED),
@@ -477,6 +571,12 @@ export class RetentionService {
       revenueRecovered: revenueAgg._sum.recoveredRevenue ?? 0,
       responseRate: sent === 0 ? 0 : (responded / sent) * 100,
       recoveryRate: sent === 0 ? 0 : (recovered / sent) * 100,
+      churn: {
+        avgRisk: avgChurnRisk,
+        cooling: tierCounts.cooling,
+        atRisk: tierCounts.at_risk,
+        lost: tierCounts.lost,
+      },
     };
   }
 

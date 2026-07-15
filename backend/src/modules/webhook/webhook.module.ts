@@ -14,6 +14,9 @@ import { CustomerIntelligenceModule } from '@modules/customer-intelligence/custo
 import { RetentionModule } from '@modules/retention/retention.module';
 import { ReplenishmentModule } from '@modules/replenishment/replenishment.module';
 import { UsageModule } from '@modules/usage/usage.module';
+import { SupportModule } from '@modules/support/support.module';
+import { PaymentsModule } from '@modules/payments/payments.module';
+import { LoyaltyModule } from '@modules/loyalty/loyalty.module';
 
 @Module({
   imports: [
@@ -29,6 +32,9 @@ import { UsageModule } from '@modules/usage/usage.module';
     RetentionModule,
     ReplenishmentModule,
     UsageModule,
+    SupportModule,
+    PaymentsModule,
+    LoyaltyModule,
   ],
   controllers: [WebhookController],
   providers: [WebhookService, AiResponseHandlerService],

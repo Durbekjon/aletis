@@ -26,6 +26,10 @@ import { BillingModule } from './billing/billing.module';
 import { UsageModule } from './usage/usage.module';
 import { BarcodeCatalogModule } from './barcode-catalog/barcode-catalog.module';
 import { BackupModule } from './backup/backup.module';
+import { PaymentsModule } from './payments/payments.module';
+import { LoyaltyModule } from './loyalty/loyalty.module';
+import { CampaignsModule } from './campaigns/campaigns.module';
+import { HealthModule } from '@core/health/health.module';
 
 @Module({
   imports: [
@@ -56,6 +60,10 @@ import { BackupModule } from './backup/backup.module';
     UsageModule,
     BarcodeCatalogModule,
     BackupModule,
+    PaymentsModule,
+    LoyaltyModule,
+    CampaignsModule,
+    HealthModule,
   ],
 })
 export class ModulesModule {}

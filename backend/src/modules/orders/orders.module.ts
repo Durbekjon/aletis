@@ -6,6 +6,7 @@ import { ActivityLogModule } from '../activity-log/activity-log.module';
 import { CustomerIntelligenceModule } from '@modules/customer-intelligence/customer-intelligence.module';
 import { RetentionModule } from '@modules/retention/retention.module';
 import { ReplenishmentModule } from '@modules/replenishment/replenishment.module';
+import { LoyaltyModule } from '@modules/loyalty/loyalty.module';
 
 @Module({
   imports: [
@@ -14,6 +15,7 @@ import { ReplenishmentModule } from '@modules/replenishment/replenishment.module
     CustomerIntelligenceModule,
     RetentionModule,
     ReplenishmentModule,
+    LoyaltyModule,
   ],
   controllers: [OrdersController],
   providers: [OrdersService],

@@ -11,6 +11,7 @@ import { v5 as uuidv5 } from 'uuid';
 @Injectable()
 export class EmbadingService implements OnModuleInit {
   private client: WeaviateClient;
+  private available = false;
   private readonly logger = new Logger(EmbadingService.name);
   private readonly UUID_NAMESPACE = '6ba7b810-9dad-11d1-80b4-00c04fd430c8'; // Standard OID namespace
 
@@ -27,12 +28,22 @@ export class EmbadingService implements OnModuleInit {
       if (ready) {
         this.logger.log('Weaviate client connected and ready');
         await this._createProductCollection();
+        this.available = true;
       } else {
         this.logger.warn('Weaviate client not ready — embedding features disabled');
       }
     } catch (err) {
       this.logger.warn(`Weaviate unavailable — embedding features disabled: ${err.message}`);
     }
+  }
+
+  /**
+   * Whether semantic/image search is currently usable. When false, all search
+   * methods degrade to an empty result set (and log a warning) instead of
+   * throwing — callers should surface a graceful fallback to the user.
+   */
+  isAvailable(): boolean {
+    return this.available && !!this.client;
   }
 
   private async _createProductCollection() {
@@ -144,7 +155,10 @@ export class EmbadingService implements OnModuleInit {
   }
 
   async searchByText(query: string, limit = 10) {
-    if (!this.client) return [];
+    if (!this.isAvailable()) {
+      this.logger.warn('searchByText skipped — Weaviate unavailable');
+      return [];
+    }
     const collection = this.client.collections.get('Product');
     const result = await collection.query.nearText(query, {
       limit: limit,
@@ -165,7 +179,10 @@ export class EmbadingService implements OnModuleInit {
   }
 
   async searchByImageBase64(base64: string, limit = 10) {
-    if (!this.client) return [];
+    if (!this.isAvailable()) {
+      this.logger.warn('searchByImageBase64 skipped — Weaviate unavailable');
+      return [];
+    }
     const collection = this.client.collections.get('ProductImage');
 
     // Search for images similar to the input image
@@ -191,18 +208,12 @@ export class EmbadingService implements OnModuleInit {
     const seenIds = new Set();
 
     for (const obj of result.objects) {
-      const refs = obj.properties.product as any[]; // Array of referenced objects
+      const refs = obj.properties.product as any[]; // referenced Product objects
       if (refs && refs.length > 0) {
-        const product = refs[0]; // We assume 1-1 link from Image->Product
-        // product here contains the properties requested in returnReferences + metadata like id
+        const product = refs[0]; // 1-1 link from Image -> Product
         if (product && !seenIds.has(product.properties.productId)) {
-          // Weaviate returns properties in 'properties' field usually, but sometimes top level depending on client.
-          // In v3 with returnProperties, the ref object has the properties directly?
-          // Actually, let's look at how we handled it before.
-          // The previous code had: if (product && !seenIds.has(product.uuid)) flatProducts.push(...)
-          // But I want to return the product properties.
-          // Let's assume the ref object has the properties we asked for.
-          const productData = product.properties || product; // Safe fallback
+          // Properties usually live under `properties`; fall back to the object.
+          const productData = product.properties || product;
 
           if (!seenIds.has(productData.productId)) {
             flatProducts.push({
@@ -235,7 +246,10 @@ export class EmbadingService implements OnModuleInit {
       );
     }
 
-    if (!this.client) return [];
+    if (!this.isAvailable()) {
+      this.logger.warn('hybridSearch skipped — Weaviate unavailable');
+      return [];
+    }
 
     // Scenario 1: Text-only - Search Product collection
     if (queryText && !queryImageFilename) {
@@ -254,14 +268,9 @@ export class EmbadingService implements OnModuleInit {
       return result.objects;
     }
 
-    // Scenario 2: Image-only or Text+Image - Prioritize visual search on ProductImage
-    // If we have an image, we use it to find matching ProductImages, then return their Products.
-    // This effectively treats the query as "find products that look like this image".
-    // If text is also provided, we strictly speaking ignore it for the retrieval phase
-    // if we use searchByImage logic, UNLESS we perform a 2-step hybrid.
-    // Complex hybrid across 2 collections is hard.
-    // Fallback: If image is present, use searchByImage.
-
+    // Scenario 2: Image present (with or without text) — run visual search on
+    // the ProductImage collection and return the linked Products. Text is not
+    // blended into retrieval here; a true cross-collection hybrid isn't wired.
     if (queryImageFilename) {
       return this.searchByImage(queryImageFilename, limit);
     }

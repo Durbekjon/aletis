@@ -7,6 +7,7 @@ export const RETENTION_QUEUE = 'retention';
 export const REPLENISHMENT_QUEUE = 'replenishment';
 export const BACKUP_QUEUE = 'backup';
 export const EMBEDDING_QUEUE = 'embedding';
+export const CAMPAIGN_QUEUE = 'campaign';
 
 @Global()
 @Module({

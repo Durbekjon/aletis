@@ -19,6 +19,7 @@ import { ActivityLogService } from '../activity-log/activity-log.service';
 import { CustomerIntelligenceService } from '@modules/customer-intelligence/customer-intelligence.service';
 import { RetentionService } from '@modules/retention/retention.service';
 import { ReplenishmentService } from '@modules/replenishment/replenishment.service';
+import { LoyaltyService } from '@modules/loyalty/loyalty.service';
 
 @Injectable()
 export class OrdersService {
@@ -58,6 +59,7 @@ export class OrdersService {
     private readonly activityLogService: ActivityLogService,
     private readonly customerIntelligenceService: CustomerIntelligenceService,
     private readonly retentionService: RetentionService,
+    private readonly loyaltyService: LoyaltyService,
     @Optional()
     private readonly replenishmentService?: ReplenishmentService,
   ) {}
@@ -360,6 +362,9 @@ export class OrdersService {
       data: { orderNumber: response.orderNumber },
       meta: { totalPrice: finalTotalPrice },
     });
+
+    // Stock awareness: decrement inventory + surface low/out-of-stock alerts.
+    await this.applyStockChanges(orderItemsData, organizationId);
 
     return response;
   }
@@ -687,6 +692,18 @@ export class OrdersService {
         ),
       );
 
+    // Stock awareness: decrement inventory + surface low/out-of-stock alerts.
+    await this.applyStockChanges(orderItemsData, order.organizationId);
+
+    // Loyalty: award order points + pay out any pending referral bonus.
+    this.loyaltyService
+      .onOrderCreated(customerId, order.organizationId, order.id)
+      .catch((err) =>
+        this.logger.warn(
+          `Failed to run loyalty hook for customer ${customerId}: ${err.message}`,
+        ),
+      );
+
     // Replenishment: close any open reminder for the products just bought, then
     // (re)predict the next run-out. Fire-and-forget — never block order flow.
     if (this.replenishmentService) {
@@ -972,7 +989,78 @@ export class OrdersService {
       meta: { source: 'AI_INTENT', totalPrice },
     });
 
+    // Stock awareness: decrement inventory + surface low/out-of-stock alerts.
+    await this.applyStockChanges(orderItemsData, organizationId);
+
+    // Loyalty: award order points + pay out any pending referral bonus.
+    this.loyaltyService
+      .onOrderCreated(customer.id, organizationId, order.id)
+      .catch((err) => this.logger.warn(`Loyalty hook failed: ${err.message}`));
+
     return response;
+  }
+
+  /** Low-stock threshold (units) below which a merchant alert fires. */
+  private get lowStockThreshold(): number {
+    const v = Number(process.env.LOW_STOCK_THRESHOLD);
+    return Number.isFinite(v) && v > 0 ? v : 5;
+  }
+
+  /**
+   * Decrement product stock for ordered items and log low/out-of-stock alerts
+   * to the merchant activity feed. Lightweight awareness (not a strict POS
+   * ledger); never throws into the order flow.
+   */
+  private async applyStockChanges(
+    items: { productId: number; quantity: number }[],
+    organizationId: number,
+  ): Promise<void> {
+    for (const it of items) {
+      if (!it?.productId) continue;
+      const qty = it.quantity ?? 1;
+      try {
+        const updated = await this.prisma.product.update({
+          where: { id: it.productId },
+          data: { quantity: { decrement: qty } },
+          select: { id: true, name: true, quantity: true },
+        });
+        if (updated.quantity <= 0) {
+          this.logger.warn(
+            `Product ${updated.id} "${updated.name}" is OUT OF STOCK (${updated.quantity})`,
+          );
+          await this.activityLogService
+            .createLog({
+              organizationId,
+              entityType: EntityType.PRODUCT,
+              entityId: updated.id,
+              action: ActionType.UPDATE,
+              templateKey: 'PRODUCT_OUT_OF_STOCK',
+              data: { name: updated.name },
+              meta: { quantity: updated.quantity },
+            })
+            .catch(() => undefined);
+        } else if (updated.quantity <= this.lowStockThreshold) {
+          this.logger.warn(
+            `Product ${updated.id} "${updated.name}" low stock (${updated.quantity})`,
+          );
+          await this.activityLogService
+            .createLog({
+              organizationId,
+              entityType: EntityType.PRODUCT,
+              entityId: updated.id,
+              action: ActionType.UPDATE,
+              templateKey: 'PRODUCT_LOW_STOCK',
+              data: { name: updated.name, quantity: String(updated.quantity) },
+              meta: { quantity: updated.quantity },
+            })
+            .catch(() => undefined);
+        }
+      } catch (err: any) {
+        this.logger.warn(
+          `Stock decrement failed for product ${it.productId}: ${err.message}`,
+        );
+      }
+    }
   }
 
   /**

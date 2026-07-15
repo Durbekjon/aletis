@@ -56,7 +56,114 @@
     "conversations": "Conversations",
     "settings": "Settings",
     "dashboard": "Dashboard",
-    "replenishment": "Replenishment"
+    "replenishment": "Replenishment",
+    "campaigns": "Campaigns",
+    "support": "Support",
+    "loyalty": "Loyalty"
+  },
+  "loyalty": {
+    "title": "Loyalty & referrals",
+    "subtitle": "Points program and refer-a-friend results",
+    "balance": "Points balance",
+    "referralsMade": "Referrals",
+    "referralLink": "Referral link",
+    "linkCopied": "Link copied",
+    "recentActivity": "Recent activity",
+    "reasons": {
+      "ORDER": "Order",
+      "REFERRAL_REFEREE": "Referral (you)",
+      "REFERRAL_REFERRER": "Referral (friend)",
+      "REDEEM": "Redeemed",
+      "ADJUST": "Adjustment"
+    },
+    "topReferrers": "Top referrers",
+    "empty": "No referrers yet",
+    "metrics": {
+      "issued": "Points issued",
+      "redeemed": "Points redeemed",
+      "referrals": "Successful referrals"
+    },
+    "col": {
+      "customer": "Customer",
+      "referrals": "Referrals",
+      "points": "Points"
+    }
+  },
+  "support": {
+    "title": "Support",
+    "subtitle": "Tickets from customers who asked for a human agent",
+    "empty": "No open tickets",
+    "filterAll": "All",
+    "statusUpdated": "Status updated",
+    "statusError": "Failed to update status",
+    "markInProgress": "Take in progress",
+    "markResolved": "Resolve",
+    "col": {
+      "customer": "Customer",
+      "reason": "Reason",
+      "sentiment": "Sentiment",
+      "status": "Status",
+      "created": "Created",
+      "action": "Action"
+    },
+    "metrics": {
+      "open": "Open",
+      "inProgress": "In progress",
+      "resolved": "Resolved",
+      "total": "Total"
+    },
+    "status": {
+      "OPEN": "Open",
+      "IN_PROGRESS": "In progress",
+      "RESOLVED": "Resolved"
+    },
+    "sentiment": {
+      "URGENT": "Urgent",
+      "NORMAL": "Normal",
+      "COMPLAINT": "Complaint"
+    }
+  },
+  "campaigns": {
+    "title": "Campaigns",
+    "subtitle": "Send an AI-written message to a customer segment",
+    "new": "New campaign",
+    "create": "Create campaign",
+    "launch": "Launch",
+    "launching": "Sending...",
+    "launched": "Campaign launched",
+    "launchError": "Failed to launch",
+    "created": "Campaign created",
+    "createError": "Failed to create",
+    "name": "Name",
+    "namePlaceholder": "e.g. Summer sale",
+    "segment": "Segment",
+    "message": "Message (optional)",
+    "messagePlaceholder": "Leave empty — AI writes a message per customer",
+    "incentive": "Incentive (optional)",
+    "incentivePlaceholder": "e.g. 10% off",
+    "recipients": "{{count}} recipients",
+    "empty": "No campaigns yet",
+    "confirmLaunch": "Confirm sending this campaign now?",
+    "col": {
+      "name": "Name",
+      "segment": "Segment",
+      "status": "Status",
+      "sent": "Sent",
+      "created": "Created"
+    },
+    "status": {
+      "DRAFT": "Draft",
+      "SENDING": "Sending",
+      "SENT": "Sent",
+      "FAILED": "Failed"
+    },
+    "segments": {
+      "ALL_BUYERS": "All buyers",
+      "NEW": "New",
+      "VIP": "VIP",
+      "AT_RISK": "At risk",
+      "DORMANT": "Dormant"
+    }
   },
   "retention": {
     "title": "Retention",
@@ -96,7 +203,13 @@
       "action": "Action",
       "status": "Status",
       "message": "AI message",
-      "recovered": "Recovered"
+      "recovered": "Recovered",
+      "churn": "Churn risk"
+    },
+    "health": {
+      "cooling": "Cooling",
+      "at_risk": "At risk",
+      "lost": "Lost"
     },
     "status": {
       "QUEUED": "Queued",
@@ -426,6 +539,9 @@
       "currentStatus": "Current Status",
       "updating": "Updating...",
       "paymentStatus": "Payment Status",
+      "paymentLink": "Payment link",
+      "linkCopied": "Link copied",
+      "linkError": "Failed to create link",
       "notes": "Notes",
       "notesPlaceholder": "Add notes about this order...",
       "saving": "Saving...",

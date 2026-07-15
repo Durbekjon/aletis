@@ -45,6 +45,12 @@ const CHANNEL_STYLES: Record<string, string> = {
   INSTAGRAM: "bg-pink-500/15 text-pink-400 border border-pink-500/30",
 }
 
+const HEALTH_STYLES: Record<string, string> = {
+  cooling: "bg-yellow-500/15 text-yellow-400 border border-yellow-500/30",
+  at_risk: "bg-orange-500/15 text-orange-400 border border-orange-500/30",
+  lost: "bg-red-500/15 text-red-400 border border-red-500/30",
+}
+
 const AVATAR_COLORS = [
   "bg-blue-600", "bg-purple-600", "bg-emerald-600", "bg-orange-600",
   "bg-pink-600", "bg-teal-600", "bg-indigo-600", "bg-rose-600",
@@ -182,6 +188,7 @@ export default function RetentionPage() {
                     <TableHead>{t("retention.col.dormant")}</TableHead>
                     <TableHead>{t("retention.col.orders")}</TableHead>
                     <TableHead>{t("retention.col.spent")}</TableHead>
+                    <TableHead>{t("retention.col.churn")}</TableHead>
                     <TableHead className="text-right pr-4">{t("retention.col.action")}</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -190,14 +197,14 @@ export default function RetentionPage() {
                     Array.from({ length: 6 }).map((_, i) => (
                       <TableRow key={i}>
                         <TableCell className="pl-4"><Skeleton className="h-8 w-40" /></TableCell>
-                        {Array.from({ length: 5 }).map((_, j) => (
+                        {Array.from({ length: 6 }).map((_, j) => (
                           <TableCell key={j}><Skeleton className="h-4 w-16" /></TableCell>
                         ))}
                       </TableRow>
                     ))
                   ) : !dormant?.length ? (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-20">
+                      <TableCell colSpan={7} className="text-center py-20">
                         <div className="flex flex-col items-center gap-3 text-muted-foreground">
                           <PartyPopper className="h-12 w-12 opacity-20" />
                           <p className="text-sm">{t("retention.dormant.empty")}</p>
@@ -241,6 +248,14 @@ export default function RetentionPage() {
                           <span className="text-sm font-medium text-emerald-400">
                             {fmt(d.totalSpent)} {d.currency}
                           </span>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <span className={cn("inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium", HEALTH_STYLES[d.healthTier])}>
+                              {t(`retention.health.${d.healthTier}`)}
+                            </span>
+                            <span className="text-xs text-muted-foreground">{d.churnRisk}%</span>
+                          </div>
                         </TableCell>
                         <TableCell className="text-right pr-4">
                           <Button
