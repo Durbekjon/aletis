@@ -21,6 +21,9 @@ import {
   TrendingUp,
   Tag,
   User,
+  Gift,
+  Copy,
+  UserPlus,
 } from "lucide-react"
 import { toast } from "sonner"
 import {
@@ -28,6 +31,7 @@ import {
   useAnalyzeCustomerMutation,
   useSendCustomerMessageMutation,
 } from "@/src/hooks/useCustomersQuery"
+import { useCustomerLoyalty } from "@/src/hooks/useLoyaltyQuery"
 import { useTranslation } from "@/src/context/I18nContext"
 import { ROUTES } from "@/lib/constants"
 import { cn } from "@/lib/utils"
@@ -62,6 +66,7 @@ export default function CustomerProfilePage() {
   const locale = i18n.language === "ru" ? "ru-RU" : i18n.language === "en" ? "en-US" : "uz-UZ"
 
   const { data: customer, isLoading } = useCustomerQuery(customerId)
+  const { data: loyalty } = useCustomerLoyalty(customerId)
   const analyzeMutation = useAnalyzeCustomerMutation(customerId)
   const sendMessageMutation = useSendCustomerMessageMutation(customerId)
   const [draft, setDraft] = useState("")
@@ -192,6 +197,68 @@ export default function CustomerProfilePage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Loyalty & referral card */}
+          {loyalty && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                  <Gift className="h-4 w-4 text-emerald-500" />
+                  {t("loyalty.title")}
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3 text-sm">
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground flex items-center gap-1">
+                    <Star className="h-3 w-3" />
+                    {t("loyalty.balance")}
+                  </span>
+                  <span className="font-bold text-emerald-500">{loyalty.balance}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-muted-foreground flex items-center gap-1">
+                    <UserPlus className="h-3 w-3" />
+                    {t("loyalty.referralsMade")}
+                  </span>
+                  <span className="font-medium">{loyalty.referralCount}</span>
+                </div>
+                {loyalty.referral && (
+                  <div className="space-y-1.5">
+                    <span className="text-muted-foreground text-xs">{t("loyalty.referralLink")}</span>
+                    <div className="flex items-center gap-2 rounded-md border bg-muted/40 p-2">
+                      <span className="flex-1 truncate text-xs">{loyalty.referral.link}</span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 shrink-0"
+                        onClick={() => {
+                          navigator.clipboard.writeText(loyalty.referral!.link)
+                          toast.success(t("loyalty.linkCopied"))
+                        }}
+                      >
+                        <Copy className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+                {loyalty.transactions?.length ? (
+                  <div className="space-y-1 pt-1">
+                    <span className="text-muted-foreground text-xs">{t("loyalty.recentActivity")}</span>
+                    {loyalty.transactions.slice(0, 5).map((tx, i) => (
+                      <div key={tx.id ?? i} className="flex justify-between text-xs">
+                        <span className="text-muted-foreground">
+                          {t(`loyalty.reasons.${tx.reason}`, { defaultValue: tx.reason })}
+                        </span>
+                        <span className={cn("font-medium", tx.points >= 0 ? "text-emerald-500" : "text-orange-500")}>
+                          {tx.points >= 0 ? "+" : ""}{tx.points}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
+              </CardContent>
+            </Card>
+          )}
 
           {/* AI Insights panel */}
           <Card>

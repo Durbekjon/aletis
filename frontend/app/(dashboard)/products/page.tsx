@@ -195,12 +195,17 @@ export default function ProductsPage() {
     return price;
   };
 
+  // Backend sends `quantity` for every product; low-stock threshold defaults to 5
+  // (matches the backend LOW_STOCK_THRESHOLD) when a per-product one isn't set.
+  const LOW_STOCK_THRESHOLD = 5;
+  const lowStockLimit = (product: Product) =>
+    product.lowStockThreshold ?? LOW_STOCK_THRESHOLD;
+
   const getStockStatus = (product: Product) => {
-    if (!product.trackQuantity) return null;
     if (product.quantity <= 0) {
       return <Badge variant="destructive">{t('products.stockOut')}</Badge>;
     }
-    if (product.quantity <= product.lowStockThreshold) {
+    if (product.quantity <= lowStockLimit(product)) {
       return (
         <Badge variant="outline" className="text-yellow-600 border-yellow-600">
           {t('products.stockLow')}
@@ -402,7 +407,7 @@ export default function ProductsPage() {
                     <TableCell>
                       <div className="flex items-center gap-2">
                         {getStatusBadge(product.status)}
-                        {product.quantity <= product.lowStockThreshold && product.trackQuantity && (
+                        {product.quantity <= lowStockLimit(product) && (
                           <AlertTriangle className="h-4 w-4 text-yellow-500" />
                         )}
                       </div>

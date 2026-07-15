@@ -20,7 +20,15 @@ export interface RetentionMetrics {
   revenueRecovered: number
   responseRate: number
   recoveryRate: number
+  churn: {
+    avgRisk: number
+    cooling: number
+    atRisk: number
+    lost: number
+  }
 }
+
+export type HealthTier = "cooling" | "at_risk" | "lost"
 
 export interface DormantCustomer {
   id: number
@@ -35,6 +43,9 @@ export interface DormantCustomer {
   currency: string
   aiTags: string[]
   lastWinBackAt: string | null
+  churnRisk: number
+  priorityScore: number
+  healthTier: HealthTier
 }
 
 export interface WinBackAttempt {

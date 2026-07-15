@@ -56,7 +56,114 @@
     "conversations": "Suhbatlar",
     "settings": "Sozlamalar",
     "dashboard": "Boshqaruv paneli",
-    "replenishment": "To‘ldirish"
+    "replenishment": "To‘ldirish",
+    "campaigns": "Kampaniyalar",
+    "support": "Qo‘llab-quvvatlash",
+    "loyalty": "Sodiqlik"
+  },
+  "loyalty": {
+    "title": "Sodiqlik va referrallar",
+    "subtitle": "Ball dasturi va do‘st taklif qilish natijalari",
+    "balance": "Ball balansi",
+    "referralsMade": "Referrallar",
+    "referralLink": "Referral havola",
+    "linkCopied": "Havola nusxalandi",
+    "recentActivity": "So‘nggi harakatlar",
+    "reasons": {
+      "ORDER": "Buyurtma",
+      "REFERRAL_REFEREE": "Referral (siz)",
+      "REFERRAL_REFERRER": "Referral (do‘st)",
+      "REDEEM": "Ishlatildi",
+      "ADJUST": "Tuzatish"
+    },
+    "topReferrers": "Eng faol referrerlar",
+    "empty": "Hali referrer yo‘q",
+    "metrics": {
+      "issued": "Berilgan ballar",
+      "redeemed": "Ishlatilgan ballar",
+      "referrals": "Muvaffaqiyatli referrallar"
+    },
+    "col": {
+      "customer": "Mijoz",
+      "referrals": "Referrallar",
+      "points": "Ballar"
+    }
+  },
+  "support": {
+    "title": "Qo‘llab-quvvatlash",
+    "subtitle": "AI operator so‘ragan mijozlar ticketlari",
+    "empty": "Ochiq ticket yo‘q",
+    "filterAll": "Barchasi",
+    "statusUpdated": "Holat yangilandi",
+    "statusError": "Holatni yangilashda xatolik",
+    "markInProgress": "Jarayonga olish",
+    "markResolved": "Hal qilindi",
+    "col": {
+      "customer": "Mijoz",
+      "reason": "Sabab",
+      "sentiment": "Kayfiyat",
+      "status": "Holat",
+      "created": "Yaratilgan",
+      "action": "Amal"
+    },
+    "metrics": {
+      "open": "Ochiq",
+      "inProgress": "Jarayonda",
+      "resolved": "Hal qilingan",
+      "total": "Jami"
+    },
+    "status": {
+      "OPEN": "Ochiq",
+      "IN_PROGRESS": "Jarayonda",
+      "RESOLVED": "Hal qilingan"
+    },
+    "sentiment": {
+      "URGENT": "Shoshilinch",
+      "NORMAL": "Oddiy",
+      "COMPLAINT": "Shikoyat"
+    }
+  },
+  "campaigns": {
+    "title": "Kampaniyalar",
+    "subtitle": "Mijoz segmentiga AI yozgan xabar yuboring",
+    "new": "Yangi kampaniya",
+    "create": "Kampaniya yaratish",
+    "launch": "Ishga tushirish",
+    "launching": "Yuborilmoqda...",
+    "launched": "Kampaniya ishga tushirildi",
+    "launchError": "Ishga tushirishda xatolik",
+    "created": "Kampaniya yaratildi",
+    "createError": "Yaratishda xatolik",
+    "name": "Nomi",
+    "namePlaceholder": "Masalan: Yozgi chegirma",
+    "segment": "Segment",
+    "message": "Xabar (ixtiyoriy)",
+    "messagePlaceholder": "Bo‘sh qoldirsangiz — AI har bir mijozga alohida yozadi",
+    "incentive": "Rag‘bat (ixtiyoriy)",
+    "incentivePlaceholder": "Masalan: 10% chegirma",
+    "recipients": "{{count}} ta qabul qiluvchi",
+    "empty": "Hali kampaniya yo‘q",
+    "confirmLaunch": "Ushbu kampaniyani hozir yuborishni tasdiqlaysizmi?",
+    "col": {
+      "name": "Nomi",
+      "segment": "Segment",
+      "status": "Holat",
+      "sent": "Yuborilgan",
+      "created": "Yaratilgan"
+    },
+    "status": {
+      "DRAFT": "Qoralama",
+      "SENDING": "Yuborilmoqda",
+      "SENT": "Yuborilgan",
+      "FAILED": "Xatolik"
+    },
+    "segments": {
+      "ALL_BUYERS": "Barcha xaridorlar",
+      "NEW": "Yangi",
+      "VIP": "VIP",
+      "AT_RISK": "Xavf ostida",
+      "DORMANT": "Uyquda"
+    }
   },
   "retention": {
     "title": "Mijozlarni qaytarish",
@@ -96,7 +203,13 @@
       "action": "Amal",
       "status": "Holat",
       "message": "AI xabari",
-      "recovered": "Qaytarilgan"
+      "recovered": "Qaytarilgan",
+      "churn": "Ketish xavfi"
+    },
+    "health": {
+      "cooling": "Sovimoqda",
+      "at_risk": "Xavf ostida",
+      "lost": "Yo‘qolgan"
     },
     "status": {
       "QUEUED": "Navbatda",
@@ -426,6 +539,9 @@
       "currentStatus": "Joriy holat",
       "updating": "Yangilanmoqda...",
       "paymentStatus": "To'lov holati",
+      "paymentLink": "To'lov havolasi",
+      "linkCopied": "Havola nusxalandi",
+      "linkError": "Havola yaratishda xatolik",
       "notes": "Izohlar",
       "notesPlaceholder": "Ushbu buyurtma haqida izoh qo'shing...",
       "saving": "Saqlanmoqda...",
