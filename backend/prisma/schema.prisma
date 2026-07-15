@@ -53,6 +53,8 @@ model Organization {
   winBackAttempts    WinBackAttempt[]
   replenishmentReminders ReplenishmentReminder[]
   supportTickets     SupportTicket[]
+  loyaltyTransactions LoyaltyTransaction[]
+  campaigns          Campaign[]
   @@map("organizations")
 }
 
@@ -314,12 +316,20 @@ model Customer {
   winBackAttempts WinBackAttempt[]
   replenishmentReminders ReplenishmentReminder[]
   supportTickets  SupportTicket[]
+  // Loyalty + referral
+  referralCode        String?              @unique
+  referredById        Int?
+  referredBy          Customer?            @relation("customer_referrals", fields: [referredById], references: [id], onDelete: SetNull)
+  referrals           Customer[]           @relation("customer_referrals")
+  loyaltyPoints       Int                  @default(0)
+  loyaltyTransactions LoyaltyTransaction[]
 
   @@unique([telegramId, organizationId, botId])
   @@index([telegramId])
   @@index([organizationId, createdAt])
   @@index([username])
   @@index([name])
+  @@index([referredById])
   @@map("customers")
 }
 
@@ -358,6 +368,7 @@ model Order {
   orderItems         OrderItem[]
   currency           String        @default("USD")
   followUpSentAt     DateTime?
+  paymentTransactions PaymentTransaction[]
 
   @@index([organizationId, status, createdAt(sort: Desc)], name: "idx_orders_org_status_created")
   @@index([customerId], name: "idx_orders_customer_id")
@@ -608,6 +619,11 @@ model WinBackAttempt {
   dormantDays      Int? // days since last activity when flagged
   generatedMessage String?
   incentive        String? // optional offer included in the message
+  // Escalating sequence: a single attempt walks through several steps
+  // (reminder → value → incentive → last chance) until the customer responds.
+  step             Int             @default(1)
+  maxSteps         Int             @default(4)
+  nextStepAt       DateTime?
   sentAt           DateTime?
   respondedAt      DateTime?
   recoveredAt      DateTime?
@@ -771,6 +787,7 @@ model Invoice {
   paymentUrl       String?
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
+  paymentTransactions PaymentTransaction[]
 
   @@index([subscriptionId, status])
   @@map("invoices")
@@ -832,4 +849,118 @@ model BarcodeCatalogEntry {
 
   @@index([status])
   @@map("barcode_catalog_entries")
+}
+
+// What a payment transaction settles: a customer order or a merchant subscription invoice.
+enum PaymentTargetType {
+  ORDER
+  INVOICE
+}
+
+// Provider-agnostic lifecycle for a payment transaction.
+enum PaymentTxState {
+  CREATED // payment link generated, provider hasn't opened a transaction yet
+  PENDING // provider created/prepared the transaction, awaiting confirmation
+  PAID // provider performed/completed the transaction
+  CANCELLED // cancelled or refunded
+  FAILED
+}
+
+// A single payment attempt against an order or invoice, tracked so Payme/Click
+// callbacks can be reconciled idempotently. One target may have several rows
+// (e.g. a cancelled attempt followed by a successful one).
+model PaymentTransaction {
+  id             Int               @id @default(autoincrement())
+  provider       PaymentProvider
+  providerTxId   String? // Payme transaction id / Click transaction id
+  targetType     PaymentTargetType
+  orderId        Int?
+  order          Order?            @relation(fields: [orderId], references: [id], onDelete: SetNull)
+  invoiceId      Int?
+  invoice        Invoice?          @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  organizationId Int
+  amount         Float // major currency units (e.g. UZS), not tiyin
+  currency       String            @default("UZS")
+  state          PaymentTxState    @default(CREATED)
+  // Payme keeps its own numeric state (-2,-1,1,2) and epoch-ms timestamps.
+  providerState  Int?
+  createTime     BigInt?
+  performTime    BigInt?
+  cancelTime     BigInt?
+  reason         Int?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  @@index([provider, providerTxId])
+  @@index([orderId])
+  @@index([invoiceId])
+  @@index([organizationId, state])
+  @@map("payment_transactions")
+}
+
+// Why a customer's loyalty balance changed. Positive points = earned, negative = redeemed.
+enum LoyaltyReason {
+  ORDER // earned for placing an order
+  REFERRAL_REFERRER // earned because someone they invited bought
+  REFERRAL_REFEREE // earned as an invited customer's first-order bonus
+  MANUAL // merchant adjustment
+  REDEMPTION // points spent
+}
+
+// Append-only loyalty ledger. Customer.loyaltyPoints holds the running balance.
+model LoyaltyTransaction {
+  id                 Int           @id @default(autoincrement())
+  customerId         Int
+  customer           Customer      @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  organizationId     Int
+  organization       Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  points             Int // + earned, - redeemed
+  reason             LoyaltyReason
+  orderId            Int? // order that earned the points, if any
+  referredCustomerId Int? // for REFERRAL_REFERRER: who they invited
+  note               String?
+  createdAt          DateTime      @default(now())
+
+  @@index([customerId])
+  @@index([organizationId, reason])
+  @@map("loyalty_transactions")
+}
+
+// Which customer segment a broadcast campaign targets.
+enum CampaignSegment {
+  ALL_BUYERS // everyone who has ordered at least once
+  NEW // recently joined, 0-1 orders
+  VIP // most loyal / highest-spend buyers
+  AT_RISK // dormant with a high churn tier
+  DORMANT // all dormant buyers
+}
+
+enum CampaignStatus {
+  DRAFT
+  SENDING
+  SENT
+  FAILED
+}
+
+// A segmented broadcast: either a fixed template (personalised with {name}) or
+// an AI-written message generated per recipient. Delivery runs on a BullMQ job.
+model Campaign {
+  id              Int             @id @default(autoincrement())
+  organizationId  Int
+  organization    Organization    @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name            String
+  segment         CampaignSegment
+  messageTemplate String? // null → generate with AI per recipient
+  incentive       String?
+  status          CampaignStatus  @default(DRAFT)
+  targeted        Int             @default(0)
+  sent            Int             @default(0)
+  failed          Int             @default(0)
+  startedAt       DateTime?
+  completedAt     DateTime?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@index([organizationId, status])
+  @@map("campaigns")
 }

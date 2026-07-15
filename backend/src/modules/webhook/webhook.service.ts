@@ -17,11 +17,12 @@ import {
 } from '@core/message-buffer/message-buffer.service';
 import { PrismaService } from '@core/prisma/prisma.service';
 import { EmbadingService } from '@modules/embading/embading.service';
-import { ProductCard } from './ai-response-handler.service';
+import { ProductCard, ProcessedAiResponse } from './ai-response-handler.service';
 import { CustomerIntelligenceService } from '@modules/customer-intelligence/customer-intelligence.service';
 import { RetentionService } from '@modules/retention/retention.service';
 import { ReplenishmentService } from '@modules/replenishment/replenishment.service';
 import { UsageService, QuotaStatus } from '@modules/usage/usage.service';
+import { LoyaltyService } from '@modules/loyalty/loyalty.service';
 
 @Injectable()
 export class WebhookService {
@@ -45,6 +46,7 @@ export class WebhookService {
     private readonly customerIntelligenceService: CustomerIntelligenceService,
     private readonly retentionService: RetentionService,
     private readonly usageService: UsageService,
+    private readonly loyaltyService: LoyaltyService,
     @Optional()
     private readonly replenishmentService?: ReplenishmentService,
   ) {}
@@ -178,9 +180,31 @@ export class WebhookService {
     }
 
     // Get message content
-    const messageContent =
+    let messageContent =
       webhookData.message?.text || webhookData.message?.caption || '';
     const photos = webhookData.message?.photo;
+
+    // Voice message: transcribe with Gemini and treat it as a normal text turn.
+    const voice = webhookData.message?.voice;
+    if (voice && !messageContent) {
+      const transcript = await this.transcribeVoice(voice, decyptedToken);
+      if (!transcript) {
+        await this.telegramService.sendRequest(decyptedToken, 'sendMessage', {
+          chat_id: customer.telegramId,
+          text:
+            customer.lang === 'ru'
+              ? 'Извините, не удалось разобрать голосовое сообщение. Напишите, пожалуйста, текстом.'
+              : customer.lang === 'en'
+                ? "Sorry, I couldn't understand the voice message. Please try typing it."
+                : "Kechirasiz, ovozli xabarni tushunolmadim. Iltimos, matn ko'rinishida yozing.",
+        });
+        return { status: 'voice_unintelligible' };
+      }
+      messageContent = transcript;
+      this.logger.log(
+        `Voice from customer ${customer.id} transcribed: "${transcript.substring(0, 50)}"`,
+      );
+    }
 
     if (photos && photos.length > 0) {
       this.logger.log(
@@ -199,33 +223,15 @@ export class WebhookService {
 
         if (fileData) {
           const base64Image = fileData.buffer.toString('base64');
-          let searchResults: any[] = [];
 
-          if (messageContent) {
-            // Hybrid search if caption exists
-            this.logger.log(
-              `Performing hybrid search for customer ${customer.id}`,
-            );
-            // We need to adapt hybridSearch to accept base64 or add a new method.
-            // For now, let's use searchByImage provided by EmbadingService which accepts filename.
-            // Wait, EmbadingService.searchByImage expects a filename to read from disk.
-            // We need to update EmbadingService to accept base64 string directly.
-            // Let's assume we will update EmbadingService to have searchByImageBase64(base64)
-            // For now, I will use a hypothetical searchByImageBase64 method and then update EmbadingService.
-            searchResults = await this.embadingService.searchByImageBase64(
-              base64Image,
-              5,
-            );
-          } else {
-            // Image-only search
-            this.logger.log(
-              `Performing image-only search for customer ${customer.id}`,
-            );
-            searchResults = await this.embadingService.searchByImageBase64(
-              base64Image,
-              5,
-            );
-          }
+          // Visual product search. The caption (if any) is not yet used for a
+          // combined text+image query — searchByImageBase64 ranks purely by
+          // image similarity. Returns [] when Weaviate is unavailable.
+          this.logger.log(
+            `Performing image search for customer ${customer.id}`,
+          );
+          const searchResults =
+            await this.embadingService.searchByImageBase64(base64Image, 5);
 
           // Format results similar to handleSearchProductIntent
           if (searchResults.length > 0) {
@@ -267,6 +273,28 @@ export class WebhookService {
           error.stack,
         );
       }
+    }
+
+    // Referral deep link: t.me/<bot>?start=ref_CODE. Attach the new customer to
+    // their referrer, then continue with the normal onboarding prompt.
+    const startPayload = this.extractStartPayload(messageContent);
+    if (startPayload?.startsWith('ref_')) {
+      await this.loyaltyService
+        .attachReferral(customer.id, organizationId, startPayload.slice(4))
+        .catch((err) =>
+          this.logger.warn(`attachReferral failed: ${err.message}`),
+        );
+      await this.telegramService.handleStartCommand(
+        customer.telegramId,
+        decyptedToken,
+      );
+      return { status: 'referral_start' };
+    }
+
+    // /referral (or /invite): send the customer their own link + points balance.
+    if (messageContent === '/referral' || messageContent === '/invite') {
+      await this.sendReferralInfo(customer, decyptedToken);
+      return { status: 'referral_info' };
     }
 
     if (messageContent === '/start') {
@@ -531,7 +559,7 @@ export class WebhookService {
       const aiResponse = await this.processWithAI(
         flushResult.combinedMessage,
         history,
-        bot,
+        bot.organizationId,
         customer,
       );
 
@@ -823,6 +851,79 @@ export class WebhookService {
       .replace(/\*\*(.*?)\*\*/g, '<b>$1</b>') // bold
       .replace(/_(.*?)_/g, '<i>$1</i>'); // italic
   }
+
+  /** Download a Telegram voice file and transcribe it to text via Gemini. */
+  private async transcribeVoice(
+    voice: { file_id: string; mime_type?: string },
+    decryptedToken: string,
+  ): Promise<string> {
+    try {
+      const fileData = await this.telegramService.downloadFile(
+        decryptedToken,
+        voice.file_id,
+      );
+      if (!fileData) return '';
+      const base64 = fileData.buffer.toString('base64');
+      return await this.geminiService.transcribeAudio(
+        base64,
+        voice.mime_type || 'audio/ogg',
+      );
+    } catch (err: any) {
+      this.logger.warn(`Voice transcription failed: ${err.message}`);
+      return '';
+    }
+  }
+
+  /** Extract the payload from a "/start PAYLOAD" or "/start=PAYLOAD" message. */
+  private extractStartPayload(text: string): string | null {
+    const match = text.match(/^\/start[ =](.+)$/);
+    return match ? match[1].trim() : null;
+  }
+
+  /** Reply to /referral with the customer's own invite link + points balance. */
+  private async sendReferralInfo(
+    customer: Customer,
+    decryptedToken: string,
+  ): Promise<void> {
+    const [{ link }, { balance }] = await Promise.all([
+      this.loyaltyService.getReferralLink(customer.id),
+      this.loyaltyService.getBalance(customer.id),
+    ]);
+    const lang = customer.lang || 'uz';
+    let text: string;
+    if (!link) {
+      text =
+        lang === 'ru'
+          ? 'Реферальная ссылка временно недоступна. Попробуйте позже.'
+          : lang === 'en'
+            ? 'Your referral link is temporarily unavailable. Please try again later.'
+            : "Referal havolangiz vaqtincha mavjud emas. Keyinroq urinib ko'ring.";
+    } else if (lang === 'ru') {
+      text =
+        `🎁 <b>Приглашайте друзей!</b>\n\n` +
+        `Ваша ссылка:\n${link}\n\n` +
+        `Когда приглашённый друг сделает первый заказ, вы оба получите бонусные баллы.\n\n` +
+        `💎 Ваши баллы: <b>${balance}</b>`;
+    } else if (lang === 'en') {
+      text =
+        `🎁 <b>Invite your friends!</b>\n\n` +
+        `Your link:\n${link}\n\n` +
+        `When a friend you invite places their first order, you both earn bonus points.\n\n` +
+        `💎 Your points: <b>${balance}</b>`;
+    } else {
+      text =
+        `🎁 <b>Do'stlaringizni taklif qiling!</b>\n\n` +
+        `Sizning havolangiz:\n${link}\n\n` +
+        `Taklif qilgan do'stingiz birinchi buyurtma qilganda, ikkalangiz ham bonus ball olasiz.\n\n` +
+        `💎 Ballaringiz: <b>${balance}</b>`;
+    }
+
+    await this.telegramService.sendRequest(decryptedToken, 'sendMessage', {
+      chat_id: customer.telegramId,
+      text,
+      parse_mode: 'HTML',
+    });
+  }
   private async getCustomerFromWebhook(
     webhookData: WebhookDto,
     botId: number,
@@ -914,17 +1015,75 @@ export class WebhookService {
     return true;
   }
 
+  /**
+   * Channel-agnostic AI reply generator. Given a customer + incoming text, it
+   * meters the conversation, runs the same AI pipeline the Telegram webhook uses
+   * (context build → Gemini → intent handling), and returns the processed
+   * response. The caller is responsible for delivering the text on its channel
+   * (Telegram, Instagram, …) and for persisting the outbound message.
+   *
+   * Returns null if the customer no longer exists.
+   */
+  async generateReplyForCustomer(
+    customerId: number,
+    organizationId: number,
+    incomingText: string,
+  ): Promise<ProcessedAiResponse | null> {
+    const customer = await this.prisma.customer.findUnique({
+      where: { id: customerId },
+    });
+    if (!customer) {
+      this.logger.warn(
+        `generateReplyForCustomer: customer ${customerId} not found`,
+      );
+      return null;
+    }
+
+    // Meter the conversation so cross-channel usage counts toward the plan.
+    const quotaStatus =
+      await this.usageService.checkAndIncrementConversation(organizationId);
+    if (quotaStatus === QuotaStatus.THROTTLED) {
+      return {
+        text:
+          customer.lang === 'ru'
+            ? 'Извините, сервис временно приостановлен. Пожалуйста, свяжитесь с продавцом.'
+            : customer.lang === 'en'
+              ? 'Sorry, the service is temporarily paused. Please contact the store owner.'
+              : "Kechirasiz, xizmat vaqtincha to'xtatildi. Iltimos, do'kon egasiga murojaat qiling.",
+      };
+    }
+
+    const history = await this.messagesService._getCustomerLastMessages(
+      customerId,
+      10,
+    );
+
+    const aiResponse = await this.processWithAI(
+      incomingText,
+      history,
+      organizationId,
+      customer,
+    );
+
+    return this.aiResponseHandler.processAiResponse(
+      aiResponse,
+      customer,
+      organizationId,
+      incomingText,
+    );
+  }
+
   private async processWithAI(
     message: string,
     history: Message[],
-    bot: Bot,
+    organizationId: number,
     customer: Customer,
   ) {
     const [userOrders, products, organization] = await Promise.all([
-      this.ordersService.getOrdersForAI(bot.organizationId, customer.id),
-      this.productsService.getProductsForOrganization(bot.organizationId),
+      this.ordersService.getOrdersForAI(organizationId, customer.id),
+      this.productsService.getProductsForOrganization(organizationId),
       this.prisma.organization.findUnique({
-        where: { id: bot.organizationId },
+        where: { id: organizationId },
         select: { name: true, description: true, category: true },
       }),
     ]);
@@ -933,10 +1092,15 @@ export class WebhookService {
       products.length > 0
         ? `AVAILABLE PRODUCTS (${products.length} total):\n` +
           products
-            .map(
-              (p) =>
-                `- ID:${p.id} | ${p.name} | ${p.price} ${p.currency}${p.description ? ` | ${p.description.substring(0, 60)}` : ''}`,
-            )
+            .map((p) => {
+              const stock =
+                p.quantity <= 0
+                  ? ' | OUT OF STOCK — do NOT offer or accept orders for this'
+                  : p.quantity <= 5
+                    ? ` | only ${p.quantity} left in stock`
+                    : '';
+              return `- ID:${p.id} | ${p.name} | ${p.price} ${p.currency}${p.description ? ` | ${p.description.substring(0, 60)}` : ''}${stock}`;
+            })
             .join('\n')
         : 'No products are currently available.';
 

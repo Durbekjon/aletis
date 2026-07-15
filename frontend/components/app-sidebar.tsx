@@ -34,6 +34,9 @@ import {
   Bot,
   Repeat,
   PackageCheck,
+  Megaphone,
+  LifeBuoy,
+  Gift,
 } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
@@ -75,6 +78,21 @@ export function AppSidebar() {
       title: t("navigation.replenishment"),
       url: ROUTES.REPLENISHMENT,
       icon: PackageCheck,
+    },
+    {
+      title: t("navigation.campaigns"),
+      url: ROUTES.CAMPAIGNS,
+      icon: Megaphone,
+    },
+    {
+      title: t("navigation.support"),
+      url: ROUTES.SUPPORT,
+      icon: LifeBuoy,
+    },
+    {
+      title: t("navigation.loyalty"),
+      url: ROUTES.LOYALTY,
+      icon: Gift,
     },
     {
       title: t("navigation.products"),

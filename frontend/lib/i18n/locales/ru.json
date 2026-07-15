@@ -56,7 +56,114 @@
     "conversations": "Разговоры",
     "settings": "Настройки",
     "dashboard": "Панель управления",
-    "replenishment": "Пополнение"
+    "replenishment": "Пополнение",
+    "campaigns": "Кампании",
+    "support": "Поддержка",
+    "loyalty": "Лояльность"
+  },
+  "loyalty": {
+    "title": "Лояльность и рефералы",
+    "subtitle": "Программа баллов и результаты приглашения друзей",
+    "balance": "Баланс баллов",
+    "referralsMade": "Рефералы",
+    "referralLink": "Реферальная ссылка",
+    "linkCopied": "Ссылка скопирована",
+    "recentActivity": "Последние операции",
+    "reasons": {
+      "ORDER": "Заказ",
+      "REFERRAL_REFEREE": "Реферал (вы)",
+      "REFERRAL_REFERRER": "Реферал (друг)",
+      "REDEEM": "Использовано",
+      "ADJUST": "Корректировка"
+    },
+    "topReferrers": "Самые активные рефереры",
+    "empty": "Пока нет рефереров",
+    "metrics": {
+      "issued": "Начислено баллов",
+      "redeemed": "Использовано баллов",
+      "referrals": "Успешные рефералы"
+    },
+    "col": {
+      "customer": "Клиент",
+      "referrals": "Рефералы",
+      "points": "Баллы"
+    }
+  },
+  "support": {
+    "title": "Поддержка",
+    "subtitle": "Тикеты клиентов, запросивших оператора",
+    "empty": "Нет открытых тикетов",
+    "filterAll": "Все",
+    "statusUpdated": "Статус обновлён",
+    "statusError": "Ошибка обновления статуса",
+    "markInProgress": "Взять в работу",
+    "markResolved": "Решено",
+    "col": {
+      "customer": "Клиент",
+      "reason": "Причина",
+      "sentiment": "Настроение",
+      "status": "Статус",
+      "created": "Создан",
+      "action": "Действие"
+    },
+    "metrics": {
+      "open": "Открытые",
+      "inProgress": "В работе",
+      "resolved": "Решённые",
+      "total": "Всего"
+    },
+    "status": {
+      "OPEN": "Открыт",
+      "IN_PROGRESS": "В работе",
+      "RESOLVED": "Решён"
+    },
+    "sentiment": {
+      "URGENT": "Срочно",
+      "NORMAL": "Обычный",
+      "COMPLAINT": "Жалоба"
+    }
+  },
+  "campaigns": {
+    "title": "Кампании",
+    "subtitle": "Отправьте сообщение, написанное ИИ, сегменту клиентов",
+    "new": "Новая кампания",
+    "create": "Создать кампанию",
+    "launch": "Запустить",
+    "launching": "Отправка...",
+    "launched": "Кампания запущена",
+    "launchError": "Ошибка запуска",
+    "created": "Кампания создана",
+    "createError": "Ошибка создания",
+    "name": "Название",
+    "namePlaceholder": "Например: Летняя скидка",
+    "segment": "Сегмент",
+    "message": "Сообщение (необязательно)",
+    "messagePlaceholder": "Если оставить пустым — ИИ напишет каждому клиенту индивидуально",
+    "incentive": "Стимул (необязательно)",
+    "incentivePlaceholder": "Например: скидка 10%",
+    "recipients": "{{count}} получателей",
+    "empty": "Пока нет кампаний",
+    "confirmLaunch": "Подтвердить отправку этой кампании сейчас?",
+    "col": {
+      "name": "Название",
+      "segment": "Сегмент",
+      "status": "Статус",
+      "sent": "Отправлено",
+      "created": "Создано"
+    },
+    "status": {
+      "DRAFT": "Черновик",
+      "SENDING": "Отправка",
+      "SENT": "Отправлено",
+      "FAILED": "Ошибка"
+    },
+    "segments": {
+      "ALL_BUYERS": "Все покупатели",
+      "NEW": "Новые",
+      "VIP": "VIP",
+      "AT_RISK": "В зоне риска",
+      "DORMANT": "Спящие"
+    }
   },
   "retention": {
     "title": "Удержание",
@@ -96,7 +203,13 @@
       "action": "Действие",
       "status": "Статус",
       "message": "Сообщение ИИ",
-      "recovered": "Возвращено"
+      "recovered": "Возвращено",
+      "churn": "Риск ухода"
+    },
+    "health": {
+      "cooling": "Остывает",
+      "at_risk": "В зоне риска",
+      "lost": "Потерян"
     },
     "status": {
       "QUEUED": "В очереди",
@@ -426,6 +539,9 @@
       "currentStatus": "Текущий статус",
       "updating": "Обновление...",
       "paymentStatus": "Статус оплаты",
+      "paymentLink": "Ссылка на оплату",
+      "linkCopied": "Ссылка скопирована",
+      "linkError": "Ошибка создания ссылки",
       "notes": "Заметки",
       "notesPlaceholder": "Добавьте заметки к заказу...",
       "saving": "Сохранение...",

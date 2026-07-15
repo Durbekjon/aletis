@@ -1145,7 +1145,7 @@ export class ProductsService {
 
   async getProductsForOrganization(
     organizationId: number,
-  ): Promise<{ id: number; name: string; price: number; currency: string; description: string; imageKey: string | null }[]> {
+  ): Promise<{ id: number; name: string; price: number; currency: string; description: string; imageKey: string | null; quantity: number }[]> {
     const products = await this.prisma.product.findMany({
       where: { organizationId, isDeleted: false, status: ProductStatus.ACTIVE },
       select: {
@@ -1153,6 +1153,7 @@ export class ProductsService {
         name: true,
         price: true,
         currency: true,
+        quantity: true,
         fields: {
           select: {
             valueText: true,
@@ -1176,6 +1177,7 @@ export class ProductsService {
           ?.valueText || '',
       // Full ImageKit CDN URL; consumers send it to Telegram as-is.
       imageKey: p.images[0]?.url ?? null,
+      quantity: p.quantity,
     }));
   }
 }

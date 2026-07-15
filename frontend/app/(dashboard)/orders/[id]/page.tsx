@@ -26,9 +26,14 @@ import {
   Send,
   AlertCircle,
   Loader2,
+  CreditCard,
+  Copy,
+  ExternalLink,
 } from "lucide-react"
 import { useOrderDetail, useUpdateOrder } from "@/src/hooks/useOrderDetail"
 import { OrderProduct, OrderStatus, PaymentStatus } from "@/src/api/ordersApi"
+import { useCreateOrderPaymentLink } from "@/src/hooks/usePaymentsQuery"
+import type { PaymentProvider } from "@/src/api/paymentsApi"
 import { useToast } from "@/hooks/use-toast"
 
 export default function OrderDetailPage() {
@@ -45,6 +50,27 @@ export default function OrderDetailPage() {
   const [paymentStatus, setPaymentStatus] = useState<PaymentStatus | undefined>()
   const [notes, setNotes] = useState("")
   const [notesChanged, setNotesChanged] = useState(false)
+  const [payLink, setPayLink] = useState<string | null>(null)
+  const paymentLinkMutation = useCreateOrderPaymentLink()
+
+  const handleGenerateLink = async (provider: PaymentProvider) => {
+    try {
+      const { url } = await paymentLinkMutation.mutateAsync({ orderId, provider })
+      setPayLink(url)
+    } catch {
+      toast({
+        title: t("orders.detail.toast.errorTitle"),
+        description: t("orders.detail.linkError"),
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleCopyLink = () => {
+    if (!payLink) return
+    navigator.clipboard.writeText(payLink)
+    toast({ title: t("orders.detail.linkCopied") })
+  }
 
   // Initialize state when order data loads
   useEffect(() => {
@@ -399,6 +425,59 @@ export default function OrderDetailPage() {
                     </SelectContent>
                   </Select>
                 </div>
+
+                {paymentStatus === PaymentStatus.PENDING && (
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium flex items-center gap-1.5">
+                      <CreditCard className="h-4 w-4" />
+                      {t('orders.detail.paymentLink')}
+                    </label>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
+                        disabled={paymentLinkMutation.isPending}
+                        onClick={() => handleGenerateLink('PAYME')}
+                      >
+                        {paymentLinkMutation.isPending ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          'Payme'
+                        )}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
+                        disabled={paymentLinkMutation.isPending}
+                        onClick={() => handleGenerateLink('CLICK')}
+                      >
+                        {paymentLinkMutation.isPending ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          'Click'
+                        )}
+                      </Button>
+                    </div>
+                    {payLink && (
+                      <div className="flex items-center gap-2 rounded-md border bg-muted/40 p-2">
+                        <a
+                          href={payLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex-1 truncate text-xs text-primary hover:underline flex items-center gap-1"
+                        >
+                          <ExternalLink className="h-3 w-3 shrink-0" />
+                          <span className="truncate">{payLink}</span>
+                        </a>
+                        <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={handleCopyLink}>
+                          <Copy className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 <div className="space-y-2">
                   <label className="text-sm font-medium">{t('orders.detail.notes')}</label>
