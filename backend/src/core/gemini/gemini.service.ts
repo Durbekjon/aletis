@@ -35,7 +35,10 @@ export class GeminiService {
     this.logger.log(`Gemini initialized with ${keys.length} API key(s)`);
   }
 
-  private async callWithRotation(modelName: string, prompt: string): Promise<string> {
+  private async callWithRotation(
+    modelName: string,
+    prompt: string | Array<{ text?: string; inlineData?: { mimeType: string; data: string } }>,
+  ): Promise<string> {
     const total = this.clients.length;
     const startIndex = this.currentKeyIndex;
 
@@ -47,7 +50,7 @@ export class GeminiService {
       const maxRetries = 2;
       for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
-          const result = await model.generateContent(prompt);
+          const result = await model.generateContent(prompt as any);
           this.currentKeyIndex = keyIndex; // remember last working key
           return result.response.text();
         } catch (error: any) {
@@ -1368,6 +1371,7 @@ Return only valid JSON, no other text.`;
     aiSummary?: string | null;
     incentive?: string | null;
     suggestedProducts?: { name: string; price: number; currency: string }[];
+    stage?: 'reminder' | 'value' | 'incentive' | 'last_chance';
   }): Promise<{ text: string; incentive?: string }> {
     const lang = ['uz', 'ru', 'en'].includes(input.lang || '')
       ? (input.lang as string)
@@ -1378,8 +1382,26 @@ Return only valid JSON, no other text.`;
       .map((p) => `- ${p.name} (${p.price} ${p.currency})`)
       .join('\n');
 
+    // Escalating sequence: each stage has a distinct angle so repeated touches
+    // feel like a thoughtful sequence, not the same message resent.
+    const stage = input.stage ?? 'reminder';
+    const offerIncentive = stage === 'incentive' || stage === 'last_chance';
+    const stageGuidance = {
+      reminder:
+        "STAGE 1 — GENTLE REMINDER: Simply let them know they're missed. No offer, no pressure. Warm and personal.",
+      value:
+        'STAGE 2 — VALUE: Remind them why the shop is worth coming back to (quality, new arrivals, things in their favorite categories). Still no discount.',
+      incentive:
+        'STAGE 3 — INCENTIVE: Make a concrete offer using the incentive provided to nudge them over the line.',
+      last_chance:
+        'STAGE 4 — LAST CHANCE: Kind but time-sensitive final nudge. Light urgency (limited time), include the incentive if provided. Do not be aggressive.',
+    }[stage];
+
     const prompt = `You are the AI sales & retention agent for "${input.businessName || 'our shop'}" in Uzbekistan.
 Your job: write ONE short, warm win-back message that brings a dormant customer back to buy again.
+This is part of a multi-step re-engagement sequence — write specifically for the current stage.
+
+${stageGuidance}
 
 CUSTOMER CONTEXT:
 - Name: ${input.customerName || 'valued customer'}
@@ -1389,7 +1411,7 @@ CUSTOMER CONTEXT:
 - Favorite categories: ${JSON.stringify(input.favoriteCategories ?? []).slice(0, 300)}
 - Sales opportunities: ${JSON.stringify(input.salesOpportunities ?? []).slice(0, 400)}
 ${products ? `SUGGESTED PRODUCTS TO MENTION:\n${products}` : ''}
-${input.incentive ? `INCENTIVE TO OFFER: ${input.incentive}` : ''}
+${offerIncentive && input.incentive ? `INCENTIVE TO OFFER: ${input.incentive}` : ''}
 
 RULES:
 - Write in ${langName} ONLY.
@@ -1397,7 +1419,7 @@ RULES:
 - Reference what they bought/liked before to feel personal (do NOT invent purchases not listed).
 - Keep it SHORT (2-4 sentences). 1-2 tasteful emojis max.
 - End with a light call to action (a question or invitation to come back).
-- ${input.incentive ? 'Naturally include the incentive above.' : 'Do NOT invent discounts or prices that are not provided.'}
+- ${offerIncentive && input.incentive ? 'Naturally include the incentive above.' : 'Do NOT invent discounts or prices that are not provided.'}
 - Output ONLY the message text. No quotes, no labels, no markdown.
 
 Message:`;
@@ -1416,6 +1438,84 @@ Message:`;
         en: `Hi${input.customerName ? ' ' + input.customerName : ''}! 👋 We've missed you. Want to see what's new in our shop?`,
       };
       return { text: fallback[lang], incentive: input.incentive ?? undefined };
+    }
+  }
+
+  /**
+   * Write a short segmented broadcast message (campaign) in the customer's
+   * language. Segment sets the angle (welcome new buyers, thank VIPs, re-engage
+   * at-risk, etc.). Falls back to a safe generic line on failure.
+   */
+  async generateBroadcastMessage(input: {
+    campaignName: string;
+    segment: string;
+    businessName?: string | null;
+    customerName?: string | null;
+    lang?: string | null;
+    incentive?: string | null;
+  }): Promise<string> {
+    const lang = ['uz', 'ru', 'en'].includes(input.lang || '')
+      ? (input.lang as string)
+      : 'uz';
+    const langName = { uz: 'Uzbek', ru: 'Russian', en: 'English' }[lang];
+
+    const segmentAngle: Record<string, string> = {
+      ALL_BUYERS: 'a friendly general update to past customers',
+      NEW: 'a warm welcome to a recently joined customer, invite them to explore',
+      VIP: 'a heartfelt thank-you to a loyal, high-value customer',
+      AT_RISK: 'a gentle re-engagement for a customer who is drifting away',
+      DORMANT: 'a warm win-back for a customer who has not bought in a while',
+    };
+
+    const prompt = `You are the AI sales & retention agent for "${input.businessName || 'our shop'}" in Uzbekistan.
+Write ONE short broadcast message for this campaign: "${input.campaignName}".
+Audience angle: ${segmentAngle[input.segment] || 'a friendly message to customers'}.
+
+CUSTOMER:
+- Name: ${input.customerName || 'valued customer'}
+${input.incentive ? `INCENTIVE TO OFFER: ${input.incentive}` : ''}
+
+RULES:
+- Write in ${langName} ONLY.
+- Warm, personal, not spammy. 2-3 sentences. 1-2 tasteful emojis max.
+- ${input.incentive ? 'Naturally include the incentive above.' : 'Do NOT invent discounts or prices.'}
+- End with a light call to action.
+- Output ONLY the message text. No quotes, labels, or markdown.
+
+Message:`;
+
+    try {
+      return (await this.callWithRotation('gemini-2.5-flash', prompt)).trim();
+    } catch (error: any) {
+      this.logger.error(`Broadcast generation failed: ${error.message}`);
+      const fallback: Record<string, string> = {
+        uz: `Salom${input.customerName ? ', ' + input.customerName : ''}! 👋 Yangiliklarimizni ko'rib chiqing.`,
+        ru: `Здравствуйте${input.customerName ? ', ' + input.customerName : ''}! 👋 Загляните к нам за новинками.`,
+        en: `Hi${input.customerName ? ' ' + input.customerName : ''}! 👋 Come check out what's new with us.`,
+      };
+      return fallback[lang];
+    }
+  }
+
+  /**
+   * Transcribe a customer voice message to text using Gemini's audio support.
+   * Returns '' on failure or when nothing intelligible is found, so the caller
+   * can fall back gracefully. `mimeType` is e.g. 'audio/ogg' for Telegram voice.
+   */
+  async transcribeAudio(base64: string, mimeType: string): Promise<string> {
+    const prompt =
+      'Transcribe this voice message to plain text. It may be in Uzbek, Russian or English. ' +
+      'Output ONLY the transcription with no quotes, labels or commentary. ' +
+      'If there is no intelligible speech, output nothing.';
+    try {
+      const text = await this.callWithRotation('gemini-2.5-flash', [
+        { text: prompt },
+        { inlineData: { mimeType, data: base64 } },
+      ]);
+      return text.trim();
+    } catch (error: any) {
+      this.logger.error(`Audio transcription failed: ${error.message}`);
+      return '';
     }
   }
 

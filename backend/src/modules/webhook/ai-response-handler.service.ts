@@ -4,6 +4,9 @@ import { AiResponse, GeminiService } from '@core/gemini/gemini.service';
 import { Customer, Order } from '@prisma/client';
 import { EmbadingService } from '@modules/embading/embading.service';
 import { ProductsService } from '@modules/products/products.service';
+import { SupportService } from '@modules/support/support.service';
+import { PaymentsService } from '@modules/payments/payments.service';
+import { PaymentProvider } from '@prisma/client';
 
 export interface ProductCard {
   caption: string;
@@ -17,6 +20,8 @@ export interface ProcessedAiResponse {
   ordersFetched?: boolean;
   orderCancelled?: boolean;
   productCards?: ProductCard[];
+  escalated?: boolean;
+  ticketId?: number;
 }
 
 @Injectable()
@@ -28,6 +33,8 @@ export class AiResponseHandlerService {
     private readonly geminiService: GeminiService,
     private readonly embadingService: EmbadingService,
     private readonly productsService: ProductsService,
+    private readonly supportService: SupportService,
+    private readonly paymentsService: PaymentsService,
   ) {}
 
   /**
@@ -79,6 +86,13 @@ export class AiResponseHandlerService {
             customer,
             organizationId,
             originalUserMessage,
+          );
+
+        case 'ESCALATE_TO_SUPPORT':
+          return await this.handleEscalateToSupportIntent(
+            aiResponse,
+            customer,
+            organizationId,
           );
 
         default:
@@ -191,8 +205,12 @@ export class AiResponseHandlerService {
         `Order created via AI: ${order.id} for customer: ${customer.id}`,
       );
 
+      // In-bot payment: append a Payme checkout link when the provider is
+      // configured. Stays inert (no link) on installs without credentials.
+      const paymentLine = await this.buildOrderPaymentLine(order.id, customer);
+
       return {
-        text: confirmationMessage,
+        text: confirmationMessage + paymentLine,
         orderCreated: true,
         orderId: order.id,
       };
@@ -393,6 +411,78 @@ export class AiResponseHandlerService {
         aiResponse.text ||
         'I need some additional information to process your order.',
     };
+  }
+
+  /**
+   * Build a "pay now" line for an order confirmation. Returns an empty string
+   * when no payment provider is configured or link generation fails, so the
+   * order confirmation is never blocked by payments.
+   */
+  private async buildOrderPaymentLine(
+    orderId: number,
+    customer: Customer,
+  ): Promise<string> {
+    if (!this.paymentsService.isConfigured(PaymentProvider.PAYME)) {
+      return '';
+    }
+    try {
+      const { url } = await this.paymentsService.createOrderPaymentLink(
+        orderId,
+        PaymentProvider.PAYME,
+      );
+      const label =
+        customer.lang === 'ru'
+          ? '💳 Оплатить'
+          : customer.lang === 'en'
+            ? '💳 Pay now'
+            : "💳 To'lov qilish";
+      return `\n\n${label}: ${url}`;
+    } catch (error) {
+      this.logger.warn(
+        `Failed to build payment link for order ${orderId}: ${error.message}`,
+      );
+      return '';
+    }
+  }
+
+  /**
+   * Handle ESCALATE_TO_SUPPORT intent — the customer wants a human agent.
+   * Creates a dashboard support ticket so the merchant can follow up.
+   */
+  private async handleEscalateToSupportIntent(
+    aiResponse: AiResponse,
+    customer: Customer,
+    organizationId: number,
+  ): Promise<ProcessedAiResponse> {
+    const fallbackText =
+      customer.lang === 'ru'
+        ? 'Я передал ваш запрос нашей команде — с вами скоро свяжется человек.'
+        : customer.lang === 'en'
+          ? "I've passed your request to our team — a human will get back to you shortly."
+          : "So'rovingizni jamoamizga yetkazdim — tez orada operator siz bilan bog'lanadi.";
+
+    try {
+      const ticket = await this.supportService.createFromAIResponse(
+        aiResponse.escalationData,
+        customer,
+        organizationId,
+      );
+      this.logger.log(
+        `Support ticket #${ticket.id} created via AI escalation for customer ${customer.id}`,
+      );
+      return {
+        text: aiResponse.text || fallbackText,
+        escalated: true,
+        ticketId: ticket.id,
+      };
+    } catch (error) {
+      this.logger.error(
+        `Failed to create support ticket via AI escalation: ${error.message}`,
+        error.stack,
+      );
+      // Still acknowledge the customer even if ticket creation failed.
+      return { text: aiResponse.text || fallbackText };
+    }
   }
 
   /**

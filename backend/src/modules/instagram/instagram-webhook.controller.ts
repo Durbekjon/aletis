@@ -12,6 +12,8 @@ import { ApiExcludeController } from '@nestjs/swagger';
 import type { Request } from 'express';
 import { InstagramService } from './instagram.service';
 import { RetentionService } from '@modules/retention/retention.service';
+import { WebhookService } from '@modules/webhook/webhook.service';
+import type { ProcessedAiResponse } from '@modules/webhook/ai-response-handler.service';
 
 /**
  * Meta webhook for Instagram DMs.
@@ -25,6 +27,7 @@ export class InstagramWebhookController {
   constructor(
     private readonly instagramService: InstagramService,
     private readonly retentionService: RetentionService,
+    private readonly webhookService: WebhookService,
   ) {}
 
   /** Verification handshake. */
@@ -57,12 +60,51 @@ export class InstagramWebhookController {
         if (!resolved) continue;
         // Retention: a reply closes the loop on a recent win-back.
         await this.retentionService.markResponseIfPending(resolved.customerId);
-        // TODO: hook the existing AI sales pipeline here to auto-reply on IG.
+        // Run the same AI sales pipeline Telegram uses and reply over Instagram.
+        await this.replyWithAi(resolved.customerId, resolved.organizationId, resolved.text, msg.senderId);
       } catch (err: any) {
         // Never throw — Meta retries aggressively on non-200.
         console.error(`Instagram inbound handling failed: ${err.message}`);
       }
     }
     return 'EVENT_RECEIVED';
+  }
+
+  /** Generate an AI reply and deliver it as an Instagram DM. */
+  private async replyWithAi(
+    customerId: number,
+    organizationId: number,
+    text: string,
+    igsid: string,
+  ): Promise<void> {
+    const processed = await this.webhookService.generateReplyForCustomer(
+      customerId,
+      organizationId,
+      text,
+    );
+    if (!processed) return;
+
+    const reply = this.toPlainText(processed);
+    if (!reply) return;
+
+    await this.instagramService.sendMessage(organizationId, igsid, reply);
+    await this.instagramService.saveOutbound(organizationId, customerId, reply);
+  }
+
+  /**
+   * Flatten a processed AI response into plain text for an Instagram DM.
+   * Instagram DMs don't support HTML/Markdown, so strip tags and prefer
+   * product-card captions when the AI returned a product search.
+   */
+  private toPlainText(p: ProcessedAiResponse): string {
+    const raw =
+      p.productCards && p.productCards.length > 0
+        ? p.productCards.map((c) => c.caption).join('\n\n')
+        : p.text || '';
+    return raw
+      .replace(/<[^>]+>/g, '') // strip HTML tags
+      .replace(/\*\*(.*?)\*\*/g, '$1') // strip bold markdown
+      .replace(/__(.*?)__/g, '$1')
+      .trim();
   }
 }

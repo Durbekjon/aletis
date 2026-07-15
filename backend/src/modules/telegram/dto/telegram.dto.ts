@@ -69,6 +69,25 @@ export class TelegramPhotoSizeDto {
   file_size?: number;
 }
 
+export class TelegramVoiceDto {
+  @IsString()
+  file_id!: string;
+
+  @IsString()
+  file_unique_id!: string;
+
+  @IsNumber()
+  duration!: number;
+
+  @IsOptional()
+  @IsString()
+  mime_type?: string;
+
+  @IsOptional()
+  @IsNumber()
+  file_size?: number;
+}
+
 export class TelegramMessageDto {
   @IsNumber()
   message_id!: number;
@@ -96,6 +115,11 @@ export class TelegramMessageDto {
   @IsOptional()
   @IsString()
   caption?: string;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => TelegramVoiceDto)
+  voice?: TelegramVoiceDto;
 }
 
 export class TelegramWebhookDto {

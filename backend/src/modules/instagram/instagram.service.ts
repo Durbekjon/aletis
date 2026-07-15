@@ -204,4 +204,26 @@ export class InstagramService {
     }
     this.logger.log(`Instagram DM sent to ${igsid} (org ${organizationId})`);
   }
+
+  /** Persist a bot (outbound) message so it shows up in the conversation history. */
+  async saveOutbound(
+    organizationId: number,
+    customerId: number,
+    text: string,
+  ): Promise<void> {
+    const bot = await this.prisma.bot.findFirst({
+      where: { organizationId },
+      orderBy: { isDefault: 'desc' },
+      select: { id: true },
+    });
+    if (!bot) return;
+    await this.prisma.message.create({
+      data: {
+        sender: 'BOT',
+        content: text,
+        customerId,
+        botId: bot.id,
+      },
+    });
+  }
 }

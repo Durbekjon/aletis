@@ -19,6 +19,16 @@ export const ACTIVITY_TEMPLATES = {
     uz: '“{name}” mahsulot statusi {oldStatus} dan {newStatus} ga o‘zgartirildi.',
     ru: 'Статус товара «{name}» изменен с {oldStatus} на {newStatus}.',
   },
+  PRODUCT_LOW_STOCK: {
+    en: 'Product "{name}" is low on stock ({quantity} left).',
+    uz: '“{name}” mahsuloti tugab qolmoqda ({quantity} dona qoldi).',
+    ru: 'Товар «{name}» заканчивается (осталось {quantity}).',
+  },
+  PRODUCT_OUT_OF_STOCK: {
+    en: 'Product "{name}" is out of stock.',
+    uz: '“{name}” mahsuloti tugadi.',
+    ru: 'Товар «{name}» закончился.',
+  },
   ORDER_CREATED: {
     en: 'Order #{orderNumber} was created.',
     uz: 'Buyurtma #{orderNumber} yaratildi.',

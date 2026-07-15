@@ -6,6 +6,7 @@ import { RetentionService } from './retention.service';
 
 export type SendWinBackJobData = {
   attemptId: number;
+  step?: number;
 };
 
 @Processor(RETENTION_QUEUE, { concurrency: 2 })
@@ -19,9 +20,11 @@ export class RetentionProcessor extends WorkerHost {
   async process(job: Job): Promise<void> {
     switch (job.name) {
       case 'send-win-back': {
-        const { attemptId } = job.data as SendWinBackJobData;
-        this.logger.log(`[Job ${job.id}] Running win-back #${attemptId}`);
-        await this.service.runWinBack(attemptId);
+        const { attemptId, step } = job.data as SendWinBackJobData;
+        this.logger.log(
+          `[Job ${job.id}] Running win-back #${attemptId} step ${step ?? 1}`,
+        );
+        await this.service.runWinBackStep(attemptId, step ?? 1);
         break;
       }
       case 'daily-scan': {
