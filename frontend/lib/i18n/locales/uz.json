@@ -572,7 +572,8 @@
     "subtitle": "Telegram botlaringiz va kanal ulanishlarini boshqaring",
     "tabs": {
       "bots": "Botlar",
-      "channels": "Kanallar"
+      "channels": "Kanallar",
+      "instagram": "Instagram"
     },
     "addBot": "Bot qo'shish",
     "channelManagement": "Kanal boshqaruvi",
@@ -619,7 +620,17 @@
     "areYouSureDeleteBot": "{{name}} ni o'chirishni xohlaysizmi?",
     "areYouSureDeleteChannel": "{{name}} ni o'chirishni xohlaysizmi?",
     "channelConfigurationComingSoon": "Kanal sozlash tez orada",
-    "connectionTestComingSoon": "Ulanish testi tez orada"
+    "connectionTestComingSoon": "Ulanish testi tez orada",
+    "instagramTitle": "Instagram boshqaruvi",
+    "instagramSubtitle": "Ulangan Instagram akkauntingizni boshqaring",
+    "connectInstagramButton": "Instagram ulash",
+    "noInstagramConnected": "Instagram ulanmagan",
+    "connectFirstInstagram": "Mijozlar bilan Instagram orqali muloqot qilishni boshlash uchun akkauntingizni ulang.",
+    "connectYourFirstInstagram": "Instagram akkauntini ulash",
+    "instagramConnectedSuccess": "Instagram akkaunt muvaffaqiyatli ulandi",
+    "instagramConnectFailed": "Instagram akkauntni ulashda xatolik yuz berdi",
+    "areYouSureDisconnectInstagram": "Instagram akkauntni uzishni xohlaysizmi?",
+    "failedToLoadInstagram": "Instagram ma'lumotlari yuklanmadi"
   },
   "posts": {
     "title": "Postlar",
