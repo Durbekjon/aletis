@@ -572,7 +572,8 @@
     "subtitle": "Manage your Telegram bots and channel connections",
     "tabs": {
       "bots": "Bots",
-      "channels": "Channels"
+      "channels": "Channels",
+      "instagram": "Instagram"
     },
     "addBot": "Add Bot",
     "channelManagement": "Channel Management",
@@ -619,7 +620,17 @@
     "areYouSureDeleteBot": "Are you sure you want to delete {{name}}?",
     "areYouSureDeleteChannel": "Are you sure you want to delete {{name}}?",
     "channelConfigurationComingSoon": "Channel configuration coming soon",
-    "connectionTestComingSoon": "Connection test coming soon"
+    "connectionTestComingSoon": "Connection test coming soon",
+    "instagramTitle": "Instagram management",
+    "instagramSubtitle": "Manage your connected Instagram account",
+    "connectInstagramButton": "Connect Instagram",
+    "noInstagramConnected": "No Instagram account connected",
+    "connectFirstInstagram": "Connect your account to start chatting with customers over Instagram.",
+    "connectYourFirstInstagram": "Connect your Instagram account",
+    "instagramConnectedSuccess": "Instagram account connected successfully",
+    "instagramConnectFailed": "Failed to connect Instagram account",
+    "areYouSureDisconnectInstagram": "Disconnect this Instagram account?",
+    "failedToLoadInstagram": "Failed to load Instagram data"
   },
   "posts": {
     "title": "Posts",
