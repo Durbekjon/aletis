@@ -572,7 +572,8 @@
     "subtitle": "Управляйте вашими Telegram ботами и подключениями к каналам",
     "tabs": {
       "bots": "Боты",
-      "channels": "Каналы"
+      "channels": "Каналы",
+      "instagram": "Instagram"
     },
     "addBot": "Добавить бота",
     "channelManagement": "Управление каналами",
@@ -619,7 +620,17 @@
     "areYouSureDeleteBot": "Вы уверены, что хотите удалить {{name}}?",
     "areYouSureDeleteChannel": "Вы уверены, что хотите удалить {{name}}?",
     "channelConfigurationComingSoon": "Настройка канала скоро появится",
-    "connectionTestComingSoon": "Тест подключения скоро появится"
+    "connectionTestComingSoon": "Тест подключения скоро появится",
+    "instagramTitle": "Управление Instagram",
+    "instagramSubtitle": "Управляйте подключённым аккаунтом Instagram",
+    "connectInstagramButton": "Подключить Instagram",
+    "noInstagramConnected": "Instagram не подключён",
+    "connectFirstInstagram": "Подключите аккаунт, чтобы начать общаться с клиентами через Instagram.",
+    "connectYourFirstInstagram": "Подключить аккаунт Instagram",
+    "instagramConnectedSuccess": "Аккаунт Instagram успешно подключён",
+    "instagramConnectFailed": "Не удалось подключить аккаунт Instagram",
+    "areYouSureDisconnectInstagram": "Отключить этот аккаунт Instagram?",
+    "failedToLoadInstagram": "Не удалось загрузить данные Instagram"
   },
   "posts": {
     "title": "Посты",

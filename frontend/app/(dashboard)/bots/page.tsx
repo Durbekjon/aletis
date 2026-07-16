@@ -1,6 +1,7 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import {
@@ -24,13 +25,17 @@ import {
   Hash,
   Search,
   AlertCircle,
+  Instagram,
 } from "lucide-react"
 import { RefreshButton } from "@/components/ui/refresh-button"
 import type { TelegramBot, TelegramChannel } from "@/lib/types/bot"
 import { useBotsQuery, useCreateBotMutation, useDeleteBotMutation, useStartBotMutation, useStopBotMutation } from "@/src/hooks/useBotsQuery"
 import { useChannelsQuery, useCreateChannelMutation, useDeleteChannelMutation } from "@/src/hooks/useChannelsQuery"
+import { useInstagramAccountQuery, useConnectInstagramMutation, useDisconnectInstagramMutation } from "@/src/hooks/useInstagramQuery"
 import { BotCard, BotCardSkeleton } from "@/src/components/BotCard"
 import { ChannelCard, ChannelCardSkeleton } from "@/src/components/ChannelCard"
+import { InstagramAccountCard, InstagramAccountCardSkeleton } from "@/src/components/InstagramAccountCard"
+import type { InstagramAccount } from "@/src/api/instagramApi"
 import { toast } from "sonner"
 import { DataPagination } from "@/components/ui/data-pagination"
 import { useTranslation } from "@/src/context/I18nContext"
@@ -38,7 +43,9 @@ import { LanguageSwitcher } from "@/components/language-switcher"
 
 export default function BotsPage() {
   const { t } = useTranslation()
-  const [activeTab, setActiveTab] = useState<"bots" | "channels">("bots")
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const [activeTab, setActiveTab] = useState<"bots" | "channels" | "instagram">("bots")
   
   // Separate search states for each tab
   const [botsSearchQuery, setBotsSearchQuery] = useState("")
@@ -62,6 +69,7 @@ export default function BotsPage() {
   // Queries with tab-specific search
   const botsQuery = useBotsQuery({ search: botsSearchQuery || undefined, page: botsPage })
   const channelsQuery = useChannelsQuery({ search: channelsSearchQuery || undefined, page: channelsPage })
+  const instagramQuery = useInstagramAccountQuery()
 
   // Mutations
   const createBotMutation = useCreateBotMutation()
@@ -70,10 +78,26 @@ export default function BotsPage() {
   const stopBotMutation = useStopBotMutation()
   const createChannelMutation = useCreateChannelMutation()
   const deleteChannelMutation = useDeleteChannelMutation()
+  const connectInstagramMutation = useConnectInstagramMutation()
+  const disconnectInstagramMutation = useDisconnectInstagramMutation()
 
   // Separate items for each tab to ensure correct typing
   const bots = botsQuery.data?.items || []
   const channels = channelsQuery.data?.items || []
+
+  // Land here after the Instagram OAuth callback redirect (?instagram=success|error&reason=...)
+  useEffect(() => {
+    const instagramStatus = searchParams.get("instagram")
+    if (!instagramStatus) return
+
+    if (instagramStatus === "success") {
+      toast.success(t("bots.instagramConnectedSuccess"))
+    } else if (instagramStatus === "error") {
+      toast.error(t("bots.instagramConnectFailed"))
+    }
+    router.replace("/bots")
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams])
 
   // Dynamic header configuration
   const headerConfig = {
@@ -88,6 +112,12 @@ export default function BotsPage() {
       subtitle: t("bots.channelSubtitle"),
       primaryButtonText: t("bots.connectChannel"),
       primaryButtonIcon: Plus,
+    },
+    instagram: {
+      title: t("bots.instagramTitle"),
+      subtitle: t("bots.instagramSubtitle"),
+      primaryButtonText: t("bots.connectInstagramButton"),
+      primaryButtonIcon: Instagram,
     }
   }
 
@@ -97,8 +127,10 @@ export default function BotsPage() {
   const handleRefresh = () => {
     if (activeTab === "bots") {
       botsQuery.refetch()
-    } else {
+    } else if (activeTab === "channels") {
       channelsQuery.refetch()
+    } else {
+      instagramQuery.refetch()
     }
   }
 
@@ -119,8 +151,16 @@ export default function BotsPage() {
   const handlePrimaryAction = () => {
     if (activeTab === "bots") {
       setIsCreateBotDialogOpen(true)
-    } else {
+    } else if (activeTab === "channels") {
       setIsCreateChannelDialogOpen(true)
+    } else {
+      connectInstagramMutation.mutate()
+    }
+  }
+
+  const handleDisconnectInstagram = (account: InstagramAccount) => {
+    if (window.confirm(t("bots.areYouSureDisconnectInstagram"))) {
+      disconnectInstagramMutation.mutate()
     }
   }
 
@@ -223,64 +263,71 @@ export default function BotsPage() {
           <RefreshButton
             variant="outline"
             onClick={handleRefresh}
-            isLoading={botsQuery.isLoading || channelsQuery.isLoading}
-            disabled={botsQuery.isLoading || channelsQuery.isLoading}
+            isLoading={botsQuery.isLoading || channelsQuery.isLoading || instagramQuery.isLoading}
+            disabled={botsQuery.isLoading || channelsQuery.isLoading || instagramQuery.isLoading}
           >
             {t("common.refresh")}
           </RefreshButton>
-          <Button onClick={handlePrimaryAction}>
-            <currentConfig.primaryButtonIcon className="h-4 w-4 mr-2" />
-            {currentConfig.primaryButtonText}
-                </Button>
+          {!(activeTab === "instagram" && instagramQuery.data) && (
+            <Button onClick={handlePrimaryAction} disabled={activeTab === "instagram" && connectInstagramMutation.isPending}>
+              <currentConfig.primaryButtonIcon className="h-4 w-4 mr-2" />
+              {currentConfig.primaryButtonText}
+            </Button>
+          )}
               </div>
             </div>
 
       {/* Error Alert */}
-      {(botsQuery.error || channelsQuery.error) && (
+      {(botsQuery.error || channelsQuery.error || instagramQuery.error) && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>
-            {activeTab === "bots" 
+            {activeTab === "bots"
               ? (botsQuery.error?.message || t("bots.failedToLoadBots"))
-              : (channelsQuery.error?.message || t("bots.failedToLoadChannels"))
+              : activeTab === "channels"
+              ? (channelsQuery.error?.message || t("bots.failedToLoadChannels"))
+              : (instagramQuery.error?.message || t("bots.failedToLoadInstagram"))
             }
           </AlertDescription>
         </Alert>
       )}
 
       {/* Search */}
-      <div className="flex items-center gap-2">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder={t("bots.searchPlaceholder", { type: t(`bots.tabs.${activeTab}`).toLowerCase() })}
-            value={activeTab === "bots" ? botsSearchQuery : channelsSearchQuery}
-            onChange={(e) => {
-              if (activeTab === "bots") {
-                setBotsSearchQuery(e.target.value)
-              } else {
-                setChannelsSearchQuery(e.target.value)
-              }
-            }}
-            className="pl-10"
-          />
+      {activeTab !== "instagram" && (
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder={t("bots.searchPlaceholder", { type: t(`bots.tabs.${activeTab}`).toLowerCase() })}
+              value={activeTab === "bots" ? botsSearchQuery : channelsSearchQuery}
+              onChange={(e) => {
+                if (activeTab === "bots") {
+                  setBotsSearchQuery(e.target.value)
+                } else {
+                  setChannelsSearchQuery(e.target.value)
+                }
+              }}
+              className="pl-10"
+            />
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Tabs */}
-      <Tabs 
-        value={activeTab} 
+      <Tabs
+        value={activeTab}
         onValueChange={(value) => {
-          setActiveTab(value as "bots" | "channels")
+          setActiveTab(value as "bots" | "channels" | "instagram")
           // Clear search when switching tabs to avoid confusion
           setBotsSearchQuery("")
           setChannelsSearchQuery("")
-        }} 
+        }}
         className="space-y-6"
       >
         <TabsList>
           <TabsTrigger value="bots">{t("bots.tabs.bots")}</TabsTrigger>
           <TabsTrigger value="channels">{t("bots.tabs.channels")}</TabsTrigger>
+          <TabsTrigger value="instagram">{t("bots.tabs.instagram")}</TabsTrigger>
         </TabsList>
 
         <TabsContent value="bots" className="space-y-4">
@@ -380,6 +427,30 @@ export default function BotsPage() {
                 onPageChange={handleChannelsPageChange}
               />
             </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="instagram" className="space-y-4">
+          {instagramQuery.isLoading ? (
+            <InstagramAccountCardSkeleton />
+          ) : instagramQuery.data ? (
+            <InstagramAccountCard
+              account={instagramQuery.data}
+              onDisconnect={handleDisconnectInstagram}
+              isDisconnecting={disconnectInstagramMutation.isPending}
+            />
+          ) : (
+            <Card className="lp-glass-card">
+              <CardContent className="p-12 text-center">
+                <Instagram className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                <h3 className="text-lg font-semibold mb-2">{t("bots.noInstagramConnected")}</h3>
+                <p className="text-muted-foreground mb-4">{t("bots.connectFirstInstagram")}</p>
+                <Button onClick={() => connectInstagramMutation.mutate()} disabled={connectInstagramMutation.isPending}>
+                  <Instagram className="h-4 w-4 mr-2" />
+                  {t("bots.connectYourFirstInstagram")}
+                </Button>
+              </CardContent>
+            </Card>
           )}
         </TabsContent>
       </Tabs>
