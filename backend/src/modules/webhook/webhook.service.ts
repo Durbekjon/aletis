@@ -187,7 +187,10 @@ export class WebhookService {
     // Voice message: transcribe with Gemini and treat it as a normal text turn.
     const voice = webhookData.message?.voice;
     if (voice && !messageContent) {
-      const transcript = await this.transcribeVoice(voice, decyptedToken);
+      const transcript = await this.transcribeVoice(voice, decyptedToken, {
+        organizationId,
+        botId: bot.id,
+      });
       if (!transcript) {
         await this.telegramService.sendRequest(decyptedToken, 'sendMessage', {
           chat_id: customer.telegramId,
@@ -561,6 +564,7 @@ export class WebhookService {
         history,
         bot.organizationId,
         customer,
+        bot.id,
       );
 
       // Process AI response and handle any order intents
@@ -856,6 +860,7 @@ export class WebhookService {
   private async transcribeVoice(
     voice: { file_id: string; mime_type?: string },
     decryptedToken: string,
+    ctx?: { organizationId?: number; botId?: number },
   ): Promise<string> {
     try {
       const fileData = await this.telegramService.downloadFile(
@@ -867,6 +872,7 @@ export class WebhookService {
       return await this.geminiService.transcribeAudio(
         base64,
         voice.mime_type || 'audio/ogg',
+        ctx,
       );
     } catch (err: any) {
       this.logger.warn(`Voice transcription failed: ${err.message}`);
@@ -1078,6 +1084,7 @@ export class WebhookService {
     history: Message[],
     organizationId: number,
     customer: Customer,
+    botId?: number,
   ) {
     const [userOrders, products, organization] = await Promise.all([
       this.ordersService.getOrdersForAI(organizationId, customer.id),
@@ -1119,6 +1126,7 @@ export class WebhookService {
       userOrders,
       customer.lang || undefined,
       orgContext,
+      { organizationId, botId },
     );
 
     console.log({aiResponse});

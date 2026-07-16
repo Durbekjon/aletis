@@ -1,8 +1,14 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import type { Message } from '@prisma/client';
+import type { AiFeature, Message } from '@prisma/client';
 import { PrismaService } from '@/core/prisma/prisma.service';
+import { AiUsageRecorderService } from './ai-usage-recorder.service';
+
+export interface AiCallContext {
+  organizationId?: number | null;
+  botId?: number | null;
+}
 
 export interface AiResponse {
   text: string;
@@ -24,6 +30,7 @@ export class GeminiService {
   constructor(
     private readonly configService: ConfigService,
     private readonly prisma: PrismaService,
+    private readonly aiUsageRecorder: AiUsageRecorderService,
   ) {
     const raw =
       this.configService.get<string>('GEMINI_API_KEYS') ||
@@ -38,9 +45,12 @@ export class GeminiService {
   private async callWithRotation(
     modelName: string,
     prompt: string | Array<{ text?: string; inlineData?: { mimeType: string; data: string } }>,
+    feature: AiFeature,
+    ctx?: AiCallContext,
   ): Promise<string> {
     const total = this.clients.length;
     const startIndex = this.currentKeyIndex;
+    const startedAt = Date.now();
 
     for (let rotation = 0; rotation < total; rotation++) {
       const keyIndex = (startIndex + rotation) % total;
@@ -52,6 +62,18 @@ export class GeminiService {
         try {
           const result = await model.generateContent(prompt as any);
           this.currentKeyIndex = keyIndex; // remember last working key
+          const usage = result.response.usageMetadata;
+          void this.aiUsageRecorder.record({
+            organizationId: ctx?.organizationId,
+            botId: ctx?.botId,
+            feature,
+            model: modelName,
+            promptTokens: usage?.promptTokenCount ?? 0,
+            candidatesTokens: usage?.candidatesTokenCount ?? 0,
+            totalTokens: usage?.totalTokenCount ?? 0,
+            latencyMs: Date.now() - startedAt,
+            success: true,
+          });
           return result.response.text();
         } catch (error: any) {
           const msg: string = error?.message ?? String(error);
@@ -73,11 +95,35 @@ export class GeminiService {
           }
 
           this.logger.error(`Gemini error (key #${keyIndex + 1}): ${msg}`);
+          void this.aiUsageRecorder.record({
+            organizationId: ctx?.organizationId,
+            botId: ctx?.botId,
+            feature,
+            model: modelName,
+            promptTokens: 0,
+            candidatesTokens: 0,
+            totalTokens: 0,
+            latencyMs: Date.now() - startedAt,
+            success: false,
+            errorType: is503 ? 'OVERLOADED' : 'ERROR',
+          });
           throw error; // non-quota, non-transient error — propagate
         }
       }
     }
 
+    void this.aiUsageRecorder.record({
+      organizationId: ctx?.organizationId,
+      botId: ctx?.botId,
+      feature,
+      model: modelName,
+      promptTokens: 0,
+      candidatesTokens: 0,
+      totalTokens: 0,
+      latencyMs: Date.now() - startedAt,
+      success: false,
+      errorType: 'QUOTA_EXHAUSTED',
+    });
     throw new Error(`All ${total} Gemini API key(s) exhausted (quota exceeded)`);
   }
 
@@ -88,6 +134,7 @@ export class GeminiService {
     userOrders?: any[],
     lang?: string,
     orgContext?: { name: string; description?: string; category?: string },
+    ctx?: AiCallContext,
   ): Promise<AiResponse> {
     const prompt = this.buildPrompt(
       userText,
@@ -100,7 +147,7 @@ export class GeminiService {
 
     try {
       this.logger.log('Generating AI response...');
-      const text = await this.callWithRotation('gemini-2.5-flash', prompt);
+      const text = await this.callWithRotation('gemini-2.5-flash', prompt, 'SALES_CHAT', ctx);
       const parsedResponse = await this.parseResponse(text);
       this.logger.log(
         `AI response generated: ${text.substring(0, 100)}${text.length > 100 ? '...' : ''}`,
@@ -929,6 +976,7 @@ IMPORTANT: Read the conversation history carefully. If the customer has already 
       currency?: string;
     },
     customerMessage: string,
+    ctx?: AiCallContext,
   ): Promise<string> {
     try {
       const prompt = `You are the Aletis AI assistant. Generate an order confirmation message in the SAME language as the customer's message.
@@ -995,7 +1043,7 @@ Is there anything else I can help you with?
 
 Generate the confirmation message now:`;
 
-      const confirmationMessage = await this.callWithRotation('gemini-2.5-flash', prompt);
+      const confirmationMessage = await this.callWithRotation('gemini-2.5-flash', prompt, 'ORDER_CONFIRMATION', ctx);
 
       this.logger.log(
         `Order confirmation generated for order ${orderData.orderId}`,
@@ -1023,7 +1071,7 @@ Is there anything else I can help you with?`;
   /**
    * Detect the language of a given text
    */
-  async detectLanguage(text: string): Promise<string> {
+  async detectLanguage(text: string, ctx?: AiCallContext): Promise<string> {
     try {
       // If text is empty or too short, default to Uzbek
       if (!text || text.trim().length < 2) {
@@ -1042,7 +1090,7 @@ Rules:
 
 Return only the language code:`;
 
-      const languageCode = (await this.callWithRotation('gemini-1.5-flash', prompt)).trim().toLowerCase();
+      const languageCode = (await this.callWithRotation('gemini-1.5-flash', prompt, 'LANGUAGE_DETECTION', ctx)).trim().toLowerCase();
 
       // Validate and return supported language codes
       if (['uz', 'ru', 'en'].includes(languageCode)) {
@@ -1089,6 +1137,7 @@ Return only the language code:`;
   async translateMessage(
     message: string,
     targetLanguage: string,
+    ctx?: AiCallContext,
   ): Promise<string> {
     try {
       // If target language is English, return as is
@@ -1108,7 +1157,7 @@ ${message}
 
 Translated message:`;
 
-      return (await this.callWithRotation('gemini-1.5-flash', prompt)).trim();
+      return (await this.callWithRotation('gemini-1.5-flash', prompt, 'TRANSLATION', ctx)).trim();
     } catch (error) {
       this.logger.warn(`Translation failed: ${error.message}`);
       return message; // Return original message if translation fails
@@ -1121,6 +1170,7 @@ Translated message:`;
   async generateOrdersListResponse(
     orders: any[],
     userMessage: string,
+    ctx?: AiCallContext,
   ): Promise<string> {
     try {
       const ordersData = orders.map((order, index) => {
@@ -1155,7 +1205,7 @@ INSTRUCTIONS:
 
 Generate a natural, friendly response:`;
 
-      return (await this.callWithRotation('gemini-1.5-flash', prompt)).trim();
+      return (await this.callWithRotation('gemini-1.5-flash', prompt, 'ORDERS_LIST', ctx)).trim();
     } catch (error) {
       this.logger.warn(
         `Failed to generate orders list response: ${error.message}`,
@@ -1188,6 +1238,7 @@ Generate a natural, friendly response:`;
   async generateOrderCancellationResponse(
     order: any,
     userMessage: string,
+    ctx?: AiCallContext,
   ): Promise<string> {
     try {
       const prompt = `You are Aletis, a friendly AI assistant. The customer asked: "${userMessage}"
@@ -1209,7 +1260,7 @@ INSTRUCTIONS:
 
 Generate a natural, friendly response:`;
 
-      return (await this.callWithRotation('gemini-1.5-flash', prompt)).trim();
+      return (await this.callWithRotation('gemini-1.5-flash', prompt, 'ORDER_CANCELLATION', ctx)).trim();
     } catch (error) {
       this.logger.warn(
         `Failed to generate cancellation response: ${error.message}`,
@@ -1304,7 +1355,7 @@ If you change your mind, you can always place a new order! Is there anything els
     }
   }
 
-  async analyzeCustomerInsights(customerData: string): Promise<string> {
+  async analyzeCustomerInsights(customerData: string, ctx?: AiCallContext): Promise<string> {
     const prompt = `You are a sales intelligence AI. Analyze the customer's conversation history and order data below and extract ONLY sales-relevant information.
 
 CUSTOMER DATA:
@@ -1351,7 +1402,7 @@ priceSensitivity rules:
 
 Return only valid JSON, no other text.`;
 
-    return this.callWithRotation('gemini-2.5-flash', prompt);
+    return this.callWithRotation('gemini-2.5-flash', prompt, 'CUSTOMER_INSIGHTS', ctx);
   }
 
   /**
@@ -1372,7 +1423,7 @@ Return only valid JSON, no other text.`;
     incentive?: string | null;
     suggestedProducts?: { name: string; price: number; currency: string }[];
     stage?: 'reminder' | 'value' | 'incentive' | 'last_chance';
-  }): Promise<{ text: string; incentive?: string }> {
+  }, ctx?: AiCallContext): Promise<{ text: string; incentive?: string }> {
     const lang = ['uz', 'ru', 'en'].includes(input.lang || '')
       ? (input.lang as string)
       : 'uz';
@@ -1426,7 +1477,7 @@ Message:`;
 
     try {
       const text = (
-        await this.callWithRotation('gemini-2.5-flash', prompt)
+        await this.callWithRotation('gemini-2.5-flash', prompt, 'WIN_BACK', ctx)
       ).trim();
       return { text, incentive: input.incentive ?? undefined };
     } catch (error: any) {
@@ -1453,7 +1504,7 @@ Message:`;
     customerName?: string | null;
     lang?: string | null;
     incentive?: string | null;
-  }): Promise<string> {
+  }, ctx?: AiCallContext): Promise<string> {
     const lang = ['uz', 'ru', 'en'].includes(input.lang || '')
       ? (input.lang as string)
       : 'uz';
@@ -1485,7 +1536,7 @@ RULES:
 Message:`;
 
     try {
-      return (await this.callWithRotation('gemini-2.5-flash', prompt)).trim();
+      return (await this.callWithRotation('gemini-2.5-flash', prompt, 'CAMPAIGN_BROADCAST', ctx)).trim();
     } catch (error: any) {
       this.logger.error(`Broadcast generation failed: ${error.message}`);
       const fallback: Record<string, string> = {
@@ -1502,7 +1553,7 @@ Message:`;
    * Returns '' on failure or when nothing intelligible is found, so the caller
    * can fall back gracefully. `mimeType` is e.g. 'audio/ogg' for Telegram voice.
    */
-  async transcribeAudio(base64: string, mimeType: string): Promise<string> {
+  async transcribeAudio(base64: string, mimeType: string, ctx?: AiCallContext): Promise<string> {
     const prompt =
       'Transcribe this voice message to plain text. It may be in Uzbek, Russian or English. ' +
       'Output ONLY the transcription with no quotes, labels or commentary. ' +
@@ -1511,7 +1562,7 @@ Message:`;
       const text = await this.callWithRotation('gemini-2.5-flash', [
         { text: prompt },
         { inlineData: { mimeType, data: base64 } },
-      ]);
+      ], 'AUDIO_TRANSCRIPTION', ctx);
       return text.trim();
     } catch (error: any) {
       this.logger.error(`Audio transcription failed: ${error.message}`);
@@ -1530,7 +1581,7 @@ Message:`;
     name: string;
     category?: string | null;
     description?: string | null;
-  }): Promise<{
+  }, ctx?: AiCallContext): Promise<{
     consumable: boolean;
     estimatedLifespanDays: number | null;
     unit: string | null;
@@ -1556,7 +1607,7 @@ JSON only:`;
 
     try {
       const raw = this.stripJson(
-        await this.callWithRotation('gemini-2.5-flash', prompt),
+        await this.callWithRotation('gemini-2.5-flash', prompt, 'CONSUMABLE_CLASSIFICATION', ctx),
       );
       const parsed = JSON.parse(raw);
       const lifespan = Number(parsed.estimatedLifespanDays);
@@ -1580,7 +1631,7 @@ JSON only:`;
   async extractUsageRate(input: {
     productName: string;
     recentMessages: string;
-  }): Promise<{ unitsPerDay: number | null; packSize: number | null }> {
+  }, ctx?: AiCallContext): Promise<{ unitsPerDay: number | null; packSize: number | null }> {
     const prompt = `From the conversation below, find how often the customer uses "${input.productName}"
 and the pack/bottle size if mentioned. The chat may be in Uzbek, Russian or English
 (e.g. "kuniga 2 mahal" = 2 times a day, "60 tabletka" = pack of 60).
@@ -1597,7 +1648,7 @@ Only report values actually implied by the text. JSON only:`;
 
     try {
       const raw = this.stripJson(
-        await this.callWithRotation('gemini-2.5-flash', prompt),
+        await this.callWithRotation('gemini-2.5-flash', prompt, 'USAGE_RATE_EXTRACTION', ctx),
       );
       const parsed = JSON.parse(raw);
       const perDay = Number(parsed.unitsPerDay);
@@ -1624,7 +1675,7 @@ Only report values actually implied by the text. JSON only:`;
     daysLeft: number;
     price?: number | null;
     currency?: string | null;
-  }): Promise<{ text: string }> {
+  }, ctx?: AiCallContext): Promise<{ text: string }> {
     const lang = ['uz', 'ru', 'en'].includes(input.lang || '')
       ? (input.lang as string)
       : 'uz';
@@ -1653,7 +1704,7 @@ Message:`;
 
     try {
       const text = (
-        await this.callWithRotation('gemini-2.5-flash', prompt)
+        await this.callWithRotation('gemini-2.5-flash', prompt, 'REPLENISHMENT_REMINDER', ctx)
       ).trim();
       return { text };
     } catch (error: any) {
@@ -1680,6 +1731,7 @@ Message:`;
     products: { id: number; name: string; price: number; currency: string; description: string }[],
     searchQuery: string,
     userMessage: string,
+    ctx?: AiCallContext,
   ): Promise<{ matches: { id: number; caption: string }[]; noResultText: string }> {
     try {
       const productList = products
@@ -1706,7 +1758,7 @@ Return a JSON object (no markdown, no code block) with:
 Only match products from the list above. Never suggest outside items.
 JSON only:`;
 
-      const raw = (await this.callWithRotation('gemini-2.5-flash', prompt)).trim().replace(/^```json[\s\S]*?```/g, (m: string) => m.replace(/^```json/, '').replace(/```$/, '')).trim();
+      const raw = (await this.callWithRotation('gemini-2.5-flash', prompt, 'PRODUCT_MATCHING', ctx)).trim().replace(/^```json[\s\S]*?```/g, (m: string) => m.replace(/^```json/, '').replace(/```$/, '')).trim();
       const parsed = JSON.parse(raw);
       return {
         matches: Array.isArray(parsed.matches) ? parsed.matches : [],

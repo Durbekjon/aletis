@@ -365,7 +365,7 @@ export class RetentionService {
       aiSummary: note?.aiSummary,
       incentive: attempt.incentive,
       stage: this.stageForStep(step),
-    });
+    }, { organizationId: attempt.organizationId });
 
     try {
       await this.sendToCustomer(attempt.channel, attempt.organizationId, customer, text);

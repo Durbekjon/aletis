@@ -55,6 +55,7 @@ model Organization {
   supportTickets     SupportTicket[]
   loyaltyTransactions LoyaltyTransaction[]
   campaigns          Campaign[]
+  aiUsageLogs        AiUsageLog[]
   @@map("organizations")
 }
 
@@ -399,6 +400,45 @@ model AnalyticsDailyAggregate {
   @@unique([organizationId, day], name: "organizationId_day_unique")
   @@index([organizationId, day], name: "idx_analytics_org_day")
   @@map("analytics_daily_aggregates")
+}
+
+enum AiFeature {
+  SALES_CHAT
+  ORDER_CONFIRMATION
+  LANGUAGE_DETECTION
+  TRANSLATION
+  ORDERS_LIST
+  ORDER_CANCELLATION
+  PRODUCT_MATCHING
+  CUSTOMER_INSIGHTS
+  WIN_BACK
+  CAMPAIGN_BROADCAST
+  AUDIO_TRANSCRIPTION
+  CONSUMABLE_CLASSIFICATION
+  USAGE_RATE_EXTRACTION
+  REPLENISHMENT_REMINDER
+}
+
+model AiUsageLog {
+  id               Int           @id @default(autoincrement())
+  organizationId   Int?
+  organization     Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  botId            Int?
+  feature          AiFeature
+  model            String
+  promptTokens     Int           @default(0)
+  candidatesTokens Int           @default(0)
+  totalTokens      Int           @default(0)
+  latencyMs        Int
+  success          Boolean       @default(true)
+  errorType        String?
+  createdAt        DateTime      @default(now())
+
+  @@index([organizationId, createdAt])
+  @@index([feature, createdAt])
+  @@index([model, createdAt])
+  @@index([createdAt])
+  @@map("ai_usage_logs")
 }
 
 model OrderItem {
