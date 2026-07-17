@@ -30,6 +30,8 @@ import { PaymentsModule } from './payments/payments.module';
 import { LoyaltyModule } from './loyalty/loyalty.module';
 import { CampaignsModule } from './campaigns/campaigns.module';
 import { HealthModule } from '@core/health/health.module';
+import { AiUsageModule } from './ai-usage/ai-usage.module';
+import { AdminModule } from './admin/admin.module';
 
 @Module({
   imports: [
@@ -64,6 +66,8 @@ import { HealthModule } from '@core/health/health.module';
     LoyaltyModule,
     CampaignsModule,
     HealthModule,
+    AiUsageModule,
+    AdminModule,
   ],
 })
 export class ModulesModule {}

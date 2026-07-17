@@ -9,6 +9,7 @@ export const BACKUP_QUEUE = 'backup';
 export const EMBEDDING_QUEUE = 'embedding';
 export const CAMPAIGN_QUEUE = 'campaign';
 export const INSTAGRAM_TOKEN_REFRESH_QUEUE = 'instagram-token-refresh';
+export const AI_COST_QUEUE = 'ai-cost';
 
 @Global()
 @Module({
