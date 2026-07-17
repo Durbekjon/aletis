@@ -262,6 +262,7 @@ export class AuthService {
     email: string;
     firstName: string | null;
     lastName: string | null;
+    platformRole: string | null;
     logo: {
       id: number;
       key: string;
@@ -274,6 +275,7 @@ export class AuthService {
         firstName: true,
         lastName: true,
         email: true,
+        platformRole: true,
         logo: {
           select: {
             id: true,
@@ -396,7 +398,14 @@ export class AuthService {
   }
 
   private async issueTokens(userId: number): Promise<Tokens> {
-    const payload: JwtPayload = { userId };
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { platformRole: true },
+    });
+    const payload: JwtPayload = {
+      userId,
+      ...(user?.platformRole ? { platformRole: user.platformRole } : {}),
+    };
     const accessToken = await this.jwtService.signAsync(payload, {
       secret: this.getAccessSecret(),
       expiresIn: this.getAccessExpiry(),
