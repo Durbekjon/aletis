@@ -21,6 +21,11 @@ export class AiUsageProcessor extends WorkerHost {
         } catch (err: any) {
           this.logger.warn(`Daily AI cost rollup failed: ${err.message}`);
         }
+        try {
+          await this.service.pruneOldLogs();
+        } catch (err: any) {
+          this.logger.warn(`AI usage log pruning failed: ${err.message}`);
+        }
         break;
       }
       default:

@@ -1,6 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '@core/prisma/prisma.service';
-import { estimateCostUsd } from './gemini-pricing.constants';
+import { TelegramLoggerService } from '@core/telegram-logger/telegram-logger.service';
+import { estimateCostUsd, isPricingVerified } from './gemini-pricing.constants';
+
+const ANOMALY_MULTIPLIER = 2;
+/** Below this, a "spike" is just noise on a near-zero baseline — not worth alerting on. */
+const ANOMALY_FLOOR_USD = 1;
 
 function utcDayRange(daysAgo: number): { from: Date; to: Date } {
   const now = new Date();
@@ -28,7 +33,10 @@ function periodStart(period: 'today' | 'month' | 'year'): Date {
 export class AiUsageService {
   private readonly logger = new Logger(AiUsageService.name);
 
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly telegramLogger: TelegramLoggerService,
+  ) {}
 
   /** Roll up yesterday's raw AiUsageLog rows into AiCostDailyAggregate, grouped by org/model/feature. */
   async rollupYesterday(): Promise<void> {
@@ -102,6 +110,58 @@ export class AiUsageService {
     this.logger.log(
       `AI cost rollup for ${from.toISOString().slice(0, 10)}: ${grouped.length} org/model/feature rows`,
     );
+
+    await this.checkCostAnomaly(from);
+  }
+
+  /** Alert on Telegram if yesterday's total AI spend spiked vs. the trailing 7-day average. */
+  private async checkCostAnomaly(day: Date): Promise<void> {
+    try {
+      const yesterdayTotal = await this.prisma.aiCostDailyAggregate.aggregate({
+        where: { day },
+        _sum: { costUsd: true },
+      });
+      const yesterdayCost = yesterdayTotal._sum.costUsd ?? 0;
+
+      const trailingStart = new Date(day.getTime() - 7 * 24 * 60 * 60 * 1000);
+      const trailingRows = await this.prisma.aiCostDailyAggregate.groupBy({
+        by: ['day'],
+        where: { day: { gte: trailingStart, lt: day } },
+        _sum: { costUsd: true },
+      });
+      if (trailingRows.length === 0) return; // not enough history yet to judge a spike
+
+      const trailingAvg =
+        trailingRows.reduce((sum, r) => sum + (r._sum.costUsd ?? 0), 0) / trailingRows.length;
+
+      if (yesterdayCost > ANOMALY_FLOOR_USD && yesterdayCost > trailingAvg * ANOMALY_MULTIPLIER) {
+        await this.telegramLogger.sendEvent(
+          '⚠️ AI cost spike detected',
+          `Yesterday (${day.toISOString().slice(0, 10)}): $${yesterdayCost.toFixed(2)}\n` +
+            `7-day average: $${trailingAvg.toFixed(2)}\n` +
+            `That's ${(yesterdayCost / trailingAvg).toFixed(1)}x the average.`,
+        );
+      }
+    } catch (err: any) {
+      this.logger.warn(`Cost anomaly check failed: ${err.message}`);
+    }
+  }
+
+  /**
+   * Delete raw AiUsageLog rows older than `retentionDays` — every customer
+   * message triggers at least one Gemini call, so this table grows fast.
+   * The daily rollup has already captured anything this old into
+   * AiCostDailyAggregate, which is what powers month/year views long-term;
+   * the raw log is only needed for recent per-call debugging.
+   */
+  async pruneOldLogs(retentionDays = 90): Promise<void> {
+    const cutoff = new Date(Date.now() - retentionDays * 24 * 60 * 60 * 1000);
+    const { count } = await this.prisma.aiUsageLog.deleteMany({
+      where: { createdAt: { lt: cutoff } },
+    });
+    if (count > 0) {
+      this.logger.log(`Pruned ${count} AiUsageLog rows older than ${retentionDays} days`);
+    }
   }
 
   /** Today's figures aren't rolled up yet — compute live from raw AiUsageLog. */
@@ -150,15 +210,34 @@ export class AiUsageService {
     };
   }
 
+  /** Distinct models seen so far this year, checking both raw logs and the rollup (in case older raw logs were pruned). */
+  private async modelsUsedThisYear(): Promise<string[]> {
+    const yearFrom = periodStart('year');
+    const [fromLogs, fromAggregate] = await Promise.all([
+      this.prisma.aiUsageLog.findMany({
+        where: { createdAt: { gte: yearFrom } },
+        distinct: ['model'],
+        select: { model: true },
+      }),
+      this.prisma.aiCostDailyAggregate.findMany({
+        where: { day: { gte: yearFrom } },
+        distinct: ['model'],
+        select: { model: true },
+      }),
+    ]);
+    return Array.from(new Set([...fromLogs, ...fromAggregate].map((r) => r.model)));
+  }
+
   /** Today/month/year summary — rolled-up history plus a live top-up for today. */
   async getSummary() {
     const monthFrom = periodStart('month');
     const yearFrom = periodStart('year');
 
-    const [todayLive, monthAgg, yearAgg] = await Promise.all([
+    const [todayLive, monthAgg, yearAgg, modelsUsed] = await Promise.all([
       this.liveSummarySince(periodStart('today')),
       this.aggregatedSummarySince(monthFrom),
       this.aggregatedSummarySince(yearFrom),
+      this.modelsUsedThisYear(),
     ]);
 
     const add = (
@@ -176,7 +255,7 @@ export class AiUsageService {
       today: todayLive,
       month: add(monthAgg, todayLive),
       year: add(yearAgg, todayLive),
-      pricingVerified: false,
+      pricingVerified: isPricingVerified(modelsUsed),
     };
   }
 
