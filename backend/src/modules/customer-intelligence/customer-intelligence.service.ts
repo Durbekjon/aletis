@@ -139,6 +139,7 @@ export class CustomerIntelligenceService {
 
       const rawInsights = await this.geminiService.analyzeCustomerInsights(
         contextLines.join('\n'),
+        { organizationId },
       );
 
       const parsed = this.parseInsights(rawInsights);
