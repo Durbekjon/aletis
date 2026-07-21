@@ -6,7 +6,13 @@ import {
   Logger,
   Optional,
 } from '@nestjs/common';
-import { Prisma, OrderStatus, EntityType, ActionType } from '@prisma/client';
+import {
+  Prisma,
+  OrderStatus,
+  EntityType,
+  ActionType,
+  PaymentProvider,
+} from '@prisma/client';
 import { PrismaService } from '@core/prisma/prisma.service';
 import { PaginatedResponseDto } from '@/shared/dto';
 import {
@@ -20,6 +26,8 @@ import { CustomerIntelligenceService } from '@modules/customer-intelligence/cust
 import { RetentionService } from '@modules/retention/retention.service';
 import { ReplenishmentService } from '@modules/replenishment/replenishment.service';
 import { LoyaltyService } from '@modules/loyalty/loyalty.service';
+import { PaymentsService } from '@modules/payments/payments.service';
+import { OrderPaymentReminderService } from './order-payment-reminder.service';
 
 @Injectable()
 export class OrdersService {
@@ -60,6 +68,8 @@ export class OrdersService {
     private readonly customerIntelligenceService: CustomerIntelligenceService,
     private readonly retentionService: RetentionService,
     private readonly loyaltyService: LoyaltyService,
+    private readonly paymentsService: PaymentsService,
+    private readonly orderPaymentReminderService: OrderPaymentReminderService,
     @Optional()
     private readonly replenishmentService?: ReplenishmentService,
   ) {}
@@ -996,6 +1006,19 @@ export class OrdersService {
     this.loyaltyService
       .onOrderCreated(customer.id, organizationId, order.id)
       .catch((err) => this.logger.warn(`Loyalty hook failed: ${err.message}`));
+
+    // Payment reminders: only meaningful once a checkout link was actually
+    // offered (ai-response-handler appends one when Payme/Click is
+    // configured for this install). Never blocks order creation.
+    if (this.paymentsService.isConfigured(PaymentProvider.PAYME)) {
+      this.orderPaymentReminderService
+        .scheduleFirstReminder(order.id)
+        .catch((err) =>
+          this.logger.warn(
+            `Failed to schedule payment reminder for order ${order.id}: ${err.message}`,
+          ),
+        );
+    }
 
     return response;
   }

@@ -414,9 +414,11 @@ export class AiResponseHandlerService {
   }
 
   /**
-   * Build a "pay now" line for an order confirmation. Returns an empty string
-   * when no payment provider is configured or link generation fails, so the
-   * order confirmation is never blocked by payments.
+   * Build a "pay to confirm" line for an order confirmation. Returns an empty
+   * string when no payment provider is configured or link generation fails,
+   * so orgs without payments set up keep today's COD/manual-confirm flow.
+   * Where a provider IS configured, payment is how the order gets confirmed —
+   * settleTarget() flips the order to CONFIRMED once the webhook lands.
    */
   private async buildOrderPaymentLine(
     orderId: number,
@@ -430,13 +432,13 @@ export class AiResponseHandlerService {
         orderId,
         PaymentProvider.PAYME,
       );
-      const label =
+      const line =
         customer.lang === 'ru'
-          ? '💳 Оплатить'
+          ? `💳 Чтобы подтвердить заказ, оплатите по ссылке: ${url}\n(Заказ подтвердится автоматически сразу после оплаты)`
           : customer.lang === 'en'
-            ? '💳 Pay now'
-            : "💳 To'lov qilish";
-      return `\n\n${label}: ${url}`;
+            ? `💳 To confirm your order, please pay here: ${url}\n(Your order is confirmed automatically as soon as payment is received)`
+            : `💳 Buyurtmangizni tasdiqlash uchun to'lovni amalga oshiring: ${url}\n(To'lov qabul qilingach, buyurtmangiz avtomatik tasdiqlanadi)`;
+      return `\n\n${line}`;
     } catch (error) {
       this.logger.warn(
         `Failed to build payment link for order ${orderId}: ${error.message}`,
