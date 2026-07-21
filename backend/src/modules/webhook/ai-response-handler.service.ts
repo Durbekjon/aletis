@@ -199,6 +199,7 @@ export class AiResponseHandlerService {
             currency: 'USD', // Default currency, can be enhanced to get from products
           },
           originalUserMessage || '',
+          { organizationId },
         );
 
       this.logger.log(
@@ -223,6 +224,7 @@ export class AiResponseHandlerService {
       // Detect language and provide appropriate error message
       const detectedLanguage = await this.geminiService.detectLanguage(
         originalUserMessage || '',
+        { organizationId },
       );
       let errorMessage =
         "I'm sorry, I couldn't process your order right now. Please try again or contact our support team.";
@@ -261,6 +263,7 @@ export class AiResponseHandlerService {
       const ordersMessage = await this.geminiService.generateOrdersListResponse(
         orders,
         originalUserMessage || 'Show my orders',
+        { organizationId },
       );
 
       this.logger.log(`Orders fetched via AI for customer: ${customer.id}`);
@@ -278,6 +281,7 @@ export class AiResponseHandlerService {
       // Detect language and provide appropriate error message
       const detectedLanguage = await this.geminiService.detectLanguage(
         originalUserMessage || '',
+        { organizationId },
       );
       let errorMessage =
         "I'm having trouble retrieving your orders right now. Please try again later.";
@@ -328,6 +332,7 @@ export class AiResponseHandlerService {
         await this.geminiService.generateOrderCancellationResponse(
           order,
           originalUserMessage || 'Cancel my order',
+          { organizationId },
         );
 
       this.logger.log(
@@ -572,6 +577,7 @@ export class AiResponseHandlerService {
         products,
         searchQuery,
         originalUserMessage || searchQuery,
+        { organizationId },
       );
 
       this.logger.log(`Matched products: ${JSON.stringify(matches.map((m) => m.id))}`);

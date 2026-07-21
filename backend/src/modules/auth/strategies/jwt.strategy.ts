@@ -5,6 +5,7 @@ import { ExtractJwt, Strategy } from 'passport-jwt';
 
 export interface JwtPayload {
   userId: number | string;
+  platformRole?: 'STAFF' | 'SUPERADMIN';
 }
 
 @Injectable()

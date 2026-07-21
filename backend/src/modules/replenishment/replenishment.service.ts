@@ -100,6 +100,7 @@ export class ReplenishmentService {
 
         const prediction = await this.predictDepletion({
           customerId: order.customerId,
+          organizationId: order.organizationId,
           product,
           quantity: item.quantity || 1,
           orderDate,
@@ -158,10 +159,10 @@ export class ReplenishmentService {
     }
 
     const category = await this.getProductCategory(product.id);
-    const classified = await this.geminiService.classifyConsumable({
-      name: product.name,
-      category,
-    });
+    const classified = await this.geminiService.classifyConsumable(
+      { name: product.name, category },
+      { organizationId: product.organizationId },
+    );
 
     await this.prisma.product.update({
       where: { id: product.id },
@@ -195,6 +196,7 @@ export class ReplenishmentService {
    */
   private async predictDepletion(input: {
     customerId: number;
+    organizationId?: number;
     product: { id: number; name: string };
     quantity: number;
     orderDate: Date;
@@ -204,7 +206,7 @@ export class ReplenishmentService {
     method: ReplenishmentMethod;
     basis: PredictionBasis;
   } | null> {
-    const { customerId, product, quantity, orderDate } = input;
+    const { customerId, organizationId, product, quantity, orderDate } = input;
 
     // 1) CADENCE — prior purchases of this product by this customer.
     const priorPurchases = await this.prisma.orderItem.findMany({
@@ -244,10 +246,10 @@ export class ReplenishmentService {
     const recentMessages = await this.getRecentMessages(customerId);
     if (recentMessages) {
       const { unitsPerDay, packSize } =
-        await this.geminiService.extractUsageRate({
-          productName: product.name,
-          recentMessages,
-        });
+        await this.geminiService.extractUsageRate(
+          { productName: product.name, recentMessages },
+          { organizationId },
+        );
       if (unitsPerDay && packSize) {
         const days = this.clampDays((packSize * quantity) / unitsPerDay);
         return {
@@ -400,7 +402,7 @@ export class ReplenishmentService {
       daysLeft,
       price: reminder.product.price,
       currency: reminder.product.currency,
-    });
+    }, { organizationId: reminder.organizationId });
 
     try {
       await this.sendToCustomer(customer.channel, reminder.organizationId, customer, text);

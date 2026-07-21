@@ -39,6 +39,7 @@ export type UserResponse = {
   email: string
   firstName: string
   lastName: string
+  platformRole?: "STAFF" | "SUPERADMIN" | null
   logo?: {
     id: number
     key: string

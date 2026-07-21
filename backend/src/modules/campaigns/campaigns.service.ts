@@ -162,7 +162,7 @@ export class CampaignsService {
               customerName: r.name,
               lang: r.lang,
               incentive: campaign.incentive,
-            });
+            }, { organizationId: campaign.organizationId });
         await this.sendToRecipient(campaign.organizationId, r, text);
         sent++;
       } catch (err: any) {

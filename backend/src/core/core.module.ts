@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { PrismaModule } from './prisma/prisma.module';
 import { EncryptionService } from './encryption/encryption.service';
 import { GeminiService } from './gemini/gemini.service';
+import { AiUsageRecorderService } from './gemini/ai-usage-recorder.service';
 import { RetryService } from './retry/retry.service';
 import { SecurityModule } from './security/security.module';
 import { LoggingModule } from './logging/logging.module';
@@ -28,11 +29,12 @@ import { QueueModule } from './queue/queue.module';
     ImagekitModule,
     QueueModule,
   ],
-  providers: [EncryptionService, GeminiService, RetryService],
+  providers: [EncryptionService, GeminiService, AiUsageRecorderService, RetryService],
   exports: [
     PrismaModule,
     EncryptionService,
     GeminiService,
+    AiUsageRecorderService,
     RetryService,
     MessageBufferModule,
     ImageToBase64Module,
