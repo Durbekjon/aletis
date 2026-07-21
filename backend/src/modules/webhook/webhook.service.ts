@@ -56,6 +56,18 @@ export class WebhookService {
     botId: number,
     organizationId: number,
   ) {
+    // The bot only holds 1:1 conversations with customers. Ignore anything
+    // posted in a group/supergroup/channel (e.g. the bot added to the
+    // merchant's own announcement group) — replying there is never correct
+    // and would otherwise create a bogus customer record for the sender.
+    const incomingChatType = webhookData.message?.chat?.type;
+    if (incomingChatType && incomingChatType !== 'private') {
+      this.logger.log(
+        `Ignoring message from non-private chat (type=${incomingChatType}, chatId=${webhookData.message?.chat?.id})`,
+      );
+      return { status: 'ignored_non_private_chat' };
+    }
+
     // Prioritize callback_query (inline button) handling
     if (
       webhookData.callback_query &&

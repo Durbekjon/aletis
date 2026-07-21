@@ -36,7 +36,10 @@ export class GeminiService {
       this.configService.get<string>('GEMINI_API_KEYS') ||
       this.configService.get<string>('GEMINI_API_KEY') ||
       '';
-    const keys = raw.split(',').map((k) => k.trim()).filter(Boolean);
+    const keys = raw
+      .split(',')
+      .map((k) => k.trim())
+      .filter(Boolean);
     if (keys.length === 0) throw new Error('No GEMINI_API_KEY(S) configured');
     this.clients = keys.map((k) => new GoogleGenerativeAI(k));
     this.logger.log(`Gemini initialized with ${keys.length} API key(s)`);
@@ -44,7 +47,12 @@ export class GeminiService {
 
   private async callWithRotation(
     modelName: string,
-    prompt: string | Array<{ text?: string; inlineData?: { mimeType: string; data: string } }>,
+    prompt:
+      | string
+      | Array<{
+          text?: string;
+          inlineData?: { mimeType: string; data: string };
+        }>,
     feature: AiFeature,
     ctx?: AiCallContext,
   ): Promise<string> {
@@ -89,7 +97,9 @@ export class GeminiService {
 
           if (is503 && attempt < maxRetries) {
             const backoff = 500 * attempt;
-            this.logger.warn(`Key #${keyIndex + 1} overloaded, retrying in ${backoff}ms...`);
+            this.logger.warn(
+              `Key #${keyIndex + 1} overloaded, retrying in ${backoff}ms...`,
+            );
             await this.delay(backoff);
             continue;
           }
@@ -124,7 +134,9 @@ export class GeminiService {
       success: false,
       errorType: 'QUOTA_EXHAUSTED',
     });
-    throw new Error(`All ${total} Gemini API key(s) exhausted (quota exceeded)`);
+    throw new Error(
+      `All ${total} Gemini API key(s) exhausted (quota exceeded)`,
+    );
   }
 
   async generateResponse(
@@ -147,7 +159,12 @@ export class GeminiService {
 
     try {
       this.logger.log('Generating AI response...');
-      const text = await this.callWithRotation('gemini-2.5-flash', prompt, 'SALES_CHAT', ctx);
+      const text = await this.callWithRotation(
+        'gemini-flash-latest',
+        prompt,
+        'SALES_CHAT',
+        ctx,
+      );
       const parsedResponse = await this.parseResponse(text);
       this.logger.log(
         `AI response generated: ${text.substring(0, 100)}${text.length > 100 ? '...' : ''}`,
@@ -214,7 +231,7 @@ LANGUAGE DETECTION RULES:
 - Detect the language of the customer's message automatically
 - Respond in the EXACT same language as the customer wrote
 - If customer writes in Uzbek → respond in Uzbek
-- If customer writes in Russian → respond in Russian  
+- If customer writes in Russian → respond in Russian
 - If customer writes in English → respond in English
 - If language cannot be detected, default to Uzbek
 - Do NOT ask about language preference - detect and match automatically
@@ -310,7 +327,7 @@ When a customer wants to place an order, follow these steps:
 [INTENT:CREATE_ORDER]
 {
   "customerName": "extracted name or 'Not provided'",
-  "customerContact": "phone/email if provided or 'Not provided'", 
+  "customerContact": "phone/email if provided or 'Not provided'",
   "items": [
     {
       "productId": "MUST be the exact numeric product ID from inventory OR search results (integer, not product name)",
@@ -329,7 +346,7 @@ When a customer wants to place an order, follow these steps:
 CRITICAL ORDER CREATION RULES:
 🚨 NEVER CREATE AN ORDER WITHOUT ESSENTIAL INFORMATION:
 - Customer contact (phone number or email) - REQUIRED
-- Delivery location/address - REQUIRED  
+- Delivery location/address - REQUIRED
 - Payment method (cash, card, transfer, etc.) - REQUIRED
 - Product details (what they want to buy) - REQUIRED
 
@@ -357,7 +374,7 @@ CRITICAL RULES FOR MULTIPLE PRODUCTS:
 
 MANDATORY MULTIPLE PRODUCTS HANDLING:
 - When customer says "X va Y" (X and Y), you MUST create 2 separate items
-- When customer says "both X and Y", you MUST create 2 separate items  
+- When customer says "both X and Y", you MUST create 2 separate items
 - When customer says "X ni Y ni birdaniga" (X and Y together), you MUST create 2 separate items
 - ALWAYS check the inventory list above to find the exact Product IDs
 - ALWAYS create a complete JSON with proper closing brackets
@@ -675,7 +692,8 @@ IMPORTANT: Read the conversation history carefully. If the customer has already 
         this.logger.warn(`Final prices: ${finalPrices?.join(', ') || 'none'}`);
 
         // Create items array from extracted data
-        const items: { productId: number; quantity: number; price: number }[] = [];
+        const items: { productId: number; quantity: number; price: number }[] =
+          [];
         if (finalProductIds && finalProductIds.length > 0) {
           for (let i = 0; i < finalProductIds.length; i++) {
             const productIdMatch = finalProductIds[i].match(/(\d+)/);
@@ -810,7 +828,8 @@ IMPORTANT: Read the conversation history carefully. If the customer has already 
 
         // Convert ORDER_CONFIRMATION to CREATE_ORDER format
         // Extract product info from items and look up actual product IDs and prices
-        let items: { productId: number; quantity: number; price: number }[] = [];
+        let items: { productId: number; quantity: number; price: number }[] =
+          [];
         if (Array.isArray(confirmationData.items)) {
           // Process each item string to extract product name and quantity
           const itemPromises = confirmationData.items.map(
@@ -1043,7 +1062,12 @@ Is there anything else I can help you with?
 
 Generate the confirmation message now:`;
 
-      const confirmationMessage = await this.callWithRotation('gemini-2.5-flash', prompt, 'ORDER_CONFIRMATION', ctx);
+      const confirmationMessage = await this.callWithRotation(
+        'gemini-flash-latest',
+        prompt,
+        'ORDER_CONFIRMATION',
+        ctx,
+      );
 
       this.logger.log(
         `Order confirmation generated for order ${orderData.orderId}`,
@@ -1084,13 +1108,22 @@ Text: "${text}"
 
 Rules:
 - If the text contains Cyrillic characters (а, б, в, г, д, е, ё, ж, з, и, й, к, л, м, н, о, п, р, с, т, у, ф, х, ц, ч, ш, щ, ъ, ы, ь, э, ю, я) → return "ru"
-- If the text contains Latin characters with Uzbek-specific letters (oʻ, gʻ, sh, ch) or common Uzbek words → return "uz"  
+- If the text contains Latin characters with Uzbek-specific letters (oʻ, gʻ, sh, ch) or common Uzbek words → return "uz"
 - If the text contains only basic Latin characters and English words → return "en"
 - If unsure, return "uz" (default)
 
 Return only the language code:`;
 
-      const languageCode = (await this.callWithRotation('gemini-1.5-flash', prompt, 'LANGUAGE_DETECTION', ctx)).trim().toLowerCase();
+      const languageCode = (
+        await this.callWithRotation(
+          'gemini-1.5-flash',
+          prompt,
+          'LANGUAGE_DETECTION',
+          ctx,
+        )
+      )
+        .trim()
+        .toLowerCase();
 
       // Validate and return supported language codes
       if (['uz', 'ru', 'en'].includes(languageCode)) {
@@ -1195,7 +1228,7 @@ ${JSON.stringify(ordersData, null, 2)}
 INSTRUCTIONS:
 1. Respond in the EXACT same language as the customer's message
 2. If customer wrote in Uzbek → respond in Uzbek
-3. If customer wrote in Russian → respond in Russian  
+3. If customer wrote in Russian → respond in Russian
 4. If customer wrote in English → respond in English
 5. If no orders exist, say "You don't have any orders yet" in their language
 6. If orders exist, list them nicely with emojis
@@ -1251,7 +1284,7 @@ ORDER CANCELLED:
 INSTRUCTIONS:
 1. Respond in the EXACT same language as the customer's message
 2. If customer wrote in Uzbek → respond in Uzbek
-3. If customer wrote in Russian → respond in Russian  
+3. If customer wrote in Russian → respond in Russian
 4. If customer wrote in English → respond in English
 5. Confirm the order has been cancelled
 6. Be friendly and helpful
@@ -1402,7 +1435,12 @@ priceSensitivity rules:
 
 Return only valid JSON, no other text.`;
 
-    return this.callWithRotation('gemini-2.5-flash', prompt, 'CUSTOMER_INSIGHTS', ctx);
+    return this.callWithRotation(
+      'gemini-flash-latest',
+      prompt,
+      'CUSTOMER_INSIGHTS',
+      ctx,
+    );
   }
 
   /**
@@ -1477,7 +1515,12 @@ Message:`;
 
     try {
       const text = (
-        await this.callWithRotation('gemini-2.5-flash', prompt, 'WIN_BACK', ctx)
+        await this.callWithRotation(
+          'gemini-flash-latest',
+          prompt,
+          'WIN_BACK',
+          ctx,
+        )
       ).trim();
       return { text, incentive: input.incentive ?? undefined };
     } catch (error: any) {
@@ -1536,7 +1579,14 @@ RULES:
 Message:`;
 
     try {
-      return (await this.callWithRotation('gemini-2.5-flash', prompt, 'CAMPAIGN_BROADCAST', ctx)).trim();
+      return (
+        await this.callWithRotation(
+          'gemini-flash-latest',
+          prompt,
+          'CAMPAIGN_BROADCAST',
+          ctx,
+        )
+      ).trim();
     } catch (error: any) {
       this.logger.error(`Broadcast generation failed: ${error.message}`);
       const fallback: Record<string, string> = {
@@ -1559,7 +1609,7 @@ Message:`;
       'Output ONLY the transcription with no quotes, labels or commentary. ' +
       'If there is no intelligible speech, output nothing.';
     try {
-      const text = await this.callWithRotation('gemini-2.5-flash', [
+      const text = await this.callWithRotation('gemini-flash-latest', [
         { text: prompt },
         { inlineData: { mimeType, data: base64 } },
       ], 'AUDIO_TRANSCRIPTION', ctx);
@@ -1607,14 +1657,21 @@ JSON only:`;
 
     try {
       const raw = this.stripJson(
-        await this.callWithRotation('gemini-2.5-flash', prompt, 'CONSUMABLE_CLASSIFICATION', ctx),
+        await this.callWithRotation(
+          'gemini-flash-latest',
+          prompt,
+          'CONSUMABLE_CLASSIFICATION',
+          ctx,
+        ),
       );
       const parsed = JSON.parse(raw);
       const lifespan = Number(parsed.estimatedLifespanDays);
       return {
         consumable: parsed.consumable === true,
         estimatedLifespanDays:
-          Number.isFinite(lifespan) && lifespan > 0 ? Math.round(lifespan) : null,
+          Number.isFinite(lifespan) && lifespan > 0
+            ? Math.round(lifespan)
+            : null,
         unit: typeof parsed.unit === 'string' ? parsed.unit : null,
       };
     } catch (error: any) {
@@ -1648,7 +1705,12 @@ Only report values actually implied by the text. JSON only:`;
 
     try {
       const raw = this.stripJson(
-        await this.callWithRotation('gemini-2.5-flash', prompt, 'USAGE_RATE_EXTRACTION', ctx),
+        await this.callWithRotation(
+          'gemini-flash-latest',
+          prompt,
+          'USAGE_RATE_EXTRACTION',
+          ctx,
+        ),
       );
       const parsed = JSON.parse(raw);
       const perDay = Number(parsed.unitsPerDay);
@@ -1704,7 +1766,12 @@ Message:`;
 
     try {
       const text = (
-        await this.callWithRotation('gemini-2.5-flash', prompt, 'REPLENISHMENT_REMINDER', ctx)
+        await this.callWithRotation(
+          'gemini-flash-latest',
+          prompt,
+          'REPLENISHMENT_REMINDER',
+          ctx,
+        )
       ).trim();
       return { text };
     } catch (error: any) {
@@ -1728,11 +1795,20 @@ Message:`;
   }
 
   async matchProductsInContext(
-    products: { id: number; name: string; price: number; currency: string; description: string }[],
+    products: {
+      id: number;
+      name: string;
+      price: number;
+      currency: string;
+      description: string;
+    }[],
     searchQuery: string,
     userMessage: string,
     ctx?: AiCallContext,
-  ): Promise<{ matches: { id: number; caption: string }[]; noResultText: string }> {
+  ): Promise<{
+    matches: { id: number; caption: string }[];
+    noResultText: string;
+  }> {
     try {
       const productList = products
         .map(
@@ -1758,7 +1834,19 @@ Return a JSON object (no markdown, no code block) with:
 Only match products from the list above. Never suggest outside items.
 JSON only:`;
 
-      const raw = (await this.callWithRotation('gemini-2.5-flash', prompt, 'PRODUCT_MATCHING', ctx)).trim().replace(/^```json[\s\S]*?```/g, (m: string) => m.replace(/^```json/, '').replace(/```$/, '')).trim();
+      const raw = (
+        await this.callWithRotation(
+          'gemini-flash-latest',
+          prompt,
+          'PRODUCT_MATCHING',
+          ctx,
+        )
+      )
+        .trim()
+        .replace(/^```json[\s\S]*?```/g, (m: string) =>
+          m.replace(/^```json/, '').replace(/```$/, ''),
+        )
+        .trim();
       const parsed = JSON.parse(raw);
       return {
         matches: Array.isArray(parsed.matches) ? parsed.matches : [],

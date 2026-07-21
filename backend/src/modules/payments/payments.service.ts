@@ -8,6 +8,7 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '@core/prisma/prisma.service';
 import {
   InvoiceStatus,
+  OrderStatus,
   PaymentProvider,
   PaymentStatus,
   PaymentTargetType,
@@ -346,8 +347,17 @@ export class PaymentsService {
         where: { id: tx.orderId },
         data: { paymentStatus: PaymentStatus.PAID },
       });
+      // Only bump NEW/PENDING orders to CONFIRMED — don't downgrade an order
+      // a merchant already moved further along (e.g. SHIPPED, CANCELLED).
+      await this.prisma.order.updateMany({
+        where: {
+          id: tx.orderId,
+          status: { in: [OrderStatus.NEW, OrderStatus.PENDING] },
+        },
+        data: { status: OrderStatus.CONFIRMED },
+      });
       this.logger.log(
-        `Order #${tx.orderId} marked PAID via ${tx.provider} (tx ${tx.providerTxId})`,
+        `Order #${tx.orderId} marked PAID + CONFIRMED via ${tx.provider} (tx ${tx.providerTxId})`,
       );
     } else if (tx.targetType === PaymentTargetType.INVOICE && tx.invoiceId) {
       const invoice = await this.prisma.invoice.update({

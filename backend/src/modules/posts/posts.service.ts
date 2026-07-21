@@ -208,7 +208,8 @@ export class PostsService {
 
   /**
    * Builds a default Telegram caption (HTML) for an auto-published product.
-   * The bot "More Info" link is appended later by sendPostToTelegram.
+   * The "Ma'lumot olish" / "Sotib olish" buttons are attached separately (as
+   * an inline keyboard) by sendPostToTelegram.
    */
   private buildProductPostContent(product: {
     name: string;
@@ -470,12 +471,20 @@ export class PostsService {
 
     const token = this.encryption.decrypt(connectedBot.token);
     const images = post.product.images || [];
-    const botLink = `<a href="https://t.me/${connectedBot.username}?start=product_${post.productId}">More Info</a>`;
+    const deepLink = `https://t.me/${connectedBot.username}?start=product_${post.productId}`;
+    // Real inline keyboard buttons instead of a text hyperlink baked into the
+    // caption — Telegram renders these as tappable buttons under the post.
+    const replyMarkup = {
+      inline_keyboard: [
+        [{ text: "📋 Ma'lumot olish", url: deepLink, style: 'primary' }],
+        [{ text: '🛒 Sotib olish', url: deepLink, style: 'success' }],
+      ],
+    };
 
     let telegramId: string | null = null;
     let meta: any = {};
 
-    const caption = `${post.content}\n\n👉 ${botLink}`;
+    const caption = post.content;
 
     if (images.length > 1) {
       const media = images.slice(0, 10).map((img, idx) => ({
@@ -497,12 +506,30 @@ export class PostsService {
       const first = Array.isArray(res.result) ? res.result[0] : undefined;
       telegramId = first?.message_id ? String(first.message_id) : null;
       meta = res.result;
+
+      // The Telegram Bot API doesn't allow reply_markup on sendMediaGroup, so
+      // the buttons are attached via a small follow-up message replying to
+      // the album instead. Non-critical — the album itself already went out.
+      const buttonRes = await this.telegram.sendRequest(token, 'sendMessage', {
+        chat_id: post.channel.telegramId,
+        text: '👉',
+        reply_markup: replyMarkup,
+        ...(first?.message_id
+          ? { reply_to_message_id: first.message_id }
+          : {}),
+      });
+      if (!buttonRes.ok) {
+        this.logger.warn(
+          `Failed to attach buttons to media group post ${post.id}: ${buttonRes.description}`,
+        );
+      }
     } else if (images.length === 1) {
       const res = await this.telegram.sendRequest(token, 'sendPhoto', {
         chat_id: post.channel.telegramId,
         photo: images[0].url,
         caption,
         parse_mode: 'HTML',
+        reply_markup: replyMarkup,
       });
 
       if (!res.ok) {
@@ -516,6 +543,7 @@ export class PostsService {
         chat_id: post.channel.telegramId,
         text: caption,
         parse_mode: 'HTML',
+        reply_markup: replyMarkup,
       });
 
       if (!res.ok) {
@@ -564,12 +592,22 @@ export class PostsService {
       throw new BadRequestException('Channel has no connected bot');
 
     const token = this.encryption.decrypt(post.channel.connectedBot.token);
+    // Re-send the same buttons — editMessageCaption/Text drop the existing
+    // inline keyboard unless reply_markup is passed again.
+    const deepLink = `https://t.me/${post.channel.connectedBot.username}?start=product_${post.productId}`;
+    const replyMarkup = {
+      inline_keyboard: [
+        [{ text: "📋 Ma'lumot olish", url: deepLink, style: 'primary' }],
+        [{ text: '🛒 Sotib olish', url: deepLink, style: 'success' }],
+      ],
+    };
     try {
       const res = await this.telegram.sendRequest(token, 'editMessageCaption', {
         chat_id: post.channel.telegramId,
         message_id: Number(post.telegramId),
         caption: post.content,
         parse_mode: 'HTML',
+        reply_markup: replyMarkup,
       });
 
       if (!res.ok) {
@@ -590,6 +628,7 @@ export class PostsService {
           message_id: Number(post.telegramId),
           text: post.content,
           parse_mode: 'HTML',
+          reply_markup: replyMarkup,
         });
 
         if (!res.ok) {

@@ -10,6 +10,7 @@ export interface FormData {
   images: number[]
   status: "ACTIVE" | "DRAFT" | "ARCHIVED"
   fields: Record<string, any>
+  autoPublish: boolean
 }
 
 export function useDynamicProductForm(options?: {
@@ -27,6 +28,7 @@ export function useDynamicProductForm(options?: {
       images: options?.initialValues?.images ?? [],
       status: options?.initialValues?.status ?? "DRAFT",
       fields: options?.initialValues?.fields ?? {},
+      autoPublish: options?.initialValues?.autoPublish ?? true,
     },
     mode: "onChange",
   })
@@ -52,6 +54,7 @@ export function useDynamicProductForm(options?: {
         images: data.images,
         fields,
         status: data.status.toUpperCase(),
+        autoPublish: data.autoPublish,
       }
 
       await createProductMutation.mutateAsync(payload)

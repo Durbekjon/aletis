@@ -4,6 +4,7 @@ import {
   IsNumber,
   IsArray,
   IsOptional,
+  IsBoolean,
   ValidateNested,
   IsInt,
   Min,
@@ -120,4 +121,15 @@ export class CreateProductDto {
   @ValidateNested({ each: true })
   @Type(() => CreateFieldValueDto)
   fields: CreateFieldValueDto[];
+
+  @ApiPropertyOptional({
+    description:
+      'Whether to automatically publish this product to the organization\'s connected Telegram channel (only takes effect if a channel is connected and status is ACTIVE)',
+    default: true,
+    example: true,
+  })
+  @IsOptional()
+  @Type(() => Boolean)
+  @IsBoolean()
+  autoPublish: boolean = true;
 }
