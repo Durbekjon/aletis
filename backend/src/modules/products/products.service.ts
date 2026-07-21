@@ -226,6 +226,32 @@ export class ProductsService {
   }
 
   /**
+   * Coerces a raw field value to the JS type its schema field type expects.
+   * JSON bodies commonly carry numbers/booleans as strings (e.g. "120",
+   * "true"), which would otherwise fail validateFieldValue's typeof checks
+   * even though the value is semantically valid.
+   */
+  private coerceFieldValue(fieldType: FieldType, value: any): any {
+    if (value === null || value === undefined || value === '') return value;
+
+    switch (fieldType) {
+      case FieldType.NUMBER:
+        if (typeof value === 'string' && value.trim() !== '' && !isNaN(Number(value))) {
+          return Number(value);
+        }
+        return value;
+      case FieldType.BOOLEAN:
+        if (typeof value === 'string') {
+          if (value.toLowerCase() === 'true') return true;
+          if (value.toLowerCase() === 'false') return false;
+        }
+        return value;
+      default:
+        return value;
+    }
+  }
+
+  /**
    * Validates field value based on field type and requirements
    */
   private validateFieldValue(
@@ -413,6 +439,7 @@ export class ProductsService {
             `Field with ID ${fieldValue.fieldId} not found in schema`,
           );
         }
+        fieldValue.value = this.coerceFieldValue(field.type, fieldValue.value);
         this.validateFieldValue(field, fieldValue.value);
       }
 
@@ -520,7 +547,11 @@ export class ProductsService {
 
       // Auto-publish the new product to the organization's connected channel
       // (fire-and-forget — product creation must never fail because of posting).
-      if (createProductDto.status === 'ACTIVE' && this.postsService) {
+      if (
+        createProductDto.status === 'ACTIVE' &&
+        createProductDto.autoPublish !== false &&
+        this.postsService
+      ) {
         this.postsService
           .autoPostProduct(result.product.id, organizationId)
           .catch((err) =>
@@ -589,6 +620,10 @@ export class ProductsService {
               );
             }
             if (fieldValue.value !== undefined) {
+              fieldValue.value = this.coerceFieldValue(
+                field.type,
+                fieldValue.value,
+              );
               this.validateFieldValue(field, fieldValue.value);
             }
           }

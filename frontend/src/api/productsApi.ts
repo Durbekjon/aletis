@@ -28,6 +28,8 @@ export interface CreateProductRequest {
     fieldId: number
     value: string | number | boolean | Date | any
   }[]
+  status?: string
+  autoPublish?: boolean
 }
 
 export interface UpdateProductRequest {

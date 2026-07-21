@@ -34,6 +34,7 @@ import { useProductSchema } from "@/src/context/ProductSchemaContext"
 import { useDynamicProductForm, type FormData } from "@/src/hooks/useDynamicProductForm"
 import { useUploadManyFilesMutation, useDeleteFileByKeyMutation } from "@/src/hooks/useFilesQuery"
 import { useCompleteBarcodeMutation } from "@/src/hooks/useBarcodeCatalogQuery"
+import { useChannelsQuery } from "@/src/hooks/useChannelsQuery"
 import { findMatchingField } from "@/src/lib/barcode-field-matching"
 import { BarcodeScanDialog, type BarcodeScanResolution } from "@/components/product/barcode-scan-dialog"
 import type { ProductSchemaField } from "@/lib/types/product"
@@ -54,6 +55,8 @@ export function DynamicProductForm({ initialValues, initialSchemaId, onSubmitImp
   const { form, onSubmit, isLoading: formLoading } = useDynamicProductForm({ initialValues, onSubmitImpl })
   const uploadFilesMutation = useUploadManyFilesMutation()
   const deleteFileByKeyMutation = useDeleteFileByKeyMutation()
+  const { data: channelsData } = useChannelsQuery()
+  const hasConnectedChannel = channelsData?.items.some((c) => c.isConnected) ?? false
   
   // Maintain numeric image IDs in form while previewing keys/URLs
   const [images, setImages] = useState<number[]>(initialValues?.images ?? [])
@@ -69,8 +72,12 @@ export function DynamicProductForm({ initialValues, initialSchemaId, onSubmitImp
     register,
     handleSubmit,
     setValue,
+    watch,
     formState: { errors },
   } = form
+
+  const watchedStatus = watch("status")
+  const watchedAutoPublish = watch("autoPublish")
 
   const currentSchema = schemas.find(schema => schema.id === selectedSchema)
 
@@ -614,6 +621,27 @@ export function DynamicProductForm({ initialValues, initialSchemaId, onSubmitImp
               </Select>
               </div>
             </div>
+
+            {/* Auto-publish to connected Telegram channel — create mode only,
+                and only offered when the org actually has a channel to post to. */}
+            {!initialValues && hasConnectedChannel && (
+              <div className="flex items-center justify-between rounded-lg border p-3">
+                <div className="space-y-0.5 pr-4">
+                  <Label htmlFor="autoPublish">{t('productForm.autoPublish')}</Label>
+                  <p className="text-sm text-muted-foreground">
+                    {watchedStatus === 'ACTIVE'
+                      ? t('productForm.autoPublishDesc')
+                      : t('productForm.autoPublishRequiresActive')}
+                  </p>
+                </div>
+                <Switch
+                  id="autoPublish"
+                  checked={watchedAutoPublish}
+                  onCheckedChange={(checked) => setValue('autoPublish', checked, { shouldDirty: true })}
+                />
+              </div>
+            )}
+
             {/* Dynamic Schema Fields */}
             {currentSchema && currentSchema.fields.length > 0 && (
               <>
