@@ -112,6 +112,78 @@ export class ProductSearchService {
     }
   }
 
+  /**
+   * Visual product search — a customer sent a photo. Weaviate's ProductImage
+   * collection doesn't store image URLs either, so the same small Postgres
+   * lookup enriches the matched IDs with image + full product details.
+   */
+  async searchByImage(
+    organizationId: number,
+    base64Image: string,
+    lang: string | null | undefined,
+    limit = 5,
+  ): Promise<ProductSearchResult> {
+    if (!this.embadingService.isAvailable()) {
+      return { matches: [], noResultText: '' };
+    }
+
+    const hits = await this.embadingService.searchByImageBase64(
+      base64Image,
+      organizationId,
+      limit,
+    );
+
+    if (!hits || hits.length === 0) {
+      return { matches: [], noResultText: '' };
+    }
+
+    const productIds = hits
+      .map((h) => h.id)
+      .filter((id) => typeof id === 'number');
+    if (productIds.length === 0) {
+      return { matches: [], noResultText: '' };
+    }
+
+    const products = await this.prisma.product.findMany({
+      where: { id: { in: productIds }, organizationId, isDeleted: false },
+      select: {
+        id: true,
+        name: true,
+        price: true,
+        currency: true,
+        images: { select: { url: true }, take: 1 },
+      },
+    });
+    const productById = new Map(products.map((p) => [p.id, p]));
+
+    const matches: ProductSearchMatch[] = [];
+    for (const hit of hits) {
+      const product = productById.get(hit.id);
+      if (!product) continue;
+      matches.push({
+        id: product.id,
+        caption: this.buildCaption(
+          product.name,
+          product.price,
+          String(product.currency),
+          hit.description,
+          lang,
+        ),
+        imageKey: product.images[0]?.url ?? null,
+      });
+    }
+
+    return { matches, noResultText: '' };
+  }
+
+  /** Telegram HTML parse_mode requires these to be escaped in text content. */
+  private escapeHtml(text: string): string {
+    return text
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+  }
+
   private buildCaption(
     name: string,
     price: number,
@@ -119,7 +191,7 @@ export class ProductSearchService {
     description: string | undefined,
     lang: string | null | undefined,
   ): string {
-    const desc = description ? description.substring(0, 100) : '';
+    const desc = description ? this.escapeHtml(description.substring(0, 100)) : '';
     const footer =
       lang === 'ru'
         ? 'Хотите заказать это?'
@@ -127,7 +199,7 @@ export class ProductSearchService {
           ? 'Would you like to order this?'
           : 'Buyurtma bermoqchimisiz?';
 
-    return `🛍️ ${name}\n💰 ${price} ${currency}${desc ? `\n✨ ${desc}` : ''}\n\n${footer}`;
+    return `🛍️ <b>${this.escapeHtml(name)}</b>\n💰 ${price} ${currency}${desc ? `\n✨ ${desc}` : ''}\n\n${footer}`;
   }
 
   private async searchViaFullCatalogFallback(

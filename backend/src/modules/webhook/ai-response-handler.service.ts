@@ -493,58 +493,6 @@ export class AiResponseHandlerService {
   }
 
   /**
-   * Format product search results into a readable message
-   */
-  async formatProductSearchResults(
-    searchResults: any[],
-    language: string,
-  ): Promise<string> {
-    if (!searchResults || searchResults.length === 0) {
-      return language === 'uz'
-        ? "Kechirasiz, so'rovingiz bo'yicha hech narsa topilmadi."
-        : language === 'ru'
-          ? 'Извините, по вашему запросу ничего не найдено.'
-          : "I couldn't find any products matching your query.";
-    }
-
-    const isUzbek = language === 'uz';
-    const isRussian = language === 'ru';
-    // const isEnglish = language === 'en'; // Default
-
-    let titleText = 'Here is what I found:\n\n';
-    let footerText = 'Would you like to order any of these?';
-
-    if (isUzbek) {
-      titleText = `Mana topilgan mahsulotlar:\n\n`;
-      footerText = 'Birortasiga buyurtma beramizmi?';
-    } else if (isRussian) {
-      titleText = `Вот что я нашел:\n\n`;
-      footerText = 'Хотите заказать что-нибудь из этого?';
-    }
-
-    let responseText = titleText;
-
-    searchResults.forEach((p) => {
-      // Handle both Weaviate object structure (properties in 'properties') and flat structure
-      const props = p.properties ? (p.properties as any) : p;
-
-      const price = props.price
-        ? `${props.price} ${props.currency || 'USD'}`
-        : 'Price not available';
-      const name = props.name || 'Unknown Product';
-      const description = props.description
-        ? props.description.substring(0, 100) + '...'
-        : '';
-
-      responseText += `🛍️ *${name}*\n💰 ${price}\n📝 ${description}\n\n`;
-    });
-
-    responseText += footerText;
-
-    return responseText;
-  }
-
-  /**
    * Handle SEARCH_PRODUCT intent
    */
   private async handleSearchProductIntent(

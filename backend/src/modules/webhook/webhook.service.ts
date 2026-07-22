@@ -15,7 +15,7 @@ import {
   FlushResult,
 } from '@core/message-buffer/message-buffer.service';
 import { PrismaService } from '@core/prisma/prisma.service';
-import { EmbadingService } from '@modules/embading/embading.service';
+import { ProductSearchService } from '@modules/products/product-search.service';
 import { ProductCard, ProcessedAiResponse } from './ai-response-handler.service';
 import { CustomerIntelligenceService } from '@modules/customer-intelligence/customer-intelligence.service';
 import { RetentionService } from '@modules/retention/retention.service';
@@ -40,7 +40,7 @@ export class WebhookService {
     private readonly aiResponseHandler: AiResponseHandlerService,
     private readonly messageBufferService: MessageBufferService,
     private readonly prisma: PrismaService,
-    private readonly embadingService: EmbadingService,
+    private readonly productSearchService: ProductSearchService,
     private readonly customerIntelligenceService: CustomerIntelligenceService,
     private readonly retentionService: RetentionService,
     private readonly usageService: UsageService,
@@ -238,34 +238,24 @@ export class WebhookService {
           const base64Image = fileData.buffer.toString('base64');
 
           // Visual product search. The caption (if any) is not yet used for a
-          // combined text+image query — searchByImageBase64 ranks purely by
-          // image similarity. Returns [] when Weaviate is unavailable.
+          // combined text+image query — searchByImage ranks purely by image
+          // similarity. Returns [] when Weaviate is unavailable.
           this.logger.log(
             `Performing image search for customer ${customer.id}`,
           );
-          const searchResults =
-            await this.embadingService.searchByImageBase64(
-              base64Image,
-              organizationId,
-              5,
-            );
+          const { matches } = await this.productSearchService.searchByImage(
+            organizationId,
+            base64Image,
+            customer.lang,
+            5,
+          );
 
-          // Format results similar to handleSearchProductIntent
-          if (searchResults.length > 0) {
-            const responseText =
-              await this.aiResponseHandler.formatProductSearchResults(
-                searchResults,
-                customer.lang || 'uz',
-              );
-            await this.telegramService.sendRequest(
-              decyptedToken,
-              'sendMessage',
-              {
-                chat_id: customer.telegramId,
-                text: responseText,
-                parse_mode: 'HTML',
-              },
-            );
+          if (matches.length > 0) {
+            const cards: ProductCard[] = matches.map((m) => ({
+              caption: m.caption,
+              imageKey: m.imageKey,
+            }));
+            await this.sendProductCards(decyptedToken, customer, bot.id, cards);
             return { status: 'ok' };
           } else {
             await this.telegramService.sendRequest(
@@ -593,54 +583,11 @@ export class WebhookService {
       try {
         // Product search results: send each product as a separate photo+caption
         if (processedResponse.productCards && processedResponse.productCards.length > 0) {
-          const baseUrl =
-            this.configService.get<string>('BASE_URL') ||
-            process.env.BASE_URL ||
-            '';
-          const toAbsolute = (key: string) => {
-            if (/^https?:\/\//i.test(key)) return key;
-            const left = baseUrl.replace(/\/+$/g, '');
-            const right = key.replace(/^\/+/, '');
-            return `${left}/${right}`;
-          };
-
-          for (const card of processedResponse.productCards as ProductCard[]) {
-            if (card.imageKey) {
-              const photoUrl = toAbsolute(card.imageKey);
-              this.logger.log(`Sending product photo: ${photoUrl}`);
-              const res = await this.telegramService.sendRequest(
-                decryptedToken,
-                'sendPhoto',
-                {
-                  chat_id: customer.telegramId,
-                  photo: photoUrl,
-                  caption: card.caption,
-                  parse_mode: 'HTML',
-                },
-              );
-              if (!res.ok) {
-                this.logger.warn(`sendPhoto failed (${res.description}), falling back to text`);
-                await this.telegramService.sendRequest(decryptedToken, 'sendMessage', {
-                  chat_id: customer.telegramId,
-                  text: card.caption,
-                  parse_mode: 'HTML',
-                });
-              }
-            } else {
-              this.logger.warn(`Product card has no imageKey, sending text only`);
-              await this.telegramService.sendRequest(decryptedToken, 'sendMessage', {
-                chat_id: customer.telegramId,
-                text: card.caption,
-                parse_mode: 'HTML',
-              });
-            }
-          }
-
-          await this.messagesService._saveMessage(
-            customer.id,
-            processedResponse.productCards.map((c) => c.caption).join('\n\n'),
-            'BOT',
+          await this.sendProductCards(
+            decryptedToken,
+            customer,
             bot.id,
+            processedResponse.productCards as ProductCard[],
           );
           return;
         }
@@ -862,6 +809,63 @@ export class WebhookService {
           );
       }
     }
+  }
+
+  /**
+   * Sends each product search result as its own Telegram photo+caption (with
+   * a text-only fallback if the photo send fails or there's no image), then
+   * logs the combined captions as a single bot message. Shared by the
+   * SEARCH_PRODUCT intent flow and the customer-photo visual search flow.
+   */
+  private async sendProductCards(
+    token: string,
+    customer: Customer,
+    botId: number,
+    cards: ProductCard[],
+  ): Promise<void> {
+    const baseUrl =
+      this.configService.get<string>('BASE_URL') || process.env.BASE_URL || '';
+    const toAbsolute = (key: string) => {
+      if (/^https?:\/\//i.test(key)) return key;
+      const left = baseUrl.replace(/\/+$/g, '');
+      const right = key.replace(/^\/+/, '');
+      return `${left}/${right}`;
+    };
+
+    for (const card of cards) {
+      if (card.imageKey) {
+        const photoUrl = toAbsolute(card.imageKey);
+        this.logger.log(`Sending product photo: ${photoUrl}`);
+        const res = await this.telegramService.sendRequest(token, 'sendPhoto', {
+          chat_id: customer.telegramId,
+          photo: photoUrl,
+          caption: card.caption,
+          parse_mode: 'HTML',
+        });
+        if (!res.ok) {
+          this.logger.warn(`sendPhoto failed (${res.description}), falling back to text`);
+          await this.telegramService.sendRequest(token, 'sendMessage', {
+            chat_id: customer.telegramId,
+            text: card.caption,
+            parse_mode: 'HTML',
+          });
+        }
+      } else {
+        this.logger.warn(`Product card has no imageKey, sending text only`);
+        await this.telegramService.sendRequest(token, 'sendMessage', {
+          chat_id: customer.telegramId,
+          text: card.caption,
+          parse_mode: 'HTML',
+        });
+      }
+    }
+
+    await this.messagesService._saveMessage(
+      customer.id,
+      cards.map((c) => c.caption).join('\n\n'),
+      'BOT',
+      botId,
+    );
   }
 
   private markdownToHtml(text: string): string {
