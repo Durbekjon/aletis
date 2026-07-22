@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { BullModule } from '@nestjs/bullmq';
 import { AiUsageModule } from '@modules/ai-usage/ai-usage.module';
+import { EmbadingModule } from '@modules/embading/embading.module';
 import {
   CUSTOMER_INTELLIGENCE_QUEUE,
   RETENTION_QUEUE,
@@ -18,10 +19,13 @@ import { AdminOrgsController } from './admin-orgs.controller';
 import { AdminOrgsService } from './admin-orgs.service';
 import { AdminJobsController } from './admin-jobs.controller';
 import { AdminJobsService } from './admin-jobs.service';
+import { AdminProductsController } from './admin-products.controller';
+import { AdminProductsService } from './admin-products.service';
 
 @Module({
   imports: [
     AiUsageModule,
+    EmbadingModule,
     BullModule.registerQueue(
       { name: CUSTOMER_INTELLIGENCE_QUEUE },
       { name: RETENTION_QUEUE },
@@ -38,7 +42,13 @@ import { AdminJobsService } from './admin-jobs.service';
     AdminRevenueController,
     AdminOrgsController,
     AdminJobsController,
+    AdminProductsController,
   ],
-  providers: [AdminRevenueService, AdminOrgsService, AdminJobsService],
+  providers: [
+    AdminRevenueService,
+    AdminOrgsService,
+    AdminJobsService,
+    AdminProductsService,
+  ],
 })
 export class AdminModule {}

@@ -4,6 +4,7 @@ import weaviate, {
   WeaviateClient,
   vectorizer,
   dataType,
+  Filters,
 } from 'weaviate-client';
 import { ProductResponseDto } from '@modules/products/dto/product-response.dto';
 import { v5 as uuidv5 } from 'uuid';
@@ -44,6 +45,30 @@ export class EmbadingService implements OnModuleInit {
    */
   isAvailable(): boolean {
     return this.available && !!this.client;
+  }
+
+  private productUuid(productId: number): string {
+    return uuidv5(productId.toString(), this.UUID_NAMESPACE);
+  }
+
+  /** Scopes a Product-collection query to one org's active, non-deleted products. */
+  private productOrgFilter(organizationId: number) {
+    const collection = this.client.collections.get('Product');
+    return Filters.and(
+      collection.filter.byProperty('organizationId').equal(organizationId.toString()),
+      collection.filter.byProperty('isDeleted').equal(false),
+      collection.filter.byProperty('status').equal('ACTIVE'),
+    );
+  }
+
+  /** Scopes a ProductImage-collection query to images of one org's active, non-deleted products. */
+  private productImageOrgFilter(organizationId: number) {
+    const collection = this.client.collections.get('ProductImage');
+    return Filters.and(
+      collection.filter.byRef('product').byProperty('organizationId').equal(organizationId.toString()),
+      collection.filter.byRef('product').byProperty('isDeleted').equal(false),
+      collection.filter.byRef('product').byProperty('status').equal('ACTIVE'),
+    );
   }
 
   private async _createProductCollection() {
@@ -106,7 +131,7 @@ export class EmbadingService implements OnModuleInit {
     const imageCollection = this.client.collections.get('ProductImage');
 
     // Generate deterministic UUID for the product
-    const productUuid = uuidv5(product.id.toString(), this.UUID_NAMESPACE);
+    const productUuid = this.productUuid(product.id);
 
     // Extract description from fields if available
     const descriptionField = product.fields.find(
@@ -154,7 +179,69 @@ export class EmbadingService implements OnModuleInit {
     }
   }
 
-  async searchByText(query: string, limit = 10) {
+  /**
+   * Removes a product (and all its linked images) from the Weaviate index.
+   * Safe to call even if the product was never indexed — deletes are
+   * best-effort and log rather than throw.
+   */
+  async deleteProductEmbedding(productId: number): Promise<void> {
+    if (!this.client) return;
+    const productCollection = this.client.collections.get('Product');
+    const imageCollection = this.client.collections.get('ProductImage');
+
+    try {
+      await imageCollection.data.deleteMany(
+        imageCollection.filter.byRef('product').byProperty('productId').equal(productId),
+      );
+    } catch (error) {
+      this.logger.error(
+        `Failed to delete image embeddings for product ${productId}: ${error.message}`,
+      );
+    }
+
+    try {
+      await productCollection.data.deleteById(this.productUuid(productId));
+    } catch (error) {
+      this.logger.error(
+        `Failed to delete product embedding ${productId}: ${error.message}`,
+      );
+    }
+  }
+
+  /**
+   * Re-syncs a product's Weaviate entry after a Postgres update — deletes the
+   * old Product + ProductImage objects and re-inserts fresh ones, since name/
+   * price/description/images may all have changed.
+   */
+  async updateProductEmbedding(product: ProductResponseDto): Promise<void> {
+    if (!this.client) return;
+    await this.deleteProductEmbedding(product.id);
+    await this.createProductEmbedding(product);
+  }
+
+  /**
+   * One-off backfill helper: walks every indexed Product object and deletes
+   * any whose productId is no longer in `liveProductIds` — cleans up ghost
+   * entries left behind by deletes that happened before delete-on-delete
+   * sync existed. Returns how many were removed.
+   */
+  async sweepOrphanedEmbeddings(liveProductIds: Set<number>): Promise<number> {
+    if (!this.isAvailable()) return 0;
+    const collection = this.client.collections.get('Product');
+    let removed = 0;
+    for await (const obj of collection.iterator({
+      returnProperties: ['productId'],
+    })) {
+      const productId = (obj.properties as any)?.productId;
+      if (typeof productId === 'number' && !liveProductIds.has(productId)) {
+        await this.deleteProductEmbedding(productId);
+        removed++;
+      }
+    }
+    return removed;
+  }
+
+  async searchByText(query: string, organizationId: number, limit = 10) {
     if (!this.isAvailable()) {
       this.logger.warn('searchByText skipped — Weaviate unavailable');
       return [];
@@ -162,6 +249,7 @@ export class EmbadingService implements OnModuleInit {
     const collection = this.client.collections.get('Product');
     const result = await collection.query.nearText(query, {
       limit: limit,
+      filters: this.productOrgFilter(organizationId),
       returnProperties: [
         'productId',
         'name',
@@ -173,12 +261,12 @@ export class EmbadingService implements OnModuleInit {
     return result.objects;
   }
 
-  async searchByImage(filename: string, limit = 10) {
+  async searchByImage(filename: string, organizationId: number, limit = 10) {
     const base64 = await this.imageToBase64Service.convert(filename);
-    return this.searchByImageBase64(base64, limit);
+    return this.searchByImageBase64(base64, organizationId, limit);
   }
 
-  async searchByImageBase64(base64: string, limit = 10) {
+  async searchByImageBase64(base64: string, organizationId: number, limit = 10) {
     if (!this.isAvailable()) {
       this.logger.warn('searchByImageBase64 skipped — Weaviate unavailable');
       return [];
@@ -188,6 +276,7 @@ export class EmbadingService implements OnModuleInit {
     // Search for images similar to the input image
     const result = await collection.query.nearImage(base64, {
       limit: limit,
+      filters: this.productImageOrgFilter(organizationId),
       returnReferences: [
         {
           linkOn: 'product',
@@ -235,10 +324,11 @@ export class EmbadingService implements OnModuleInit {
   async hybridSearch(options: {
     queryText?: string;
     queryImageFilename?: string;
+    organizationId: number;
     limit?: number;
     alpha?: number; // 0 = text only, 1 = vector only
   }) {
-    const { queryText, queryImageFilename, limit = 10, alpha = 0.5 } = options;
+    const { queryText, queryImageFilename, organizationId, limit = 10, alpha = 0.5 } = options;
 
     if (!queryText && !queryImageFilename) {
       throw new Error(
@@ -257,6 +347,7 @@ export class EmbadingService implements OnModuleInit {
       const result = await collection.query.hybrid(queryText, {
         limit,
         alpha,
+        filters: this.productOrgFilter(organizationId),
         returnProperties: [
           'productId',
           'name',
@@ -272,7 +363,7 @@ export class EmbadingService implements OnModuleInit {
     // the ProductImage collection and return the linked Products. Text is not
     // blended into retrieval here; a true cross-collection hybrid isn't wired.
     if (queryImageFilename) {
-      return this.searchByImage(queryImageFilename, limit);
+      return this.searchByImage(queryImageFilename, organizationId, limit);
     }
 
     return [];

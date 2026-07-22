@@ -3,7 +3,7 @@ import { OrdersService } from '@modules/orders/orders.service';
 import { AiResponse, GeminiService } from '@core/gemini/gemini.service';
 import { Customer, Order } from '@prisma/client';
 import { EmbadingService } from '@modules/embading/embading.service';
-import { ProductsService } from '@modules/products/products.service';
+import { ProductSearchService } from '@modules/products/product-search.service';
 import { SupportService } from '@modules/support/support.service';
 import { PaymentsService } from '@modules/payments/payments.service';
 import { PaymentProvider } from '@prisma/client';
@@ -32,7 +32,7 @@ export class AiResponseHandlerService {
     private readonly ordersService: OrdersService,
     private readonly geminiService: GeminiService,
     private readonly embadingService: EmbadingService,
-    private readonly productsService: ProductsService,
+    private readonly productSearchService: ProductSearchService,
     private readonly supportService: SupportService,
     private readonly paymentsService: PaymentsService,
   ) {}
@@ -566,18 +566,11 @@ export class AiResponseHandlerService {
     try {
       this.logger.log(`Searching for products with query: "${searchQuery}"`);
 
-      const products = await this.productsService.getProductsForOrganization(organizationId);
-      this.logger.log(`Loaded ${products.length} products for org ${organizationId}`);
-
-      if (products.length === 0) {
-        return { text: aiResponse.text || 'Hozircha do\'konimizda mahsulotlar mavjud emas.' };
-      }
-
-      const { matches, noResultText } = await this.geminiService.matchProductsInContext(
-        products,
+      const { matches, noResultText } = await this.productSearchService.search(
+        organizationId,
         searchQuery,
         originalUserMessage || searchQuery,
-        { organizationId },
+        customer.lang,
       );
 
       this.logger.log(`Matched products: ${JSON.stringify(matches.map((m) => m.id))}`);
@@ -588,10 +581,9 @@ export class AiResponseHandlerService {
         };
       }
 
-      const productById = new Map(products.map((p) => [p.id, p]));
       const productCards: ProductCard[] = matches.map((m) => ({
         caption: m.caption,
-        imageKey: productById.get(m.id)?.imageKey ?? null,
+        imageKey: m.imageKey,
       }));
 
       this.logger.log(`Product cards imageKeys: ${JSON.stringify(productCards.map((c) => c.imageKey))}`);

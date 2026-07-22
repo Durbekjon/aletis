@@ -195,7 +195,7 @@ export class GeminiService {
 
     const productInfo =
       productContext ||
-      'Product catalog is available via search. You do NOT have the full product list loaded. You MUST use [INTENT:SEARCH_PRODUCT] to find products.';
+      'No product count available. You do NOT have the full product list loaded. You MUST use [INTENT:SEARCH_PRODUCT] to find products.';
     const baseUrl = this.configService.get<string>('PUBLIC_BASE_URL') || '';
 
     let langInstruction = '';
@@ -297,13 +297,17 @@ CURRENT INVENTORY STATUS:
 ${productInfo}
 
 INVENTORY RULES:
-1. The inventory above is the FULL product catalog. You have all available products listed.
-2. When user sends a greeting (salom, hi, hello, привет, etc.) with no specific request:
-   - Greet them warmly AND briefly list the available products by name.
-   - Example: "Salom! 👋 Bizda quyidagi mahsulotlar bor: [product names]. Qaysi biri sizni qiziqtiradi?"
-3. If user asks about a specific product, use [INTENT:SEARCH_PRODUCT] so we can show the product with its photo.
-4. Do NOT say "we don't have X" unless the product is truly not in the inventory list above.
-5. Do NOT make up products that are not in the list.
+1. You do NOT have the product catalog loaded — only the count above. You MUST use
+   [INTENT:SEARCH_PRODUCT] with a search query to look up actual products before
+   naming, pricing, or offering any specific item.
+2. When user sends a greeting (salom, hi, hello, привет, etc.) with no specific
+   request, greet them warmly and ask what they're looking for — do NOT list
+   product names, since you don't have them loaded.
+3. If user asks about a specific product or category, use [INTENT:SEARCH_PRODUCT]
+   so we can search for it and show it with its photo.
+4. Do NOT say "we don't have X" unless a search for X returned nothing.
+5. Do NOT make up products or invent details — only describe what a search result
+   returns.
 
 ${
   userOrders && userOrders.length > 0

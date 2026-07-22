@@ -2,11 +2,10 @@ import { Injectable, Logger, NotFoundException, Optional } from '@nestjs/common'
 import { WebhookDto } from './dto/webhook.dto';
 import { BotsService } from '@modules/bots/bots.service';
 import { CustomersService } from '@modules/customers/customers.service';
-import { Bot, Customer, Message } from '@prisma/client';
+import { Bot, Customer, Message, ProductStatus } from '@prisma/client';
 import { MessagesService } from '@modules/messages/messages.service';
 import { ConfigService } from '@nestjs/config';
 import { GeminiService } from '@core/gemini/gemini.service';
-import { ProductsService } from '@modules/products/products.service';
 import { TelegramService } from '@modules/telegram/telegram.service';
 import { EncryptionService } from '@core/encryption/encryption.service';
 import { OrdersService } from '@modules/orders/orders.service';
@@ -35,7 +34,6 @@ export class WebhookService {
     private readonly messagesService: MessagesService,
     private readonly configService: ConfigService,
     private readonly geminiService: GeminiService,
-    private readonly productsService: ProductsService,
     private readonly telegramService: TelegramService,
     private readonly encryptionService: EncryptionService,
     private readonly ordersService: OrdersService,
@@ -246,7 +244,11 @@ export class WebhookService {
             `Performing image search for customer ${customer.id}`,
           );
           const searchResults =
-            await this.embadingService.searchByImageBase64(base64Image, 5);
+            await this.embadingService.searchByImageBase64(
+              base64Image,
+              organizationId,
+              5,
+            );
 
           // Format results similar to handleSearchProductIntent
           if (searchResults.length > 0) {
@@ -1098,29 +1100,28 @@ export class WebhookService {
     customer: Customer,
     botId?: number,
   ) {
-    const [userOrders, products, organization] = await Promise.all([
+    const [userOrders, productCount, organization] = await Promise.all([
       this.ordersService.getOrdersForAI(organizationId, customer.id),
-      this.productsService.getProductsForOrganization(organizationId),
+      this.prisma.product.count({
+        where: {
+          organizationId,
+          isDeleted: false,
+          status: ProductStatus.ACTIVE,
+        },
+      }),
       this.prisma.organization.findUnique({
         where: { id: organizationId },
         select: { name: true, description: true, category: true },
       }),
     ]);
 
+    // The full catalog is deliberately NOT loaded here — it used to be
+    // serialized into every single message's prompt (unbounded cost that
+    // scaled with catalog size). The AI is told only the count and must use
+    // [INTENT:SEARCH_PRODUCT] to look products up via real vector search.
     const productContext =
-      products.length > 0
-        ? `AVAILABLE PRODUCTS (${products.length} total):\n` +
-          products
-            .map((p) => {
-              const stock =
-                p.quantity <= 0
-                  ? ' | OUT OF STOCK — do NOT offer or accept orders for this'
-                  : p.quantity <= 5
-                    ? ` | only ${p.quantity} left in stock`
-                    : '';
-              return `- ID:${p.id} | ${p.name} | ${p.price} ${p.currency}${p.description ? ` | ${p.description.substring(0, 60)}` : ''}${stock}`;
-            })
-            .join('\n')
+      productCount > 0
+        ? `This business has ${productCount} active product(s) in its catalog.`
         : 'No products are currently available.';
 
     const orgContext = organization
