@@ -1805,6 +1805,7 @@ Message:`;
       price: number;
       currency: string;
       description: string;
+      quantity?: number;
     }[],
     searchQuery: string,
     userMessage: string,
@@ -1815,10 +1816,15 @@ Message:`;
   }> {
     try {
       const productList = products
-        .map(
-          (p) =>
-            `ID:${p.id} | ${p.name} | ${p.price} ${p.currency}${p.description ? ` | ${p.description.substring(0, 80)}` : ''}`,
-        )
+        .map((p) => {
+          const stock =
+            p.quantity === undefined
+              ? ''
+              : p.quantity <= 0
+                ? ' | OUT OF STOCK'
+                : ` | ${p.quantity} in stock`;
+          return `ID:${p.id} | ${p.name} | ${p.price} ${p.currency}${p.description ? ` | ${p.description.substring(0, 80)}` : ''}${stock}`;
+        })
         .join('\n');
 
       const lang = userMessage;
@@ -1830,9 +1836,10 @@ ${productList}
 Return a JSON object (no markdown, no code block) with:
 - "matches": array of matched products. Each item: { "id": <integer product ID>, "caption": "<short attractive product card text>" }
   - caption must be in the SAME language as "${lang}"
-  - caption format: product name on first line, price, 1-2 line catchy description, end with "Buyurtma bermoqchimisiz?" (or equivalent in detected language)
-  - Use emojis in caption: 🛍️ for name, 💰 for price, ✨ for features
-  - Keep caption under 200 characters total
+  - caption format: product name on first line, price on next line, stock status (in stock count, or out of stock) on next line, then 1-2 line catchy description, end with "Buyurtma bermoqchimisiz?" (or equivalent in detected language) — but if OUT OF STOCK, do not ask this, say it's unavailable instead
+  - Use Telegram HTML formatting, NOT markdown: wrap the product name in <b>...</b> for bold. Do NOT use *asterisks* for bold — they render literally.
+  - Use emojis in caption: 🛍️ for name, 💰 for price, 📦 for stock, ✨ for features
+  - Keep caption under 250 characters total
 - "noResultText": short message in the SAME language as "${lang}" if nothing matched. Empty string if something matched.
 
 Only match products from the list above. Never suggest outside items.

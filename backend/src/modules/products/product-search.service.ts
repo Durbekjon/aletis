@@ -82,8 +82,9 @@ export class ProductSearchService {
         return { matches: [], noResultText: '' };
       }
 
-      // Weaviate's Product collection doesn't store image URLs — one small
-      // scoped Postgres lookup for just the matched IDs (not the full catalog).
+      // Weaviate's Product collection doesn't store image URLs or live stock
+      // — one small scoped Postgres lookup for just the matched IDs (not the
+      // full catalog) gets both, always fresh.
       const products = await this.prisma.product.findMany({
         where: { id: { in: productIds }, organizationId, isDeleted: false },
         select: {
@@ -91,6 +92,7 @@ export class ProductSearchService {
           name: true,
           price: true,
           currency: true,
+          quantity: true,
           images: { select: { url: true }, take: 1 },
         },
       });
@@ -106,6 +108,7 @@ export class ProductSearchService {
             product.name,
             product.price,
             String(product.currency),
+            product.quantity,
             p.description,
             lang,
           ),
@@ -166,6 +169,7 @@ export class ProductSearchService {
         name: true,
         price: true,
         currency: true,
+        quantity: true,
         images: { select: { url: true }, take: 1 },
       },
     });
@@ -181,6 +185,7 @@ export class ProductSearchService {
           product.name,
           product.price,
           String(product.currency),
+          product.quantity,
           hit.description,
           lang,
         ),
@@ -203,6 +208,7 @@ export class ProductSearchService {
     name: string,
     price: number,
     currency: string,
+    quantity: number,
     description: string | undefined,
     lang: string | null | undefined,
   ): string {
@@ -213,8 +219,20 @@ export class ProductSearchService {
         : lang === 'en'
           ? 'Would you like to order this?'
           : 'Buyurtma bermoqchimisiz?';
+    const stock =
+      quantity <= 0
+        ? lang === 'ru'
+          ? '❌ Нет в наличии'
+          : lang === 'en'
+            ? '❌ Out of stock'
+            : '❌ Hozircha mavjud emas'
+        : lang === 'ru'
+          ? `📦 В наличии: ${quantity} шт.`
+          : lang === 'en'
+            ? `📦 ${quantity} in stock`
+            : `📦 ${quantity} dona mavjud`;
 
-    return `🛍️ <b>${this.escapeHtml(name)}</b>\n💰 ${price} ${currency}${desc ? `\n✨ ${desc}` : ''}\n\n${footer}`;
+    return `🛍️ <b>${this.escapeHtml(name)}</b>\n💰 ${price} ${currency}\n${stock}${desc ? `\n✨ ${desc}` : ''}\n\n${footer}`;
   }
 
   private async searchViaFullCatalogFallback(
