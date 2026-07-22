@@ -297,23 +297,21 @@ export class EmbadingService implements OnModuleInit {
     const seenIds = new Set();
 
     for (const obj of result.objects) {
-      const refs = obj.properties.product as any[]; // referenced Product objects
+      // Cross-references come back under `references`, not `properties` —
+      // `properties` only ever holds this object's own scalar fields.
+      const refs = (obj as any).references?.product?.objects as any[] | undefined;
       if (refs && refs.length > 0) {
         const product = refs[0]; // 1-1 link from Image -> Product
-        if (product && !seenIds.has(product.properties.productId)) {
-          // Properties usually live under `properties`; fall back to the object.
-          const productData = product.properties || product;
-
-          if (!seenIds.has(productData.productId)) {
-            flatProducts.push({
-              id: productData.productId,
-              name: productData.name,
-              description: productData.description,
-              price: productData.price,
-              organizationId: parseInt(productData.organizationId),
-            });
-            seenIds.add(productData.productId);
-          }
+        const productData = product?.properties;
+        if (productData && !seenIds.has(productData.productId)) {
+          flatProducts.push({
+            id: productData.productId,
+            name: productData.name,
+            description: productData.description,
+            price: productData.price,
+            organizationId: parseInt(productData.organizationId),
+          });
+          seenIds.add(productData.productId);
         }
       }
     }
