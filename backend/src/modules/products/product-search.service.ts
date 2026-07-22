@@ -17,9 +17,17 @@ export interface ProductSearchResult {
 
 /**
  * Query-scoped product search for the chat's [INTENT:SEARCH_PRODUCT] flow.
- * Prefers real Weaviate hybrid search (BM25 + vector) over the org's product
- * catalog; falls back to the old "dump the whole catalog to Gemini" matching
- * only when Weaviate is unavailable, so search still works in that case.
+ *
+ * Uses BM25 keyword search as the primary signal — empirically, CLIP's
+ * multilingual text embeddings do NOT reliably discriminate between short,
+ * unrelated product names (an unrelated product scored a *closer* vector
+ * distance than the real match for a totally unrelated query in testing),
+ * so vector/hybrid search can't be trusted to rank text queries. BM25 only
+ * ever returns objects with actual term overlap, which is a much safer
+ * signal. When BM25 finds nothing (a real paraphrase/synonym/misspelling,
+ * not just "irrelevant"), falls back to an LLM judging relevance over the
+ * org's catalog — real reasoning instead of an unreliable raw embedding
+ * distance. Also falls back there if Weaviate itself is unavailable.
  */
 @Injectable()
 export class ProductSearchService {
@@ -48,14 +56,21 @@ export class ProductSearchService {
     }
 
     try {
-      const hits = await this.embadingService.hybridSearch({
-        queryText: searchQuery,
+      const hits = await this.embadingService.searchByKeyword(
+        searchQuery,
         organizationId,
         limit,
-      });
+      );
 
       if (!hits || hits.length === 0) {
-        return { matches: [], noResultText: '' };
+        // No keyword overlap at all — not necessarily "nothing available",
+        // could be a paraphrase/synonym/misspelling. Let an LLM judge real
+        // relevance rather than trusting the unreliable text-vector fallback.
+        return this.searchViaFullCatalogFallback(
+          organizationId,
+          searchQuery,
+          userMessage,
+        );
       }
 
       const props = hits.map((h: any) => (h.properties ? h.properties : h));
@@ -101,7 +116,7 @@ export class ProductSearchService {
       return { matches, noResultText: '' };
     } catch (error: any) {
       this.logger.error(
-        `Weaviate hybrid search failed, falling back to full-catalog match: ${error.message}`,
+        `Weaviate keyword search failed, falling back to full-catalog match: ${error.message}`,
         error.stack,
       );
       return this.searchViaFullCatalogFallback(

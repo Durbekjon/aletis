@@ -16,6 +16,17 @@ export class EmbadingService implements OnModuleInit {
   private readonly logger = new Logger(EmbadingService.name);
   private readonly UUID_NAMESPACE = '6ba7b810-9dad-11d1-80b4-00c04fd430c8'; // Standard OID namespace
 
+  // Weaviate's nearest-neighbor search always returns the closest object in
+  // the collection, even if it's a bad match — with a small/sparse catalog
+  // this means a totally unrelated product (e.g. a leftover "cat" test
+  // product) gets returned as the "match" for a query the org has nothing
+  // for (e.g. "asus"), since it's the only thing in the vector space. These
+  // cap how far (0 = identical, 2 = opposite; cosine distance) a match is
+  // allowed to be before it's dropped instead of surfaced as a false match.
+  // Heuristic defaults — may need tuning against real query traffic.
+  private readonly MAX_TEXT_VECTOR_DISTANCE = 0.75;
+  private readonly MAX_IMAGE_VECTOR_DISTANCE = 0.9;
+
   constructor(private readonly imageToBase64Service: ImageToBase64Service) {}
 
   async onModuleInit() {
@@ -241,6 +252,36 @@ export class EmbadingService implements OnModuleInit {
     return removed;
   }
 
+  /**
+   * Pure BM25 keyword search — no vector component. Empirically, CLIP's
+   * multilingual text tower does NOT reliably discriminate between short,
+   * unrelated product names/queries (e.g. an unrelated "cat" product scored
+   * a *closer* vector distance than the actual matching product for an
+   * unrelated query), so it can't be trusted as the primary text-search
+   * signal. BM25 only ever returns objects with actual term overlap, so an
+   * empty result here means the org's catalog genuinely has no keyword
+   * match — a much safer signal to build search on.
+   */
+  async searchByKeyword(query: string, organizationId: number, limit = 10) {
+    if (!this.isAvailable()) {
+      this.logger.warn('searchByKeyword skipped — Weaviate unavailable');
+      return [];
+    }
+    const collection = this.client.collections.get('Product');
+    const result = await collection.query.bm25(query, {
+      limit,
+      filters: this.productOrgFilter(organizationId),
+      returnProperties: [
+        'productId',
+        'name',
+        'description',
+        'price',
+        'organizationId',
+      ],
+    });
+    return result.objects;
+  }
+
   async searchByText(query: string, organizationId: number, limit = 10) {
     if (!this.isAvailable()) {
       this.logger.warn('searchByText skipped — Weaviate unavailable');
@@ -249,6 +290,7 @@ export class EmbadingService implements OnModuleInit {
     const collection = this.client.collections.get('Product');
     const result = await collection.query.nearText(query, {
       limit: limit,
+      distance: this.MAX_TEXT_VECTOR_DISTANCE,
       filters: this.productOrgFilter(organizationId),
       returnProperties: [
         'productId',
@@ -276,6 +318,7 @@ export class EmbadingService implements OnModuleInit {
     // Search for images similar to the input image
     const result = await collection.query.nearImage(base64, {
       limit: limit,
+      distance: this.MAX_IMAGE_VECTOR_DISTANCE,
       filters: this.productImageOrgFilter(organizationId),
       returnReferences: [
         {
@@ -345,6 +388,7 @@ export class EmbadingService implements OnModuleInit {
       const result = await collection.query.hybrid(queryText, {
         limit,
         alpha,
+        maxVectorDistance: this.MAX_TEXT_VECTOR_DISTANCE,
         filters: this.productOrgFilter(organizationId),
         returnProperties: [
           'productId',
