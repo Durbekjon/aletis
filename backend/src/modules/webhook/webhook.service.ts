@@ -245,6 +245,7 @@ export class WebhookService {
           );
           const { matches } = await this.productSearchService.searchByImage(
             organizationId,
+            customer.id,
             base64Image,
             customer.lang,
             5,
@@ -1104,29 +1105,40 @@ export class WebhookService {
     customer: Customer,
     botId?: number,
   ) {
-    const [userOrders, productCount, organization] = await Promise.all([
-      this.ordersService.getOrdersForAI(organizationId, customer.id),
-      this.prisma.product.count({
-        where: {
+    const [userOrders, productCount, organization, recentlyViewed] =
+      await Promise.all([
+        this.ordersService.getOrdersForAI(organizationId, customer.id),
+        this.prisma.product.count({
+          where: {
+            organizationId,
+            isDeleted: false,
+            status: ProductStatus.ACTIVE,
+          },
+        }),
+        this.prisma.organization.findUnique({
+          where: { id: organizationId },
+          select: { name: true, description: true, category: true },
+        }),
+        this.productSearchService.getRecentlyViewedContext(
+          customer.id,
           organizationId,
-          isDeleted: false,
-          status: ProductStatus.ACTIVE,
-        },
-      }),
-      this.prisma.organization.findUnique({
-        where: { id: organizationId },
-        select: { name: true, description: true, category: true },
-      }),
-    ]);
+        ),
+      ]);
 
     // The full catalog is deliberately NOT loaded here — it used to be
     // serialized into every single message's prompt (unbounded cost that
     // scaled with catalog size). The AI is told only the count and must use
     // [INTENT:SEARCH_PRODUCT] to look products up via real vector search.
+    // Full details of whatever was just shown to THIS customer (bounded to
+    // a handful of products, not the catalog) are appended separately so
+    // follow-ups about that specific product can be answered directly.
     const productContext =
-      productCount > 0
+      (productCount > 0
         ? `This business has ${productCount} active product(s) in its catalog.`
-        : 'No products are currently available.';
+        : 'No products are currently available.') +
+      (recentlyViewed
+        ? `\n\nRECENTLY VIEWED PRODUCT(S) (shown to this customer earlier in the conversation):\n${recentlyViewed}`
+        : '');
 
     const orgContext = organization
       ? {

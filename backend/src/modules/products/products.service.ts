@@ -985,6 +985,30 @@ export class ProductsService {
   }
 
   /**
+   * Full details (all dynamic fields, not just "description") for a small,
+   * explicit set of product IDs — used to give the AI chat real data about
+   * products it just showed the customer, so follow-up questions (color,
+   * warranty, spec, quantity...) can be answered directly instead of
+   * re-searching. Bounded to the given IDs, so cost stays flat regardless
+   * of catalog size — never call this with a large/unbounded ID list.
+   */
+  async getProductsForAiContext(
+    productIds: number[],
+    organizationId: number,
+  ): Promise<ProductResponseDto[]> {
+    if (productIds.length === 0) return [];
+    const products = await this.prisma.product.findMany({
+      where: { id: { in: productIds }, organizationId, isDeleted: false },
+      include: {
+        schema: true,
+        images: true,
+        fields: { include: { field: true } },
+      },
+    });
+    return products.map((p) => this.toProductResponseDto(p));
+  }
+
+  /**
    * Gets products with pagination and search
    */
   async getProducts(

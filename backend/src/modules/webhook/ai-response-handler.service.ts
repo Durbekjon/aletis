@@ -516,6 +516,7 @@ export class AiResponseHandlerService {
 
       const { matches, noResultText } = await this.productSearchService.search(
         organizationId,
+        customer.id,
         searchQuery,
         originalUserMessage || searchQuery,
         customer.lang,

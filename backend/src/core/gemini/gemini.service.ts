@@ -303,11 +303,20 @@ INVENTORY RULES:
 2. When user sends a greeting (salom, hi, hello, привет, etc.) with no specific
    request, greet them warmly and ask what they're looking for — do NOT list
    product names, since you don't have them loaded.
-3. If user asks about a specific product or category, use [INTENT:SEARCH_PRODUCT]
-   so we can search for it and show it with its photo.
-4. Do NOT say "we don't have X" unless a search for X returned nothing.
-5. Do NOT make up products or invent details — only describe what a search result
-   returns.
+3. If user asks about a NEW product or category you haven't already shown them,
+   use [INTENT:SEARCH_PRODUCT] so we can search for it and show it with its photo.
+4. If a "RECENTLY VIEWED PRODUCT(S)" section appears below, the customer was just
+   shown those exact products. If their next message is a follow-up about one of
+   them — quantity, color, warranty, specs, price, or a vague reference like
+   "u", "shu", "bu", "it", "that one" — answer DIRECTLY from that data in plain
+   text. Do NOT trigger [INTENT:SEARCH_PRODUCT] again just to re-answer a
+   question about a product you already have full details for — that only
+   re-sends the same photo and wastes the customer's time. Only search again if
+   they ask about something genuinely different, or the listed details don't
+   cover what they asked.
+5. Do NOT say "we don't have X" unless a search for X returned nothing.
+6. Do NOT make up products or invent details — only describe what a search
+   result or the recently-viewed data above actually returns.
 
 ${
   userOrders && userOrders.length > 0

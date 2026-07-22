@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '@core/prisma/prisma.service';
+import { RedisService } from '@core/redis/redis.service';
 import { GeminiService } from '@core/gemini/gemini.service';
 import { EmbadingService } from '@modules/embading/embading.service';
 import { ProductsService } from './products.service';
@@ -15,6 +16,10 @@ export interface ProductSearchResult {
   noResultText: string;
 }
 
+// How long a customer's "recently shown products" context stays available
+// for follow-up questions before it's considered a stale/abandoned topic.
+const RECENTLY_SHOWN_TTL_SECONDS = 30 * 60;
+
 /**
  * Query-scoped product search for the chat's [INTENT:SEARCH_PRODUCT] flow.
  *
@@ -28,6 +33,12 @@ export interface ProductSearchResult {
  * not just "irrelevant"), falls back to an LLM judging relevance over the
  * org's catalog — real reasoning instead of an unreliable raw embedding
  * distance. Also falls back there if Weaviate itself is unavailable.
+ *
+ * Also tracks which products were last shown to each customer (Redis,
+ * short TTL) so the chat prompt can give the AI full details on just those
+ * few products — letting it answer follow-ups about color/warranty/spec/
+ * quantity directly instead of re-searching and re-sending a photo for
+ * every question about the same item.
  */
 @Injectable()
 export class ProductSearchService {
@@ -38,14 +49,39 @@ export class ProductSearchService {
     private readonly productsService: ProductsService,
     private readonly geminiService: GeminiService,
     private readonly prisma: PrismaService,
+    private readonly redisService: RedisService,
   ) {}
 
   async search(
     organizationId: number,
+    customerId: number,
     searchQuery: string,
     userMessage: string,
     lang: string | null | undefined,
     limit = 5,
+  ): Promise<ProductSearchResult> {
+    const result = await this.performTextSearch(
+      organizationId,
+      searchQuery,
+      userMessage,
+      lang,
+      limit,
+    );
+    if (result.matches.length > 0) {
+      await this.recordShown(
+        customerId,
+        result.matches.map((m) => m.id),
+      );
+    }
+    return result;
+  }
+
+  private async performTextSearch(
+    organizationId: number,
+    searchQuery: string,
+    userMessage: string,
+    lang: string | null | undefined,
+    limit: number,
   ): Promise<ProductSearchResult> {
     if (!this.embadingService.isAvailable()) {
       return this.searchViaFullCatalogFallback(
@@ -137,9 +173,31 @@ export class ProductSearchService {
    */
   async searchByImage(
     organizationId: number,
+    customerId: number,
     base64Image: string,
     lang: string | null | undefined,
     limit = 5,
+  ): Promise<ProductSearchResult> {
+    const result = await this.performImageSearch(
+      organizationId,
+      base64Image,
+      lang,
+      limit,
+    );
+    if (result.matches.length > 0) {
+      await this.recordShown(
+        customerId,
+        result.matches.map((m) => m.id),
+      );
+    }
+    return result;
+  }
+
+  private async performImageSearch(
+    organizationId: number,
+    base64Image: string,
+    lang: string | null | undefined,
+    limit: number,
   ): Promise<ProductSearchResult> {
     if (!this.embadingService.isAvailable()) {
       return { matches: [], noResultText: '' };
@@ -261,5 +319,95 @@ export class ProductSearchService {
       })),
       noResultText,
     };
+  }
+
+  private recentlyShownKey(customerId: number): string {
+    return `chat:recent-products:${customerId}`;
+  }
+
+  private async recordShown(
+    customerId: number,
+    productIds: number[],
+  ): Promise<void> {
+    try {
+      await this.redisService.set(
+        this.recentlyShownKey(customerId),
+        productIds,
+        RECENTLY_SHOWN_TTL_SECONDS,
+      );
+    } catch (error: any) {
+      // Non-critical — worst case, follow-up questions fall back to a
+      // fresh search instead of using remembered context.
+      this.logger.warn(`Failed to record recently-shown products: ${error.message}`);
+    }
+  }
+
+  private async getRecentlyShown(customerId: number): Promise<number[]> {
+    try {
+      return (await this.redisService.get<number[]>(this.recentlyShownKey(customerId))) ?? [];
+    } catch {
+      return [];
+    }
+  }
+
+  /**
+   * Full details of whatever products were last shown to this customer,
+   * formatted for the main chat prompt — lets the AI answer follow-up
+   * questions (color, warranty, spec, quantity...) about "that product"
+   * directly, without re-searching or re-sending a photo. Empty string if
+   * nothing was recently shown (the common case, most turns).
+   */
+  async getRecentlyViewedContext(
+    customerId: number,
+    organizationId: number,
+  ): Promise<string> {
+    const productIds = await this.getRecentlyShown(customerId);
+    if (productIds.length === 0) return '';
+
+    const products = await this.productsService.getProductsForAiContext(
+      productIds,
+      organizationId,
+    );
+    if (products.length === 0) return '';
+
+    return products
+      .map((p) => {
+        const stockLine =
+          p.quantity <= 0 ? 'OUT OF STOCK' : `${p.quantity} in stock`;
+        const fieldLines = p.fields
+          .map((f) => {
+            const value = this.formatFieldValue(f);
+            return value ? `  - ${f.fieldName}: ${value}` : null;
+          })
+          .filter((line): line is string => line !== null)
+          .join('\n');
+        return `Product #${p.id}: ${p.name}\n  Price: ${p.price} ${p.currency}\n  Stock: ${stockLine}${fieldLines ? '\n' + fieldLines : ''}`;
+      })
+      .join('\n\n');
+  }
+
+  private formatFieldValue(field: {
+    valueText?: string | null;
+    valueNumber?: number | null;
+    valueBool?: boolean | null;
+    valueDate?: Date | null;
+    valueJson?: any;
+  }): string | null {
+    if (field.valueText) return field.valueText;
+    if (field.valueNumber !== undefined && field.valueNumber !== null) {
+      return String(field.valueNumber);
+    }
+    if (field.valueBool !== undefined && field.valueBool !== null) {
+      return field.valueBool ? 'yes' : 'no';
+    }
+    if (field.valueDate) {
+      return new Date(field.valueDate).toISOString().slice(0, 10);
+    }
+    if (field.valueJson !== undefined && field.valueJson !== null) {
+      return typeof field.valueJson === 'string'
+        ? field.valueJson
+        : JSON.stringify(field.valueJson);
+    }
+    return null;
   }
 }
