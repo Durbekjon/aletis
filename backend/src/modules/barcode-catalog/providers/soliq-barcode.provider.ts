@@ -56,6 +56,7 @@ export class SoliqBarcodeProvider implements BarcodeProvider {
     private readonly configService: ConfigService,
     private readonly retryService: RetryService,
   ) {
+    // test
     this.baseUrl = this.configService.get<string>(
       'SOLIQ_API_BASE_URL',
       'https://compel-vigorous-renderer.ngrok-free.dev/proxy',
