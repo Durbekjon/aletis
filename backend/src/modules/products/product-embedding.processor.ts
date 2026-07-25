@@ -6,6 +6,8 @@ import { ProductsService } from './products.service';
 import { EmbadingService } from '@modules/embading/embading.service';
 
 export type CreateProductEmbeddingJobData = { productId: number };
+export type UpdateProductEmbeddingJobData = { productId: number };
+export type DeleteProductEmbeddingJobData = { productId: number };
 
 @Processor(EMBEDDING_QUEUE, { concurrency: 3 })
 export class ProductEmbeddingProcessor extends WorkerHost {
@@ -31,6 +33,25 @@ export class ProductEmbeddingProcessor extends WorkerHost {
         }
         await this.embadingService.createProductEmbedding(product);
         this.logger.log(`[Job ${job.id}] Embedded product ${productId}`);
+        break;
+      }
+      case 'update-product-embedding': {
+        const { productId } = job.data as UpdateProductEmbeddingJobData;
+        const product = await this.productsService.getProductForEmbedding(productId);
+        if (!product) {
+          this.logger.warn(
+            `[Job ${job.id}] Product ${productId} no longer exists — skipping embedding update`,
+          );
+          return;
+        }
+        await this.embadingService.updateProductEmbedding(product);
+        this.logger.log(`[Job ${job.id}] Re-embedded product ${productId}`);
+        break;
+      }
+      case 'delete-product-embedding': {
+        const { productId } = job.data as DeleteProductEmbeddingJobData;
+        await this.embadingService.deleteProductEmbedding(productId);
+        this.logger.log(`[Job ${job.id}] Removed embedding for product ${productId}`);
         break;
       }
       default:

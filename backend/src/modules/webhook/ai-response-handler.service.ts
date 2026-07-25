@@ -3,7 +3,7 @@ import { OrdersService } from '@modules/orders/orders.service';
 import { AiResponse, GeminiService } from '@core/gemini/gemini.service';
 import { Customer, Order } from '@prisma/client';
 import { EmbadingService } from '@modules/embading/embading.service';
-import { ProductsService } from '@modules/products/products.service';
+import { ProductSearchService } from '@modules/products/product-search.service';
 import { SupportService } from '@modules/support/support.service';
 import { PaymentsService } from '@modules/payments/payments.service';
 import { PaymentProvider } from '@prisma/client';
@@ -32,7 +32,7 @@ export class AiResponseHandlerService {
     private readonly ordersService: OrdersService,
     private readonly geminiService: GeminiService,
     private readonly embadingService: EmbadingService,
-    private readonly productsService: ProductsService,
+    private readonly productSearchService: ProductSearchService,
     private readonly supportService: SupportService,
     private readonly paymentsService: PaymentsService,
   ) {}
@@ -493,58 +493,6 @@ export class AiResponseHandlerService {
   }
 
   /**
-   * Format product search results into a readable message
-   */
-  async formatProductSearchResults(
-    searchResults: any[],
-    language: string,
-  ): Promise<string> {
-    if (!searchResults || searchResults.length === 0) {
-      return language === 'uz'
-        ? "Kechirasiz, so'rovingiz bo'yicha hech narsa topilmadi."
-        : language === 'ru'
-          ? 'Извините, по вашему запросу ничего не найдено.'
-          : "I couldn't find any products matching your query.";
-    }
-
-    const isUzbek = language === 'uz';
-    const isRussian = language === 'ru';
-    // const isEnglish = language === 'en'; // Default
-
-    let titleText = 'Here is what I found:\n\n';
-    let footerText = 'Would you like to order any of these?';
-
-    if (isUzbek) {
-      titleText = `Mana topilgan mahsulotlar:\n\n`;
-      footerText = 'Birortasiga buyurtma beramizmi?';
-    } else if (isRussian) {
-      titleText = `Вот что я нашел:\n\n`;
-      footerText = 'Хотите заказать что-нибудь из этого?';
-    }
-
-    let responseText = titleText;
-
-    searchResults.forEach((p) => {
-      // Handle both Weaviate object structure (properties in 'properties') and flat structure
-      const props = p.properties ? (p.properties as any) : p;
-
-      const price = props.price
-        ? `${props.price} ${props.currency || 'USD'}`
-        : 'Price not available';
-      const name = props.name || 'Unknown Product';
-      const description = props.description
-        ? props.description.substring(0, 100) + '...'
-        : '';
-
-      responseText += `🛍️ *${name}*\n💰 ${price}\n📝 ${description}\n\n`;
-    });
-
-    responseText += footerText;
-
-    return responseText;
-  }
-
-  /**
    * Handle SEARCH_PRODUCT intent
    */
   private async handleSearchProductIntent(
@@ -566,18 +514,12 @@ export class AiResponseHandlerService {
     try {
       this.logger.log(`Searching for products with query: "${searchQuery}"`);
 
-      const products = await this.productsService.getProductsForOrganization(organizationId);
-      this.logger.log(`Loaded ${products.length} products for org ${organizationId}`);
-
-      if (products.length === 0) {
-        return { text: aiResponse.text || 'Hozircha do\'konimizda mahsulotlar mavjud emas.' };
-      }
-
-      const { matches, noResultText } = await this.geminiService.matchProductsInContext(
-        products,
+      const { matches, noResultText } = await this.productSearchService.search(
+        organizationId,
+        customer.id,
         searchQuery,
         originalUserMessage || searchQuery,
-        { organizationId },
+        customer.lang,
       );
 
       this.logger.log(`Matched products: ${JSON.stringify(matches.map((m) => m.id))}`);
@@ -588,10 +530,9 @@ export class AiResponseHandlerService {
         };
       }
 
-      const productById = new Map(products.map((p) => [p.id, p]));
       const productCards: ProductCard[] = matches.map((m) => ({
         caption: m.caption,
-        imageKey: productById.get(m.id)?.imageKey ?? null,
+        imageKey: m.imageKey,
       }));
 
       this.logger.log(`Product cards imageKeys: ${JSON.stringify(productCards.map((c) => c.imageKey))}`);

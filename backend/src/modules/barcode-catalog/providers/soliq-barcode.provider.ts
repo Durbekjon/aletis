@@ -1,7 +1,7 @@
+import { RetryService } from '@core/retry/retry.service';
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { BarcodeSource } from '@prisma/client';
-import { RetryService } from '@core/retry/retry.service';
 import {
   BarcodeLookupResult,
   BarcodeProvider,
@@ -58,7 +58,7 @@ export class SoliqBarcodeProvider implements BarcodeProvider {
   ) {
     this.baseUrl = this.configService.get<string>(
       'SOLIQ_API_BASE_URL',
-      'https://tasnif.soliq.uz/api/cls-api',
+      'https://compel-vigorous-renderer.ngrok-free.dev/proxy',
     );
     this.timeoutMs = Number(
       this.configService.get<string>('SOLIQ_API_TIMEOUT_MS', '8000'),
@@ -69,7 +69,12 @@ export class SoliqBarcodeProvider implements BarcodeProvider {
     try {
       const response = await this.retryService.executeWithRetry(
         () => this.performRequest(barcode),
-        { maxAttempts: 3, baseDelay: 1000, maxDelay: 4000, backoffMultiplier: 2 },
+        {
+          maxAttempts: 3,
+          baseDelay: 1000,
+          maxDelay: 4000,
+          backoffMultiplier: 2,
+        },
       );
 
       const item = response?.data?.content?.[0];
@@ -113,7 +118,13 @@ export class SoliqBarcodeProvider implements BarcodeProvider {
       }
 
       if (!response.ok) {
-        return { success: false, code: response.status, reason: response.statusText, data: null, errors: null };
+        return {
+          success: false,
+          code: response.status,
+          reason: response.statusText,
+          data: null,
+          errors: null,
+        };
       }
 
       return (await response.json()) as SoliqSearchResponse;

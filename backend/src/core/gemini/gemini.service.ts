@@ -195,7 +195,7 @@ export class GeminiService {
 
     const productInfo =
       productContext ||
-      'Product catalog is available via search. You do NOT have the full product list loaded. You MUST use [INTENT:SEARCH_PRODUCT] to find products.';
+      'No product count available. You do NOT have the full product list loaded. You MUST use [INTENT:SEARCH_PRODUCT] to find products.';
     const baseUrl = this.configService.get<string>('PUBLIC_BASE_URL') || '';
 
     let langInstruction = '';
@@ -297,13 +297,26 @@ CURRENT INVENTORY STATUS:
 ${productInfo}
 
 INVENTORY RULES:
-1. The inventory above is the FULL product catalog. You have all available products listed.
-2. When user sends a greeting (salom, hi, hello, привет, etc.) with no specific request:
-   - Greet them warmly AND briefly list the available products by name.
-   - Example: "Salom! 👋 Bizda quyidagi mahsulotlar bor: [product names]. Qaysi biri sizni qiziqtiradi?"
-3. If user asks about a specific product, use [INTENT:SEARCH_PRODUCT] so we can show the product with its photo.
-4. Do NOT say "we don't have X" unless the product is truly not in the inventory list above.
-5. Do NOT make up products that are not in the list.
+1. You do NOT have the product catalog loaded — only the count above. You MUST use
+   [INTENT:SEARCH_PRODUCT] with a search query to look up actual products before
+   naming, pricing, or offering any specific item.
+2. When user sends a greeting (salom, hi, hello, привет, etc.) with no specific
+   request, greet them warmly and ask what they're looking for — do NOT list
+   product names, since you don't have them loaded.
+3. If user asks about a NEW product or category you haven't already shown them,
+   use [INTENT:SEARCH_PRODUCT] so we can search for it and show it with its photo.
+4. If a "RECENTLY VIEWED PRODUCT(S)" section appears below, the customer was just
+   shown those exact products. If their next message is a follow-up about one of
+   them — quantity, color, warranty, specs, price, or a vague reference like
+   "u", "shu", "bu", "it", "that one" — answer DIRECTLY from that data in plain
+   text. Do NOT trigger [INTENT:SEARCH_PRODUCT] again just to re-answer a
+   question about a product you already have full details for — that only
+   re-sends the same photo and wastes the customer's time. Only search again if
+   they ask about something genuinely different, or the listed details don't
+   cover what they asked.
+5. Do NOT say "we don't have X" unless a search for X returned nothing.
+6. Do NOT make up products or invent details — only describe what a search
+   result or the recently-viewed data above actually returns.
 
 ${
   userOrders && userOrders.length > 0
@@ -1801,6 +1814,7 @@ Message:`;
       price: number;
       currency: string;
       description: string;
+      quantity?: number;
     }[],
     searchQuery: string,
     userMessage: string,
@@ -1811,10 +1825,15 @@ Message:`;
   }> {
     try {
       const productList = products
-        .map(
-          (p) =>
-            `ID:${p.id} | ${p.name} | ${p.price} ${p.currency}${p.description ? ` | ${p.description.substring(0, 80)}` : ''}`,
-        )
+        .map((p) => {
+          const stock =
+            p.quantity === undefined
+              ? ''
+              : p.quantity <= 0
+                ? ' | OUT OF STOCK'
+                : ` | ${p.quantity} in stock`;
+          return `ID:${p.id} | ${p.name} | ${p.price} ${p.currency}${p.description ? ` | ${p.description.substring(0, 80)}` : ''}${stock}`;
+        })
         .join('\n');
 
       const lang = userMessage;
@@ -1826,9 +1845,10 @@ ${productList}
 Return a JSON object (no markdown, no code block) with:
 - "matches": array of matched products. Each item: { "id": <integer product ID>, "caption": "<short attractive product card text>" }
   - caption must be in the SAME language as "${lang}"
-  - caption format: product name on first line, price, 1-2 line catchy description, end with "Buyurtma bermoqchimisiz?" (or equivalent in detected language)
-  - Use emojis in caption: 🛍️ for name, 💰 for price, ✨ for features
-  - Keep caption under 200 characters total
+  - caption format: product name on first line, price on next line, stock status (in stock count, or out of stock) on next line, then 1-2 line catchy description, end with "Buyurtma bermoqchimisiz?" (or equivalent in detected language) — but if OUT OF STOCK, do not ask this, say it's unavailable instead
+  - Use Telegram HTML formatting, NOT markdown: wrap the product name in <b>...</b> for bold. Do NOT use *asterisks* for bold — they render literally.
+  - Use emojis in caption: 🛍️ for name, 💰 for price, 📦 for stock, ✨ for features
+  - Keep caption under 250 characters total
 - "noResultText": short message in the SAME language as "${lang}" if nothing matched. Empty string if something matched.
 
 Only match products from the list above. Never suggest outside items.

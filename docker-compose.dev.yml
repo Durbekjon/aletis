@@ -54,6 +54,13 @@ services:
       - weaviate_data_dev:/var/lib/weaviate
     networks: [aletis_dev]
     restart: unless-stopped
+    # Published to the host (127.0.0.1 only) so `yarn dev` running directly
+    # on the host — not the containerized `backend` service — can reach
+    # Weaviate at the WEAVIATE_HOST=localhost default. The containerized
+    # backend still reaches it via the `weaviate` hostname on aletis_dev.
+    ports:
+      - "127.0.0.1:8080:8080"
+      - "127.0.0.1:50051:50051"
 
   multi2vec-clip:
     image: cr.weaviate.io/semitechnologies/multi2vec-clip:sentence-transformers-clip-ViT-B-32-multilingual-v1

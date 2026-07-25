@@ -1,15 +1,15 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '@core/prisma/prisma.service';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { BarcodeCatalogEntry, BarcodeSource } from '@prisma/client';
-import {
-  BARCODE_PROVIDERS,
-  BarcodeProvider,
-} from './providers/barcode-provider.interface';
 import {
   BarcodeCatalogDataDto,
   BarcodeLookupResponseDto,
   CompleteBarcodeEntryDto,
 } from './dto';
+import {
+  BARCODE_PROVIDERS,
+  BarcodeProvider,
+} from './providers/barcode-provider.interface';
 
 @Injectable()
 export class BarcodeCatalogService {
@@ -28,10 +28,6 @@ export class BarcodeCatalogService {
 
     if (existing?.status === 'COMPLETED') {
       return this.toResponseDto(existing);
-    }
-
-    if (existing?.status === 'PENDING') {
-      return { found: false, status: 'PENDING' };
     }
 
     for (const provider of this.providers) {
@@ -104,9 +100,7 @@ export class BarcodeCatalogService {
     return this.toResponseDto(saved);
   }
 
-  private toResponseDto(
-    entry: BarcodeCatalogEntry,
-  ): BarcodeLookupResponseDto {
+  private toResponseDto(entry: BarcodeCatalogEntry): BarcodeLookupResponseDto {
     const data: BarcodeCatalogDataDto = {
       productName: entry.productName ?? undefined,
       description: entry.description ?? undefined,

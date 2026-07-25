@@ -728,6 +728,24 @@ export class ProductsService {
         this.invalidateSchemaProductCaches(existingProduct.schemaId),
       ]);
 
+      // Re-sync the Weaviate embedding so search reflects the new name/price/
+      // description/images instead of drifting stale — background, non-blocking.
+      this.embeddingQueue
+        .add(
+          'update-product-embedding',
+          { productId: result.id },
+          {
+            jobId: `embed-update-${result.id}-${Date.now()}`,
+            attempts: 3,
+            backoff: { type: 'exponential', delay: 5000 },
+            removeOnComplete: true,
+            removeOnFail: 50,
+          },
+        )
+        .catch((err) =>
+          this.logger.warn(`Failed to enqueue embedding update job: ${err.message}`),
+        );
+
       // Return the updated product with full details
       return this.getProductById(result.id, userId);
     } catch (error) {
@@ -784,6 +802,24 @@ export class ProductsService {
       await this.prisma.product.delete({
         where: { id: productId },
       });
+
+      // Remove the product from the Weaviate search index too — otherwise a
+      // deleted product stays returnable via text/image search forever.
+      this.embeddingQueue
+        .add(
+          'delete-product-embedding',
+          { productId },
+          {
+            jobId: `embed-delete-${productId}-${Date.now()}`,
+            attempts: 3,
+            backoff: { type: 'exponential', delay: 5000 },
+            removeOnComplete: true,
+            removeOnFail: 50,
+          },
+        )
+        .catch((err) =>
+          this.logger.warn(`Failed to enqueue embedding delete job: ${err.message}`),
+        );
 
       // Invalidate all caches related to this product and organization
       await Promise.all([
@@ -946,6 +982,30 @@ export class ProductsService {
     });
     if (!product) return null;
     return this.toProductResponseDto(product);
+  }
+
+  /**
+   * Full details (all dynamic fields, not just "description") for a small,
+   * explicit set of product IDs — used to give the AI chat real data about
+   * products it just showed the customer, so follow-up questions (color,
+   * warranty, spec, quantity...) can be answered directly instead of
+   * re-searching. Bounded to the given IDs, so cost stays flat regardless
+   * of catalog size — never call this with a large/unbounded ID list.
+   */
+  async getProductsForAiContext(
+    productIds: number[],
+    organizationId: number,
+  ): Promise<ProductResponseDto[]> {
+    if (productIds.length === 0) return [];
+    const products = await this.prisma.product.findMany({
+      where: { id: { in: productIds }, organizationId, isDeleted: false },
+      include: {
+        schema: true,
+        images: true,
+        fields: { include: { field: true } },
+      },
+    });
+    return products.map((p) => this.toProductResponseDto(p));
   }
 
   /**

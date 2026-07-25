@@ -2,11 +2,10 @@ import { Injectable, Logger, NotFoundException, Optional } from '@nestjs/common'
 import { WebhookDto } from './dto/webhook.dto';
 import { BotsService } from '@modules/bots/bots.service';
 import { CustomersService } from '@modules/customers/customers.service';
-import { Bot, Customer, Message } from '@prisma/client';
+import { Bot, Customer, Message, ProductStatus } from '@prisma/client';
 import { MessagesService } from '@modules/messages/messages.service';
 import { ConfigService } from '@nestjs/config';
 import { GeminiService } from '@core/gemini/gemini.service';
-import { ProductsService } from '@modules/products/products.service';
 import { TelegramService } from '@modules/telegram/telegram.service';
 import { EncryptionService } from '@core/encryption/encryption.service';
 import { OrdersService } from '@modules/orders/orders.service';
@@ -16,7 +15,7 @@ import {
   FlushResult,
 } from '@core/message-buffer/message-buffer.service';
 import { PrismaService } from '@core/prisma/prisma.service';
-import { EmbadingService } from '@modules/embading/embading.service';
+import { ProductSearchService } from '@modules/products/product-search.service';
 import { ProductCard, ProcessedAiResponse } from './ai-response-handler.service';
 import { CustomerIntelligenceService } from '@modules/customer-intelligence/customer-intelligence.service';
 import { RetentionService } from '@modules/retention/retention.service';
@@ -35,14 +34,13 @@ export class WebhookService {
     private readonly messagesService: MessagesService,
     private readonly configService: ConfigService,
     private readonly geminiService: GeminiService,
-    private readonly productsService: ProductsService,
     private readonly telegramService: TelegramService,
     private readonly encryptionService: EncryptionService,
     private readonly ordersService: OrdersService,
     private readonly aiResponseHandler: AiResponseHandlerService,
     private readonly messageBufferService: MessageBufferService,
     private readonly prisma: PrismaService,
-    private readonly embadingService: EmbadingService,
+    private readonly productSearchService: ProductSearchService,
     private readonly customerIntelligenceService: CustomerIntelligenceService,
     private readonly retentionService: RetentionService,
     private readonly usageService: UsageService,
@@ -240,30 +238,25 @@ export class WebhookService {
           const base64Image = fileData.buffer.toString('base64');
 
           // Visual product search. The caption (if any) is not yet used for a
-          // combined text+image query — searchByImageBase64 ranks purely by
-          // image similarity. Returns [] when Weaviate is unavailable.
+          // combined text+image query — searchByImage ranks purely by image
+          // similarity. Returns [] when Weaviate is unavailable.
           this.logger.log(
             `Performing image search for customer ${customer.id}`,
           );
-          const searchResults =
-            await this.embadingService.searchByImageBase64(base64Image, 5);
+          const { matches } = await this.productSearchService.searchByImage(
+            organizationId,
+            customer.id,
+            base64Image,
+            customer.lang,
+            5,
+          );
 
-          // Format results similar to handleSearchProductIntent
-          if (searchResults.length > 0) {
-            const responseText =
-              await this.aiResponseHandler.formatProductSearchResults(
-                searchResults,
-                customer.lang || 'uz',
-              );
-            await this.telegramService.sendRequest(
-              decyptedToken,
-              'sendMessage',
-              {
-                chat_id: customer.telegramId,
-                text: responseText,
-                parse_mode: 'HTML',
-              },
-            );
+          if (matches.length > 0) {
+            const cards: ProductCard[] = matches.map((m) => ({
+              caption: m.caption,
+              imageKey: m.imageKey,
+            }));
+            await this.sendProductCards(decyptedToken, customer, bot.id, cards);
             return { status: 'ok' };
           } else {
             await this.telegramService.sendRequest(
@@ -591,54 +584,11 @@ export class WebhookService {
       try {
         // Product search results: send each product as a separate photo+caption
         if (processedResponse.productCards && processedResponse.productCards.length > 0) {
-          const baseUrl =
-            this.configService.get<string>('BASE_URL') ||
-            process.env.BASE_URL ||
-            '';
-          const toAbsolute = (key: string) => {
-            if (/^https?:\/\//i.test(key)) return key;
-            const left = baseUrl.replace(/\/+$/g, '');
-            const right = key.replace(/^\/+/, '');
-            return `${left}/${right}`;
-          };
-
-          for (const card of processedResponse.productCards as ProductCard[]) {
-            if (card.imageKey) {
-              const photoUrl = toAbsolute(card.imageKey);
-              this.logger.log(`Sending product photo: ${photoUrl}`);
-              const res = await this.telegramService.sendRequest(
-                decryptedToken,
-                'sendPhoto',
-                {
-                  chat_id: customer.telegramId,
-                  photo: photoUrl,
-                  caption: card.caption,
-                  parse_mode: 'HTML',
-                },
-              );
-              if (!res.ok) {
-                this.logger.warn(`sendPhoto failed (${res.description}), falling back to text`);
-                await this.telegramService.sendRequest(decryptedToken, 'sendMessage', {
-                  chat_id: customer.telegramId,
-                  text: card.caption,
-                  parse_mode: 'HTML',
-                });
-              }
-            } else {
-              this.logger.warn(`Product card has no imageKey, sending text only`);
-              await this.telegramService.sendRequest(decryptedToken, 'sendMessage', {
-                chat_id: customer.telegramId,
-                text: card.caption,
-                parse_mode: 'HTML',
-              });
-            }
-          }
-
-          await this.messagesService._saveMessage(
-            customer.id,
-            processedResponse.productCards.map((c) => c.caption).join('\n\n'),
-            'BOT',
+          await this.sendProductCards(
+            decryptedToken,
+            customer,
             bot.id,
+            processedResponse.productCards as ProductCard[],
           );
           return;
         }
@@ -860,6 +810,63 @@ export class WebhookService {
           );
       }
     }
+  }
+
+  /**
+   * Sends each product search result as its own Telegram photo+caption (with
+   * a text-only fallback if the photo send fails or there's no image), then
+   * logs the combined captions as a single bot message. Shared by the
+   * SEARCH_PRODUCT intent flow and the customer-photo visual search flow.
+   */
+  private async sendProductCards(
+    token: string,
+    customer: Customer,
+    botId: number,
+    cards: ProductCard[],
+  ): Promise<void> {
+    const baseUrl =
+      this.configService.get<string>('BASE_URL') || process.env.BASE_URL || '';
+    const toAbsolute = (key: string) => {
+      if (/^https?:\/\//i.test(key)) return key;
+      const left = baseUrl.replace(/\/+$/g, '');
+      const right = key.replace(/^\/+/, '');
+      return `${left}/${right}`;
+    };
+
+    for (const card of cards) {
+      if (card.imageKey) {
+        const photoUrl = toAbsolute(card.imageKey);
+        this.logger.log(`Sending product photo: ${photoUrl}`);
+        const res = await this.telegramService.sendRequest(token, 'sendPhoto', {
+          chat_id: customer.telegramId,
+          photo: photoUrl,
+          caption: card.caption,
+          parse_mode: 'HTML',
+        });
+        if (!res.ok) {
+          this.logger.warn(`sendPhoto failed (${res.description}), falling back to text`);
+          await this.telegramService.sendRequest(token, 'sendMessage', {
+            chat_id: customer.telegramId,
+            text: card.caption,
+            parse_mode: 'HTML',
+          });
+        }
+      } else {
+        this.logger.warn(`Product card has no imageKey, sending text only`);
+        await this.telegramService.sendRequest(token, 'sendMessage', {
+          chat_id: customer.telegramId,
+          text: card.caption,
+          parse_mode: 'HTML',
+        });
+      }
+    }
+
+    await this.messagesService._saveMessage(
+      customer.id,
+      cards.map((c) => c.caption).join('\n\n'),
+      'BOT',
+      botId,
+    );
   }
 
   private markdownToHtml(text: string): string {
@@ -1098,30 +1105,40 @@ export class WebhookService {
     customer: Customer,
     botId?: number,
   ) {
-    const [userOrders, products, organization] = await Promise.all([
-      this.ordersService.getOrdersForAI(organizationId, customer.id),
-      this.productsService.getProductsForOrganization(organizationId),
-      this.prisma.organization.findUnique({
-        where: { id: organizationId },
-        select: { name: true, description: true, category: true },
-      }),
-    ]);
+    const [userOrders, productCount, organization, recentlyViewed] =
+      await Promise.all([
+        this.ordersService.getOrdersForAI(organizationId, customer.id),
+        this.prisma.product.count({
+          where: {
+            organizationId,
+            isDeleted: false,
+            status: ProductStatus.ACTIVE,
+          },
+        }),
+        this.prisma.organization.findUnique({
+          where: { id: organizationId },
+          select: { name: true, description: true, category: true },
+        }),
+        this.productSearchService.getRecentlyViewedContext(
+          customer.id,
+          organizationId,
+        ),
+      ]);
 
+    // The full catalog is deliberately NOT loaded here — it used to be
+    // serialized into every single message's prompt (unbounded cost that
+    // scaled with catalog size). The AI is told only the count and must use
+    // [INTENT:SEARCH_PRODUCT] to look products up via real vector search.
+    // Full details of whatever was just shown to THIS customer (bounded to
+    // a handful of products, not the catalog) are appended separately so
+    // follow-ups about that specific product can be answered directly.
     const productContext =
-      products.length > 0
-        ? `AVAILABLE PRODUCTS (${products.length} total):\n` +
-          products
-            .map((p) => {
-              const stock =
-                p.quantity <= 0
-                  ? ' | OUT OF STOCK — do NOT offer or accept orders for this'
-                  : p.quantity <= 5
-                    ? ` | only ${p.quantity} left in stock`
-                    : '';
-              return `- ID:${p.id} | ${p.name} | ${p.price} ${p.currency}${p.description ? ` | ${p.description.substring(0, 60)}` : ''}${stock}`;
-            })
-            .join('\n')
-        : 'No products are currently available.';
+      (productCount > 0
+        ? `This business has ${productCount} active product(s) in its catalog.`
+        : 'No products are currently available.') +
+      (recentlyViewed
+        ? `\n\nRECENTLY VIEWED PRODUCT(S) (shown to this customer earlier in the conversation):\n${recentlyViewed}`
+        : '');
 
     const orgContext = organization
       ? {
