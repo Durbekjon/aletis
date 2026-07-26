@@ -132,27 +132,49 @@ export class ProductSearchService {
           images: { select: { url: true }, take: 1 },
         },
       });
+
+      if (products.length === 0) {
+        return { matches: [], noResultText: '' };
+      }
+
+      // BM25 only guarantees keyword overlap, not semantic relevance.
+      // Pass the small candidate set through Gemini to filter out false
+      // positives (e.g. "дафтар" query matching "Bamboozy" because both
+      // happened to share a BM25 token). This is a cheap LLM call since
+      // the candidate list is already narrow (≤ limit items, not full catalog).
       const productById = new Map(products.map((p) => [p.id, p]));
+      const candidates = products.map((p) => ({
+        id: p.id,
+        name: p.name,
+        price: p.price,
+        currency: String(p.currency),
+        description: props.find((pr: any) => pr.productId === p.id)?.description || '',
+        quantity: p.quantity,
+      }));
+
+      const { matches: relevantMatches, noResultText } =
+        await this.geminiService.matchProductsInContext(
+          candidates,
+          searchQuery,
+          userMessage,
+          { organizationId },
+        );
 
       const matches: ProductSearchMatch[] = [];
-      for (const p of props) {
-        const product = productById.get(p.productId);
+      for (const m of relevantMatches) {
+        const product = productById.get(m.id);
         if (!product) continue;
         matches.push({
           id: product.id,
-          caption: this.buildCaption(
-            product.name,
-            product.price,
-            String(product.currency),
-            product.quantity,
-            p.description,
-            lang,
-          ),
+          caption: m.caption,
           imageKey: product.images[0]?.url ?? null,
         });
       }
 
-      return { matches, noResultText: '' };
+      // If Gemini filtered everything out, surface the noResultText rather
+      // than silently returning empty — caller can use it as a user-facing
+      // "nothing found" message.
+      return { matches, noResultText };
     } catch (error: any) {
       this.logger.error(
         `Weaviate keyword search failed, falling back to full-catalog match: ${error.message}`,

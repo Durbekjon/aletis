@@ -1837,13 +1837,19 @@ Message:`;
         .join('\n');
 
       const lang = userMessage;
-      const prompt = `You are a shop assistant. Customer wants: "${searchQuery}"
+      const prompt = `You are a strict shop assistant. Customer wants: "${searchQuery}"
 
 OUR PRODUCTS:
 ${productList}
 
+RELEVANCE RULES (follow strictly):
+- Only include a product if it is a DIRECT, GENUINE match for what the customer is asking for.
+- Do NOT include products that are merely in the same store or have a coincidental word overlap.
+- Do NOT return a product just because it is the "closest" thing if it is still clearly unrelated.
+- If NONE of the listed products match what the customer wants, return "matches": [] and explain politely in "noResultText".
+
 Return a JSON object (no markdown, no code block) with:
-- "matches": array of matched products. Each item: { "id": <integer product ID>, "caption": "<short attractive product card text>" }
+- "matches": array of truly matching products. Each item: { "id": <integer product ID>, "caption": "<short attractive product card text>" }
   - caption must be in the SAME language as "${lang}"
   - caption format: product name on first line, price on next line, stock status (in stock count, or out of stock) on next line, then 1-2 line catchy description, end with "Buyurtma bermoqchimisiz?" (or equivalent in detected language) — but if OUT OF STOCK, do not ask this, say it's unavailable instead
   - Use Telegram HTML formatting, NOT markdown: wrap the product name in <b>...</b> for bold. Do NOT use *asterisks* for bold — they render literally.
