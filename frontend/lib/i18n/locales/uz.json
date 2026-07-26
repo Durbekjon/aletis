@@ -1310,6 +1310,7 @@
     "images": "Mahsulot rasmlari",
     "imagesDesc": "Mahsulot rasmlarini yuklang",
     "uploadImages": "Rasmlarni yuklash",
+    "takePhoto": "Kameradan olish",
     "imagesCount": "{{count}} ta rasm",
     "uploading": "Yuklanmoqda...",
     "imageN": "Rasm {{n}}",
@@ -1332,6 +1333,20 @@
       "GBP": "GBP — funt sterling",
       "JPY": "JPY — yapon iyenasi"
     }
+  },
+  "cameraCapture": {
+    "title": "Kameradan rasm olish",
+    "description": "Mahsulot uchun kamera orqali rasm oling",
+    "capture": "Rasm olish",
+    "retake": "Qayta olish",
+    "usePhoto": "Foydalanish",
+    "cancel": "Bekor qilish",
+    "flip": "Kamerani aylantirish",
+    "starting": "Kamera yoqilmoqda...",
+    "errorPermission": "Kameraga ruxsat berilmagan. Brauzer sozlamalarini tekshiring.",
+    "errorNotFound": "Kamera topilmadi.",
+    "errorGeneric": "Kamerani ishga tushirib bo'lmadi.",
+    "tryAgain": "Qayta urinish"
   },
   "postForm": {
     "channel": "Kanal",
