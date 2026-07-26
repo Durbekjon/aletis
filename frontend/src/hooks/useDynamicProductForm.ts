@@ -26,7 +26,7 @@ export function useDynamicProductForm(options?: {
       currency: options?.initialValues?.currency ?? "UZS",
       quantity: options?.initialValues?.quantity ?? 0,
       images: options?.initialValues?.images ?? [],
-      status: options?.initialValues?.status ?? "DRAFT",
+      status: options?.initialValues?.status ?? "ACTIVE",
       fields: options?.initialValues?.fields ?? {},
       autoPublish: options?.initialValues?.autoPublish ?? true,
     },

@@ -1332,7 +1332,9 @@
       "KZT": "KZT — qozog'iston tengesi",
       "GBP": "GBP — funt sterling",
       "JPY": "JPY — yapon iyenasi"
-    }
+    },
+    "showAdvancedSettings": "Qo'shimcha sozlamalarni ko'rsatish",
+    "hideAdvancedSettings": "Qo'shimcha sozlamalarni yashirish"
   },
   "cameraCapture": {
     "title": "Kameradan rasm olish",

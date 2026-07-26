@@ -1332,7 +1332,9 @@
       "KZT": "KZT - Kazakhstani Tenge",
       "GBP": "GBP - British Pound",
       "JPY": "JPY - Japanese Yen"
-    }
+    },
+    "showAdvancedSettings": "Show advanced settings",
+    "hideAdvancedSettings": "Hide advanced settings"
   },
   "cameraCapture": {
     "title": "Take a Photo",

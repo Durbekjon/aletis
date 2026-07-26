@@ -904,19 +904,31 @@ model BarcodeCatalogEntry {
   barcode      String               @unique
   status       BarcodeCatalogStatus @default(PENDING)
   source       BarcodeSource?
-  productName  String?
-  description  String?
-  brandName    String?
-  categoryName String?
-  unitName     String?
   mxikCode     String?
   imageUrl     String?
   metadata     Json?
+  businessCategories BUSINESS_CATEGORY[]
+  translations BarcodeCatalogTranslation[]
   createdAt    DateTime             @default(now())
   updatedAt    DateTime             @updatedAt()
 
   @@index([status])
   @@map("barcode_catalog_entries")
+}
+
+model BarcodeCatalogTranslation {
+  id           Int                 @id @default(autoincrement())
+  entryId      Int
+  entry        BarcodeCatalogEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  languageCode String
+  productName  String?
+  description  String?
+  brandName    String?
+  categoryName String?
+  unitName     String?
+
+  @@unique([entryId, languageCode])
+  @@map("barcode_catalog_translations")
 }
 
 // What a payment transaction settles: a customer order or a merchant subscription invoice.
