@@ -1350,6 +1350,20 @@
     "errorGeneric": "Failed to start the camera.",
     "tryAgain": "Try Again"
   },
+  "cameraCapture": {
+    "title": "Take a Photo",
+    "description": "Use your camera to capture a product image",
+    "capture": "Capture",
+    "retake": "Retake",
+    "usePhoto": "Use Photo",
+    "cancel": "Cancel",
+    "flip": "Flip Camera",
+    "starting": "Starting camera...",
+    "errorPermission": "Camera permission denied. Please check your browser settings.",
+    "errorNotFound": "No camera found on this device.",
+    "errorGeneric": "Failed to start the camera.",
+    "tryAgain": "Try Again"
+  },
   "postForm": {
     "channel": "Channel",
     "channelDesc": "Select the channel where you want to post",
