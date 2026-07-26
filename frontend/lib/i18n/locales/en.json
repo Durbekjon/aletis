@@ -1332,7 +1332,23 @@
       "KZT": "KZT - Kazakhstani Tenge",
       "GBP": "GBP - British Pound",
       "JPY": "JPY - Japanese Yen"
-    }
+    },
+    "showAdvancedSettings": "Show advanced settings",
+    "hideAdvancedSettings": "Hide advanced settings"
+  },
+  "cameraCapture": {
+    "title": "Take a Photo",
+    "description": "Use your camera to capture a product image",
+    "capture": "Capture",
+    "retake": "Retake",
+    "usePhoto": "Use Photo",
+    "cancel": "Cancel",
+    "flip": "Flip Camera",
+    "starting": "Starting camera...",
+    "errorPermission": "Camera permission denied. Please check your browser settings.",
+    "errorNotFound": "No camera found on this device.",
+    "errorGeneric": "Failed to start the camera.",
+    "tryAgain": "Try Again"
   },
   "cameraCapture": {
     "title": "Take a Photo",

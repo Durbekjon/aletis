@@ -1332,7 +1332,23 @@
       "KZT": "KZT — qozog'iston tengesi",
       "GBP": "GBP — funt sterling",
       "JPY": "JPY — yapon iyenasi"
-    }
+    },
+    "showAdvancedSettings": "Qo'shimcha sozlamalarni ko'rsatish",
+    "hideAdvancedSettings": "Qo'shimcha sozlamalarni yashirish"
+  },
+  "cameraCapture": {
+    "title": "Kameradan rasm olish",
+    "description": "Mahsulot uchun kamera orqali rasm oling",
+    "capture": "Rasm olish",
+    "retake": "Qayta olish",
+    "usePhoto": "Foydalanish",
+    "cancel": "Bekor qilish",
+    "flip": "Kamerani aylantirish",
+    "starting": "Kamera yoqilmoqda...",
+    "errorPermission": "Kameraga ruxsat berilmagan. Brauzer sozlamalarini tekshiring.",
+    "errorNotFound": "Kamera topilmadi.",
+    "errorGeneric": "Kamerani ishga tushirib bo'lmadi.",
+    "tryAgain": "Qayta urinish"
   },
   "cameraCapture": {
     "title": "Kameradan rasm olish",

@@ -66,6 +66,7 @@ export function DynamicProductForm({ initialValues, initialSchemaId, onSubmitImp
   const [selectedSchema, setSelectedSchema] = useState<number | null>(initialSchemaId ?? null)
   const [scanDialogOpen, setScanDialogOpen] = useState(false)
   const [cameraDialogOpen, setCameraDialogOpen] = useState(false)
+  const [showAdvanced, setShowAdvanced] = useState(false)
   const [pendingBarcode, setPendingBarcode] = useState<string | null>(null)
   const completeBarcodeMutation = useCompleteBarcodeMutation()
   const didPrefillRef = useRef(false)
@@ -141,7 +142,7 @@ export function DynamicProductForm({ initialValues, initialSchemaId, onSubmitImp
         quantity: initialValues.quantity ?? '',
         images: initialValues.images ?? [],
         fields: nextFields,
-        status: initialValues.status?.toUpperCase() as "ACTIVE" | "DRAFT" | "ARCHIVED" ?? "DRAFT",
+        status: initialValues.status?.toUpperCase() as "ACTIVE" | "DRAFT" | "ARCHIVED" ?? "ACTIVE",
       } as any)
       didPrefillRef.current = true
     }
@@ -590,91 +591,102 @@ export function DynamicProductForm({ initialValues, initialSchemaId, onSubmitImp
             </div>
 
             </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="currency">
-                  {t('productForm.currency')} <span className="text-destructive">*</span>
-                </Label>
-                <Select
-                  {...register("currency", { 
-                    required: t("productForm.currencyRequired")
-                  })}
-                  defaultValue={initialValues?.currency ?? "UZS"}
-                  onValueChange={(value) => setValue('currency', value as "USD" | "EUR" | "UZS" | "RUB" | "KZT" | "GBP" | "JPY", { shouldDirty: true })}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder={t('productForm.selectCurrency')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="USD">{t('productForm.currencies.USD')}</SelectItem>
-                    <SelectItem value="EUR">{t('productForm.currencies.EUR')}</SelectItem>
-                    <SelectItem value="UZS">{t('productForm.currencies.UZS')}</SelectItem>
-                    <SelectItem value="RUB">{t('productForm.currencies.RUB')}</SelectItem>
-                    <SelectItem value="KZT">{t('productForm.currencies.KZT')}</SelectItem>
-                    <SelectItem value="GBP">{t('productForm.currencies.GBP')}</SelectItem>
-                    <SelectItem value="JPY">{t('productForm.currencies.JPY')}</SelectItem>
-                  </SelectContent>
-                </Select>
-                {errors.currency && <p className="text-sm text-destructive">{errors.currency.message}</p>}
-              </div>
-
-              <div className="space-y-2">
-              <Label htmlFor="status">{t('productForm.status')}</Label>
-              <Select
-                {...register("status", { 
-                  required: t("productForm.statusRequired")
-                })}
-                defaultValue={initialValues?.status?.toUpperCase() as "ACTIVE" | "DRAFT" | "ARCHIVED" ?? "DRAFT"}
-                onValueChange={(value) => setValue('status', value as "ACTIVE" | "DRAFT" | "ARCHIVED", { shouldDirty: true })}
+            <div className="pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full text-muted-foreground border-dashed"
+                onClick={() => setShowAdvanced(!showAdvanced)}
               >
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder={t('productForm.selectStatus')} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ACTIVE">{t('productForm.statusActive')}</SelectItem>
-                  <SelectItem value="DRAFT">{t('productForm.statusDraft')}</SelectItem>
-                  <SelectItem value="ARCHIVED">{t('productForm.statusArchived')}</SelectItem>
-                </SelectContent>
-              </Select>
-              </div>
+                {showAdvanced ? t('productForm.hideAdvancedSettings') : t('productForm.showAdvancedSettings')}
+              </Button>
             </div>
 
-            {/* Auto-publish to connected Telegram channel — create mode only,
-                and only offered when the org actually has a channel to post to. */}
-            {!initialValues && hasConnectedChannel && (
-              <div className="flex items-center justify-between rounded-lg border p-3">
-                <div className="space-y-0.5 pr-4">
-                  <Label htmlFor="autoPublish">{t('productForm.autoPublish')}</Label>
-                  <p className="text-sm text-muted-foreground">
-                    {watchedStatus === 'ACTIVE'
-                      ? t('productForm.autoPublishDesc')
-                      : t('productForm.autoPublishRequiresActive')}
-                  </p>
-                </div>
-                <Switch
-                  id="autoPublish"
-                  checked={watchedAutoPublish}
-                  onCheckedChange={(checked) => setValue('autoPublish', checked, { shouldDirty: true })}
-                />
-              </div>
-            )}
+            {showAdvanced && (
+              <div className="space-y-4 animate-in fade-in slide-in-from-top-2">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="currency">
+                      {t('productForm.currency')} <span className="text-destructive">*</span>
+                    </Label>
+                    <Select
+                      {...register("currency", { 
+                        required: t("productForm.currencyRequired")
+                      })}
+                      defaultValue={initialValues?.currency ?? "UZS"}
+                      onValueChange={(value) => setValue('currency', value as "USD" | "EUR" | "UZS" | "RUB" | "KZT" | "GBP" | "JPY", { shouldDirty: true })}
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder={t('productForm.selectCurrency')} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="USD">{t('productForm.currencies.USD')}</SelectItem>
+                        <SelectItem value="EUR">{t('productForm.currencies.EUR')}</SelectItem>
+                        <SelectItem value="UZS">{t('productForm.currencies.UZS')}</SelectItem>
+                        <SelectItem value="RUB">{t('productForm.currencies.RUB')}</SelectItem>
+                        <SelectItem value="KZT">{t('productForm.currencies.KZT')}</SelectItem>
+                        <SelectItem value="GBP">{t('productForm.currencies.GBP')}</SelectItem>
+                        <SelectItem value="JPY">{t('productForm.currencies.JPY')}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {errors.currency && <p className="text-sm text-destructive">{errors.currency.message}</p>}
+                  </div>
 
-            {/* Dynamic Schema Fields */}
-            {currentSchema && currentSchema.fields.length > 0 && (
-              <>
-                <Separator />
-                <div className="space-y-4">
-                 
-                  {currentSchema.fields
-                    .sort((a, b) => (a.order || 0) - (b.order || 0)) // Sort by order
-                    .map(renderField)}
+                  <div className="space-y-2">
+                  <Label htmlFor="status">{t('productForm.status')}</Label>
+                  <Select
+                    {...register("status", { 
+                      required: t("productForm.statusRequired")
+                    })}
+                    defaultValue={initialValues?.status?.toUpperCase() as "ACTIVE" | "DRAFT" | "ARCHIVED" ?? "ACTIVE"}
+                    onValueChange={(value) => setValue('status', value as "ACTIVE" | "DRAFT" | "ARCHIVED", { shouldDirty: true })}
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder={t('productForm.selectStatus')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="ACTIVE">{t('productForm.statusActive')}</SelectItem>
+                      <SelectItem value="DRAFT">{t('productForm.statusDraft')}</SelectItem>
+                      <SelectItem value="ARCHIVED">{t('productForm.statusArchived')}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  </div>
                 </div>
-              </>
-            )}
 
-            {currentSchema && currentSchema.fields.length === 0 && (
-              <div className="text-center py-4 text-muted-foreground">
-                <p className="text-sm">{t('productForm.noFields')}</p>
+                {!initialValues && hasConnectedChannel && (
+                  <div className="flex items-center justify-between rounded-lg border p-3">
+                    <div className="space-y-0.5 pr-4">
+                      <Label htmlFor="autoPublish">{t('productForm.autoPublish')}</Label>
+                      <p className="text-sm text-muted-foreground">
+                        {watchedStatus === 'ACTIVE'
+                          ? t('productForm.autoPublishDesc')
+                          : t('productForm.autoPublishRequiresActive')}
+                      </p>
+                    </div>
+                    <Switch
+                      id="autoPublish"
+                      checked={watchedAutoPublish}
+                      onCheckedChange={(checked) => setValue('autoPublish', checked, { shouldDirty: true })}
+                    />
+                  </div>
+                )}
+
+                {currentSchema && currentSchema.fields.length > 0 && (
+                  <>
+                    <Separator />
+                    <div className="space-y-4">
+                      {currentSchema.fields
+                        .sort((a, b) => (a.order || 0) - (b.order || 0))
+                        .map(renderField)}
+                    </div>
+                  </>
+                )}
+
+                {currentSchema && currentSchema.fields.length === 0 && (
+                  <div className="text-center py-4 text-muted-foreground">
+                    <p className="text-sm">{t('productForm.noFields')}</p>
+                  </div>
+                )}
               </div>
             )}
           </CardContent>

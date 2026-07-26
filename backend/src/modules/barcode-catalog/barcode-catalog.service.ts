@@ -24,6 +24,7 @@ export class BarcodeCatalogService {
   async lookup(barcode: string): Promise<BarcodeLookupResponseDto> {
     const existing = await this.prisma.barcodeCatalogEntry.findUnique({
       where: { barcode },
+      include: { translations: true },
     });
 
     if (existing?.status === 'COMPLETED') {
@@ -34,34 +35,64 @@ export class BarcodeCatalogService {
       const result = await provider.lookup(barcode);
       if (!result.found) continue;
 
-      const saved = await this.prisma.barcodeCatalogEntry.upsert({
-        where: { barcode },
-        create: {
-          barcode,
-          status: 'COMPLETED',
-          source: provider.source,
-          productName: result.productName,
-          description: result.description,
-          brandName: result.brandName,
-          categoryName: result.categoryName,
-          unitName: result.unitName,
-          mxikCode: result.mxikCode,
-          imageUrl: result.imageUrl,
-          metadata: result.metadata,
-        },
-        update: {
-          status: 'COMPLETED',
-          source: provider.source,
-          productName: result.productName,
-          description: result.description,
-          brandName: result.brandName,
-          categoryName: result.categoryName,
-          unitName: result.unitName,
-          mxikCode: result.mxikCode,
-          imageUrl: result.imageUrl,
-          metadata: result.metadata,
-        },
-      });
+      let saved;
+      if (existing) {
+        saved = await this.prisma.barcodeCatalogEntry.update({
+          where: { id: existing.id },
+          data: {
+            status: 'COMPLETED',
+            source: provider.source,
+            mxikCode: result.mxikCode,
+            imageUrl: result.imageUrl,
+            metadata: result.metadata ?? undefined,
+            translations: {
+              upsert: {
+                where: {
+                  entryId_languageCode: { entryId: existing.id, languageCode: 'ru' }
+                },
+                create: {
+                  languageCode: 'ru',
+                  productName: result.productName,
+                  description: result.description,
+                  brandName: result.brandName,
+                  categoryName: result.categoryName,
+                  unitName: result.unitName,
+                },
+                update: {
+                  productName: result.productName,
+                  description: result.description,
+                  brandName: result.brandName,
+                  categoryName: result.categoryName,
+                  unitName: result.unitName,
+                }
+              }
+            }
+          },
+          include: { translations: true },
+        });
+      } else {
+        saved = await this.prisma.barcodeCatalogEntry.create({
+          data: {
+            barcode,
+            status: 'COMPLETED',
+            source: provider.source,
+            mxikCode: result.mxikCode,
+            imageUrl: result.imageUrl,
+            metadata: result.metadata ?? undefined,
+            translations: {
+              create: {
+                languageCode: 'ru',
+                productName: result.productName,
+                description: result.description,
+                brandName: result.brandName,
+                categoryName: result.categoryName,
+                unitName: result.unitName,
+              }
+            }
+          },
+          include: { translations: true },
+        });
+      }
 
       this.logger.log(
         `[BarcodeCatalog] Resolved ${barcode} via ${provider.source}`,
@@ -69,10 +100,11 @@ export class BarcodeCatalogService {
       return this.toResponseDto(saved);
     }
 
-    await this.prisma.barcodeCatalogEntry.upsert({
+    const pendingSaved = await this.prisma.barcodeCatalogEntry.upsert({
       where: { barcode },
       create: { barcode, status: 'PENDING' },
       update: {},
+      include: { translations: true },
     });
 
     return { found: false, status: 'PENDING' };
@@ -82,31 +114,64 @@ export class BarcodeCatalogService {
     barcode: string,
     dto: CompleteBarcodeEntryDto,
   ): Promise<BarcodeLookupResponseDto> {
-    const saved = await this.prisma.barcodeCatalogEntry.upsert({
+    const existing = await this.prisma.barcodeCatalogEntry.findUnique({
       where: { barcode },
-      create: {
-        barcode,
-        status: 'COMPLETED',
-        source: BarcodeSource.MANUAL,
-        ...dto,
-      },
-      update: {
-        status: 'COMPLETED',
-        source: BarcodeSource.MANUAL,
-        ...dto,
-      },
     });
+
+    const commonData = {
+      status: 'COMPLETED' as const,
+      source: BarcodeSource.MANUAL,
+    };
+
+    const translationData = {
+      productName: dto.productName,
+      description: dto.description,
+      brandName: dto.brandName,
+      categoryName: dto.categoryName,
+      unitName: dto.unitName,
+    };
+
+    let saved;
+    if (existing) {
+      saved = await this.prisma.barcodeCatalogEntry.update({
+        where: { id: existing.id },
+        data: {
+          ...commonData,
+          translations: {
+            upsert: {
+              where: { entryId_languageCode: { entryId: existing.id, languageCode: 'uz' } },
+              create: { languageCode: 'uz', ...translationData },
+              update: translationData,
+            }
+          }
+        },
+        include: { translations: true },
+      });
+    } else {
+      saved = await this.prisma.barcodeCatalogEntry.create({
+        data: {
+          barcode,
+          ...commonData,
+          translations: {
+            create: { languageCode: 'uz', ...translationData }
+          }
+        },
+        include: { translations: true },
+      });
+    }
 
     return this.toResponseDto(saved);
   }
 
-  private toResponseDto(entry: BarcodeCatalogEntry): BarcodeLookupResponseDto {
+  private toResponseDto(entry: any): BarcodeLookupResponseDto {
+    const translation = entry.translations?.find((t: any) => t.languageCode === 'ru') || entry.translations?.[0] || {};
+    
     const data: BarcodeCatalogDataDto = {
-      productName: entry.productName ?? undefined,
-      description: entry.description ?? undefined,
-      brandName: entry.brandName ?? undefined,
-      categoryName: entry.categoryName ?? undefined,
-      unitName: entry.unitName ?? undefined,
+      productName: translation.productName ?? undefined,
+      description: translation.description ?? undefined,
+      brandName: translation.brandName ?? undefined,
+      categoryName: translation.categoryName ?? undefined,
+      unitName: translation.unitName ?? undefined,
       mxikCode: entry.mxikCode ?? undefined,
       imageUrl: entry.imageUrl ?? undefined,
       metadata: (entry.metadata as Record<string, any>) ?? undefined,
