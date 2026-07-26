@@ -1,8 +1,8 @@
 name: Deploy (development)
 
 on:
-  push:
-    branches: [development]
+  # Temporarily disabled: auto-deploy on development push is paused.
+  # Re-enable by adding:  push:\n    branches: [development]
   workflow_dispatch:
 
 concurrency:

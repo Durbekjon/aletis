@@ -25,7 +25,7 @@ export class EmbadingService implements OnModuleInit {
   // allowed to be before it's dropped instead of surfaced as a false match.
   // Heuristic defaults — may need tuning against real query traffic.
   private readonly MAX_TEXT_VECTOR_DISTANCE = 0.75;
-  private readonly MAX_IMAGE_VECTOR_DISTANCE = 0.9;
+  private readonly MAX_IMAGE_VECTOR_DISTANCE = 0.35;
 
   constructor(private readonly imageToBase64Service: ImageToBase64Service) {}
 
@@ -320,6 +320,7 @@ export class EmbadingService implements OnModuleInit {
       limit: limit,
       distance: this.MAX_IMAGE_VECTOR_DISTANCE,
       filters: this.productImageOrgFilter(organizationId),
+      returnMetadata: ['distance'],
       returnReferences: [
         {
           linkOn: 'product',
@@ -334,18 +335,27 @@ export class EmbadingService implements OnModuleInit {
       ],
     });
 
+    this.logger.log(
+      `[ImageSearch] Weaviate returned ${result.objects.length} raw hits (threshold: ${this.MAX_IMAGE_VECTOR_DISTANCE}) for org ${organizationId}`,
+    );
+
     // Extract the parent Product from the matching ProductImages
     // Result objects are ProductImages. Each has a 'product' reference.
     const flatProducts: { id: any; name: any; description: any; price: any; organizationId: number }[] = [];
     const seenIds = new Set();
 
     for (const obj of result.objects) {
+      const distance = (obj as any).metadata?.distance;
+      this.logger.log(
+        `[ImageSearch] Hit distance=${distance}, refs=${JSON.stringify((obj as any).references?.product?.objects?.length)}`,
+      );
       // Cross-references come back under `references`, not `properties` —
       // `properties` only ever holds this object's own scalar fields.
       const refs = (obj as any).references?.product?.objects as any[] | undefined;
       if (refs && refs.length > 0) {
         const product = refs[0]; // 1-1 link from Image -> Product
         const productData = product?.properties;
+        this.logger.log(`[ImageSearch] productData=${JSON.stringify(productData)}`);
         if (productData && !seenIds.has(productData.productId)) {
           flatProducts.push({
             id: productData.productId,
@@ -356,9 +366,14 @@ export class EmbadingService implements OnModuleInit {
           });
           seenIds.add(productData.productId);
         }
+      } else {
+        this.logger.warn(
+          `[ImageSearch] Hit has no product references — possibly unlinked ProductImage object`,
+        );
       }
     }
 
+    this.logger.log(`[ImageSearch] Final flat products: ${flatProducts.length}`);
     return flatProducts;
   }
 
