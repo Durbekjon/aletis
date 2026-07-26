@@ -29,7 +29,7 @@ import { Switch } from "@/components/ui/switch"
 import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { X, Upload, Loader2, AlertCircle, ScanBarcode } from "lucide-react"
+import { X, Upload, Loader2, AlertCircle, ScanBarcode, Camera } from "lucide-react"
 import { useProductSchema } from "@/src/context/ProductSchemaContext"
 import { useDynamicProductForm, type FormData } from "@/src/hooks/useDynamicProductForm"
 import { useUploadManyFilesMutation, useDeleteFileByKeyMutation } from "@/src/hooks/useFilesQuery"
@@ -37,6 +37,7 @@ import { useCompleteBarcodeMutation } from "@/src/hooks/useBarcodeCatalogQuery"
 import { useChannelsQuery } from "@/src/hooks/useChannelsQuery"
 import { findMatchingField } from "@/src/lib/barcode-field-matching"
 import { BarcodeScanDialog, type BarcodeScanResolution } from "@/components/product/barcode-scan-dialog"
+import { CameraCaptureDialog } from "@/components/product/camera-capture-dialog"
 import type { ProductSchemaField } from "@/lib/types/product"
 
 interface DynamicProductFormProps {
@@ -64,6 +65,7 @@ export function DynamicProductForm({ initialValues, initialSchemaId, onSubmitImp
   const [uploadedImages, setUploadedImages] = useState<any[]>([])
   const [selectedSchema, setSelectedSchema] = useState<number | null>(initialSchemaId ?? null)
   const [scanDialogOpen, setScanDialogOpen] = useState(false)
+  const [cameraDialogOpen, setCameraDialogOpen] = useState(false)
   const [pendingBarcode, setPendingBarcode] = useState<string | null>(null)
   const completeBarcodeMutation = useCompleteBarcodeMutation()
   const didPrefillRef = useRef(false)
@@ -188,6 +190,21 @@ export function DynamicProductForm({ initialValues, initialSchemaId, onSubmitImp
       console.error('Failed to upload files:', error)
       // Still store files for preview even if upload fails
       setImageFiles(prev => [...prev, ...files])
+    }
+  }
+
+  const handleCameraCapture = async (file: File) => {
+    try {
+      const uploadResult = await uploadFilesMutation.mutateAsync([file])
+      const newImageIds = uploadResult.map((f) => f.id)
+      const updatedImages = [...images, ...newImageIds]
+      setImages(updatedImages)
+      setValue("images", updatedImages, { shouldDirty: true })
+      setImageFiles((prev) => [...prev, file])
+      setUploadedImages((prev) => [...prev, ...uploadResult])
+    } catch (error) {
+      console.error("Failed to upload camera photo:", error)
+      setImageFiles((prev) => [...prev, file])
     }
   }
 
@@ -671,7 +688,7 @@ export function DynamicProductForm({ initialValues, initialSchemaId, onSubmitImp
           </CardHeader>
           <CardContent>
             <div className="space-y-4 ">
-              <div className="flex items-center gap-4">
+              <div className="flex flex-wrap items-center gap-2">
                 <Input
                   type="file"
                   multiple
@@ -687,6 +704,14 @@ export function DynamicProductForm({ initialValues, initialSchemaId, onSubmitImp
                   <Upload className="h-4 w-4" />
                   {t('productForm.uploadImages')}
                 </Label>
+                <button
+                  type="button"
+                  onClick={() => setCameraDialogOpen(true)}
+                  className="flex items-center gap-2 px-4 py-2 border border-dashed border-muted-foreground rounded-lg cursor-pointer hover:bg-muted text-sm"
+                >
+                  <Camera className="h-4 w-4" />
+                  {t('productForm.takePhoto')}
+                </button>
                 <span className="text-sm text-muted-foreground">{t('productForm.imagesCount', { count: images.length })}</span>
                 {uploadFilesMutation.isPending && (
                   <div className="flex items-center gap-2 text-sm text-blue-600">
@@ -784,6 +809,11 @@ export function DynamicProductForm({ initialValues, initialSchemaId, onSubmitImp
         onResolved={handleBarcodeResolved}
       />
     )}
+    <CameraCaptureDialog
+      open={cameraDialogOpen}
+      onOpenChange={setCameraDialogOpen}
+      onCapture={handleCameraCapture}
+    />
     </>
   )
 }
