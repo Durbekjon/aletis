@@ -1,3 +1,5 @@
+import { EncryptionService } from '@core/encryption/encryption.service';
+import { PrismaService } from '@core/prisma/prisma.service';
 import {
   ConflictException,
   ForbiddenException,
@@ -6,10 +8,14 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import {
+  CustomerChannel,
+  InstagramAccount,
+  MemberRole,
+  Organization,
+  Prisma,
+} from '@prisma/client';
 import { createHmac, timingSafeEqual } from 'crypto';
-import { PrismaService } from '@core/prisma/prisma.service';
-import { EncryptionService } from '@core/encryption/encryption.service';
-import { CustomerChannel, InstagramAccount, MemberRole, Organization, Prisma } from '@prisma/client';
 
 export type InboundIgMessage = {
   igBusinessId: string; // the IG business account that received the DM (entry.id)
@@ -77,7 +83,11 @@ export class InstagramService {
   }
 
   /** GET webhook handshake — echo hub.challenge when the verify token matches. */
-  verifyChallenge(mode?: string, token?: string, challenge?: string): string | null {
+  verifyChallenge(
+    mode?: string,
+    token?: string,
+    challenge?: string,
+  ): string | null {
     if (mode === 'subscribe' && token && token === this.verifyToken) {
       this.logger.log('Instagram webhook verified');
       return challenge ?? '';
@@ -91,9 +101,14 @@ export class InstagramService {
    * secret is configured yet, so the scaffold accepts events in dev. Requires
    * the raw request body — enable `rawBody: true` in main.ts to use it.
    */
-  verifySignature(rawBody: Buffer | string | undefined, signature?: string): boolean {
+  verifySignature(
+    rawBody: Buffer | string | undefined,
+    signature?: string,
+  ): boolean {
     if (!this.appSecret) {
-      this.logger.warn('META_APP_SECRET not set — skipping signature check (scaffold)');
+      this.logger.warn(
+        'META_APP_SECRET not set — skipping signature check (scaffold)',
+      );
       return true;
     }
     if (!rawBody || !signature) return false;
@@ -111,6 +126,7 @@ export class InstagramService {
 
   /** Extract inbound text messages from a Meta webhook payload. */
   parseInbound(payload: any): InboundIgMessage[] {
+    console.log(JSON.stringify(payload, null, 2));
     const out: InboundIgMessage[] = [];
     const entries = Array.isArray(payload?.entry) ? payload.entry : [];
     for (const entry of entries) {
@@ -120,7 +136,8 @@ export class InstagramService {
         const senderId = ev?.sender?.id ? String(ev.sender.id) : '';
         const text = ev?.message?.text;
         // Ignore echoes (messages we sent) and non-text events.
-        if (!senderId || ev?.message?.is_echo || typeof text !== 'string') continue;
+        if (!senderId || ev?.message?.is_echo || typeof text !== 'string')
+          continue;
         out.push({ igBusinessId, senderId, text, timestamp: ev?.timestamp });
       }
     }
@@ -149,7 +166,11 @@ export class InstagramService {
 
     const telegramKey = `ig_${msg.senderId}`;
     let customer = await this.prisma.customer.findFirst({
-      where: { organizationId, instagramId: msg.senderId, channel: CustomerChannel.INSTAGRAM },
+      where: {
+        organizationId,
+        instagramId: msg.senderId,
+        channel: CustomerChannel.INSTAGRAM,
+      },
       select: { id: true },
     });
     if (!customer) {
@@ -193,13 +214,19 @@ export class InstagramService {
    * Note: outside the 24h window Meta requires a message tag (e.g. HUMAN_AGENT)
    * — add `messaging_type`/`tag` here when sending late win-backs in production.
    */
-  async sendMessage(organizationId: number, igsid: string, text: string): Promise<void> {
+  async sendMessage(
+    organizationId: number,
+    igsid: string,
+    text: string,
+  ): Promise<void> {
     const account = await this.prisma.instagramAccount.findFirst({
       where: { organizationId },
       select: { accessTokenEncrypted: true, instagramUserId: true },
     });
     if (!account) {
-      throw new Error(`No InstagramAccount configured for org ${organizationId}`);
+      throw new Error(
+        `No InstagramAccount configured for org ${organizationId}`,
+      );
     }
     const token = this.encryption.decrypt(account.accessTokenEncrypted);
 
@@ -276,7 +303,10 @@ export class InstagramService {
     const { organizationId, iat } = JSON.parse(
       Buffer.from(payload, 'base64url').toString('utf8'),
     );
-    if (typeof organizationId !== 'number' || Date.now() - iat > 10 * 60 * 1000) {
+    if (
+      typeof organizationId !== 'number' ||
+      Date.now() - iat > 10 * 60 * 1000
+    ) {
       throw new ForbiddenException('State expired');
     }
     return organizationId;
@@ -313,7 +343,9 @@ export class InstagramService {
       scope: 'instagram_business_basic,instagram_business_manage_messages',
       state: this.signState(organization.id),
     });
-    return { url: `https://www.instagram.com/oauth/authorize?${params.toString()}` };
+    return {
+      url: `https://www.instagram.com/oauth/authorize?${params.toString()}`,
+    };
   }
 
   /** Decode+verify the OAuth `state` param — used by the public callback controller. */
@@ -332,7 +364,9 @@ export class InstagramService {
     code: string,
   ): Promise<InstagramAccount> {
     const shortLived = await this.exchangeCodeForShortLivedToken(code);
-    const longLived = await this.exchangeForLongLivedToken(shortLived.accessToken);
+    const longLived = await this.exchangeForLongLivedToken(
+      shortLived.accessToken,
+    );
     const account = await this.fetchAccountInfo(longLived.accessToken);
     await this.subscribeWebhooks(account.id, longLived.accessToken);
 
@@ -365,9 +399,15 @@ export class InstagramService {
     }
   }
 
-  async getAccountForOrg(userId: number): Promise<Pick<
+  async getAccountForOrg(
+    userId: number,
+  ): Promise<Pick<
     InstagramAccount,
-    'id' | 'instagramUserId' | 'instagramUsername' | 'tokenExpiresAt' | 'createdAt'
+    | 'id'
+    | 'instagramUserId'
+    | 'instagramUsername'
+    | 'tokenExpiresAt'
+    | 'createdAt'
   > | null> {
     const organization = await this.validateUser(userId);
     return this.prisma.instagramAccount.findFirst({
@@ -393,7 +433,9 @@ export class InstagramService {
       const token = this.encryption.decrypt(account.accessTokenEncrypted);
       await this.unsubscribeWebhooks(account.instagramUserId, token);
     } catch (err: any) {
-      this.logger.warn(`Instagram unsubscribe on disconnect failed (ignoring): ${err.message}`);
+      this.logger.warn(
+        `Instagram unsubscribe on disconnect failed (ignoring): ${err.message}`,
+      );
     }
 
     await this.prisma.instagramAccount.delete({ where: { id: account.id } });
@@ -412,11 +454,15 @@ export class InstagramService {
         await this.prisma.instagramAccount.update({
           where: { id: account.id },
           data: {
-            accessTokenEncrypted: this.encryption.encrypt(refreshed.accessToken),
+            accessTokenEncrypted: this.encryption.encrypt(
+              refreshed.accessToken,
+            ),
             tokenExpiresAt: new Date(Date.now() + refreshed.expiresIn * 1000),
           },
         });
-        this.logger.log(`Refreshed Instagram token for account ${account.instagramUserId}`);
+        this.logger.log(
+          `Refreshed Instagram token for account ${account.instagramUserId}`,
+        );
       } catch (err: any) {
         this.logger.warn(
           `Failed to refresh Instagram token for account ${account.instagramUserId}: ${err.message}`,
@@ -442,14 +488,21 @@ export class InstagramService {
     });
     const data = await res.json();
     if (!res.ok) {
-      throw new Error(`Instagram code exchange failed: ${JSON.stringify(data)}`);
+      throw new Error(
+        `Instagram code exchange failed: ${JSON.stringify(data)}`,
+      );
     }
     // Response shape varies by API version: either top-level or wrapped in `data[0]`.
     const entry = Array.isArray(data?.data) ? data.data[0] : data;
     if (!entry?.access_token) {
-      throw new Error(`Instagram code exchange returned no access_token: ${JSON.stringify(data)}`);
+      throw new Error(
+        `Instagram code exchange returned no access_token: ${JSON.stringify(data)}`,
+      );
     }
-    return { accessToken: entry.access_token, igUserId: String(entry.user_id ?? '') };
+    return {
+      accessToken: entry.access_token,
+      igUserId: String(entry.user_id ?? ''),
+    };
   }
 
   private async exchangeForLongLivedToken(
@@ -459,9 +512,14 @@ export class InstagramService {
     const res = await fetch(url);
     const data = await res.json();
     if (!res.ok || !data?.access_token) {
-      throw new Error(`Instagram long-lived token exchange failed: ${JSON.stringify(data)}`);
+      throw new Error(
+        `Instagram long-lived token exchange failed: ${JSON.stringify(data)}`,
+      );
     }
-    return { accessToken: data.access_token, expiresIn: Number(data.expires_in) || 5184000 };
+    return {
+      accessToken: data.access_token,
+      expiresIn: Number(data.expires_in) || 5184000,
+    };
   }
 
   private async refreshLongLivedToken(
@@ -471,9 +529,14 @@ export class InstagramService {
     const res = await fetch(url);
     const data = await res.json();
     if (!res.ok || !data?.access_token) {
-      throw new Error(`Instagram token refresh failed: ${JSON.stringify(data)}`);
+      throw new Error(
+        `Instagram token refresh failed: ${JSON.stringify(data)}`,
+      );
     }
-    return { accessToken: data.access_token, expiresIn: Number(data.expires_in) || 5184000 };
+    return {
+      accessToken: data.access_token,
+      expiresIn: Number(data.expires_in) || 5184000,
+    };
   }
 
   /**
@@ -492,27 +555,41 @@ export class InstagramService {
     const res = await fetch(url);
     const data = await res.json();
     if (!res.ok || !data?.user_id) {
-      throw new Error(`Failed to fetch Instagram account info: ${JSON.stringify(data)}`);
+      throw new Error(
+        `Failed to fetch Instagram account info: ${JSON.stringify(data)}`,
+      );
     }
     return { id: String(data.user_id), username: data.username };
   }
 
-  private async subscribeWebhooks(igUserId: string, accessToken: string): Promise<void> {
+  private async subscribeWebhooks(
+    igUserId: string,
+    accessToken: string,
+  ): Promise<void> {
     const url = `https://${this.graphHost}/${this.graphVersion}/${igUserId}/subscribed_apps?subscribed_fields=messages&access_token=${encodeURIComponent(accessToken)}`;
     const res = await fetch(url, { method: 'POST' });
     if (!res.ok) {
       const body = await res.text().catch(() => '');
-      throw new Error(`Failed to subscribe Instagram webhooks (${res.status}): ${body}`);
+      throw new Error(
+        `Failed to subscribe Instagram webhooks (${res.status}): ${body}`,
+      );
     }
-    this.logger.log(`Subscribed Instagram account ${igUserId} to 'messages' webhooks`);
+    this.logger.log(
+      `Subscribed Instagram account ${igUserId} to 'messages' webhooks`,
+    );
   }
 
-  private async unsubscribeWebhooks(igUserId: string, accessToken: string): Promise<void> {
+  private async unsubscribeWebhooks(
+    igUserId: string,
+    accessToken: string,
+  ): Promise<void> {
     const url = `https://${this.graphHost}/${this.graphVersion}/${igUserId}/subscribed_apps?access_token=${encodeURIComponent(accessToken)}`;
     const res = await fetch(url, { method: 'DELETE' });
     if (!res.ok) {
       const body = await res.text().catch(() => '');
-      throw new Error(`Failed to unsubscribe Instagram webhooks (${res.status}): ${body}`);
+      throw new Error(
+        `Failed to unsubscribe Instagram webhooks (${res.status}): ${body}`,
+      );
     }
   }
 }
