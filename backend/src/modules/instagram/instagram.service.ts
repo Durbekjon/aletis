@@ -20,14 +20,20 @@ import { createHmac, timingSafeEqual } from 'crypto';
 export type InboundIgMessage = {
   igBusinessId: string; // the IG business account that received the DM (entry.id)
   senderId: string; // IGSID of the customer
-  text: string;
   timestamp?: number;
-};
+} & (
+  | { type: 'text'; text: string }
+  | { type: 'image'; imageUrl: string; text?: string }
+  | { type: 'reel'; reelTitle: string; reelUrl: string }
+);
 
 export type ResolvedInbound = {
   customerId: number;
   organizationId: number;
   text: string;
+  messageType: 'text' | 'image' | 'reel';
+  imageUrl?: string;
+  reelTitle?: string;
 };
 
 /**
@@ -124,9 +130,9 @@ export class InstagramService {
     }
   }
 
-  /** Extract inbound text messages from a Meta webhook payload. */
+  /** Extract inbound messages (text, image, reel) from a Meta webhook payload. */
   parseInbound(payload: any): InboundIgMessage[] {
-    console.log(JSON.stringify(payload, null, 2));
+    this.logger.debug(`Instagram webhook payload: ${JSON.stringify(payload)}`);
     const out: InboundIgMessage[] = [];
     const entries = Array.isArray(payload?.entry) ? payload.entry : [];
     for (const entry of entries) {
@@ -134,11 +140,59 @@ export class InstagramService {
       const events = Array.isArray(entry?.messaging) ? entry.messaging : [];
       for (const ev of events) {
         const senderId = ev?.sender?.id ? String(ev.sender.id) : '';
+        if (!senderId) continue;
+
+        // Skip echoes (messages we sent) and read receipts.
+        if (ev?.message?.is_echo) continue;
+        if (ev?.read) continue;
+
+        const base = { igBusinessId, senderId, timestamp: ev?.timestamp };
         const text = ev?.message?.text;
-        // Ignore echoes (messages we sent) and non-text events.
-        if (!senderId || ev?.message?.is_echo || typeof text !== 'string')
+        const attachments = ev?.message?.attachments;
+
+        // 1. Plain text message
+        if (typeof text === 'string' && !attachments) {
+          out.push({ ...base, type: 'text', text });
           continue;
-        out.push({ igBusinessId, senderId, text, timestamp: ev?.timestamp });
+        }
+
+        // 2. Attachment-based messages
+        if (Array.isArray(attachments) && attachments.length > 0) {
+          const att = attachments[0];
+          const attType = att?.type;
+          const attPayload = att?.payload;
+
+          if (attType === 'image' && attPayload?.url) {
+            out.push({
+              ...base,
+              type: 'image',
+              imageUrl: attPayload.url,
+              text: typeof text === 'string' ? text : undefined,
+            });
+            continue;
+          }
+
+          if (attType === 'ig_reel' && attPayload?.title) {
+            out.push({
+              ...base,
+              type: 'reel',
+              reelTitle: attPayload.title,
+              reelUrl: attPayload.url ?? '',
+            });
+            continue;
+          }
+
+          // ig_story and unknown attachment types — skip for now.
+          this.logger.debug(
+            `Skipping unsupported attachment type: ${attType} from ${senderId}`,
+          );
+          continue;
+        }
+
+        // 3. Text message that somehow also had attachments array check above
+        if (typeof text === 'string') {
+          out.push({ ...base, type: 'text', text });
+        }
       }
     }
     return out;
@@ -194,11 +248,25 @@ export class InstagramService {
       });
     }
 
+    // Determine the text to persist based on message type.
+    let contentForDb: string;
+    switch (msg.type) {
+      case 'text':
+        contentForDb = msg.text;
+        break;
+      case 'image':
+        contentForDb = msg.text || '📷 [Rasm yuborildi]';
+        break;
+      case 'reel':
+        contentForDb = `🎬 [Reel: ${msg.reelTitle.substring(0, 100)}]`;
+        break;
+    }
+
     if (bot) {
       await this.prisma.message.create({
         data: {
           sender: 'USER',
-          content: msg.text,
+          content: contentForDb,
           customerId: customer.id,
           botId: bot.id,
           isInquiry: true,
@@ -206,7 +274,40 @@ export class InstagramService {
       });
     }
 
-    return { customerId: customer.id, organizationId, text: msg.text };
+    // Build resolved inbound with type-specific fields.
+    const resolved: ResolvedInbound = {
+      customerId: customer.id,
+      organizationId,
+      text: contentForDb,
+      messageType: msg.type,
+    };
+    if (msg.type === 'image') resolved.imageUrl = msg.imageUrl;
+    if (msg.type === 'reel') resolved.reelTitle = msg.reelTitle;
+
+    return resolved;
+  }
+
+  /**
+   * Download an image from an Instagram CDN URL into an in-memory Buffer.
+   * Returns null on any failure (expired URL, network error, etc.).
+   */
+  async downloadImageFromUrl(url: string): Promise<Buffer | null> {
+    try {
+      const res = await fetch(url);
+      if (!res.ok) {
+        this.logger.warn(
+          `Instagram image download failed (${res.status}): ${url.substring(0, 120)}`,
+        );
+        return null;
+      }
+      const arrayBuffer = await res.arrayBuffer();
+      return Buffer.from(arrayBuffer);
+    } catch (err: any) {
+      this.logger.warn(
+        `Instagram image download error: ${err.message}`,
+      );
+      return null;
+    }
   }
 
   /**
