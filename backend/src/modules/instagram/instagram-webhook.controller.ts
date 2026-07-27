@@ -13,7 +13,9 @@ import type { Request } from 'express';
 import { InstagramService } from './instagram.service';
 import { RetentionService } from '@modules/retention/retention.service';
 import { WebhookService } from '@modules/webhook/webhook.service';
+import { ProductSearchService } from '@modules/products/product-search.service';
 import type { ProcessedAiResponse } from '@modules/webhook/ai-response-handler.service';
+import { Logger } from '@nestjs/common';
 
 /**
  * Meta webhook for Instagram DMs.
@@ -24,10 +26,13 @@ import type { ProcessedAiResponse } from '@modules/webhook/ai-response-handler.s
 @ApiExcludeController()
 @Controller({ path: 'webhook/instagram', version: '1' })
 export class InstagramWebhookController {
+  private readonly logger = new Logger(InstagramWebhookController.name);
+
   constructor(
     private readonly instagramService: InstagramService,
     private readonly retentionService: RetentionService,
     private readonly webhookService: WebhookService,
+    private readonly productSearchService: ProductSearchService,
   ) {}
 
   /** Verification handshake. */
@@ -60,8 +65,39 @@ export class InstagramWebhookController {
         if (!resolved) continue;
         // Retention: a reply closes the loop on a recent win-back.
         await this.retentionService.markResponseIfPending(resolved.customerId);
-        // Run the same AI sales pipeline Telegram uses and reply over Instagram.
-        await this.replyWithAi(resolved.customerId, resolved.organizationId, resolved.text, msg.senderId);
+
+        // Dispatch based on message type.
+        switch (resolved.messageType) {
+          case 'text':
+            await this.replyWithAi(
+              resolved.customerId,
+              resolved.organizationId,
+              resolved.text,
+              msg.senderId,
+            );
+            break;
+
+          case 'image':
+            await this.replyWithImageSearch(
+              resolved.customerId,
+              resolved.organizationId,
+              resolved.imageUrl!,
+              msg.senderId,
+            );
+            break;
+
+          case 'reel':
+            // Pass the reel title through the AI pipeline; if the AI recognises
+            // a product query it will emit [INTENT:SEARCH_PRODUCT] and the
+            // existing search pipeline handles the rest.
+            await this.replyWithAi(
+              resolved.customerId,
+              resolved.organizationId,
+              resolved.reelTitle!,
+              msg.senderId,
+            );
+            break;
+        }
       } catch (err: any) {
         // Never throw — Meta retries aggressively on non-200.
         console.error(`Instagram inbound handling failed: ${err.message}`);
@@ -89,6 +125,61 @@ export class InstagramWebhookController {
 
     await this.instagramService.sendMessage(organizationId, igsid, reply);
     await this.instagramService.saveOutbound(organizationId, customerId, reply);
+  }
+
+  /**
+   * Download the image from Instagram CDN, run visual product search via
+   * Weaviate, and reply with matched product captions or a "not found" message.
+   */
+  private async replyWithImageSearch(
+    customerId: number,
+    organizationId: number,
+    imageUrl: string,
+    igsid: string,
+  ): Promise<void> {
+    const buffer = await this.instagramService.downloadImageFromUrl(imageUrl);
+    if (!buffer) {
+      await this.instagramService.sendMessage(
+        organizationId,
+        igsid,
+        "Kechirasiz, rasmni yuklab bo'lmadi. Iltimos, qayta urinib ko'ring.",
+      );
+      return;
+    }
+
+    const base64Image = buffer.toString('base64');
+
+    this.logger.log(
+      `Performing Instagram image search for customer ${customerId}`,
+    );
+    const { matches } = await this.productSearchService.searchByImage(
+      organizationId,
+      customerId,
+      base64Image,
+      'uz', // default lang for Instagram customers
+      5,
+    );
+
+    let reply: string;
+    if (matches.length > 0) {
+      reply = matches.map((m) => m.caption).join('\n\n');
+    } else {
+      reply = "Rasm bo'yicha hech qanday mahsulot topilmadi.";
+    }
+
+    // Strip any HTML/markdown that captions might contain.
+    reply = reply
+      .replace(/<[^>]+>/g, '')
+      .replace(/\*\*(.*?)\*\*/g, '$1')
+      .replace(/__(.*?)__/g, '$1')
+      .trim();
+
+    await this.instagramService.sendMessage(organizationId, igsid, reply);
+    await this.instagramService.saveOutbound(
+      organizationId,
+      customerId,
+      reply,
+    );
   }
 
   /**
