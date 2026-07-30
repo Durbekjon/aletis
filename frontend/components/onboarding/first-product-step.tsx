@@ -34,6 +34,13 @@ export function FirstProductStep({ data, onUpdate, onNext }: FirstProductStepPro
   const [uploadedImageIds, setUploadedImageIds] = useState<number[]>([])
   const [isUploading, setIsUploading] = useState(false)
   const { toast } = useToast()
+  const nameInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (nameInputRef.current) {
+      nameInputRef.current.focus()
+    }
+  }, [])
 
   useEffect(() => {
     let mounted = true
@@ -136,6 +143,7 @@ export function FirstProductStep({ data, onUpdate, onNext }: FirstProductStepPro
             <Label htmlFor="productName">{t("onboarding.product.nameLabel")} *</Label>
             <Input
               id="productName"
+              ref={nameInputRef}
               value={product.name}
               onChange={(e) => handleInputChange("name", e.target.value)}
               placeholder={t("onboarding.product.namePlaceholder")}
