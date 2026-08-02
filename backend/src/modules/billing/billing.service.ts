@@ -301,7 +301,7 @@ export class BillingService implements OnModuleInit {
     const count = await this.prisma.invoice.count({
       where: { subscriptionId: subscription.id },
     });
-    const invoiceNumber = `INV-${new Date().getFullYear()}-${String(count + 1).padStart(4, '0')}`;
+    const invoiceNumber = `INV-${subscription.organizationId}-${new Date().getFullYear()}-${String(count + 1).padStart(4, '0')}`;
 
     const dueDate = new Date(subscription.currentPeriodEnd);
     dueDate.setUTCDate(dueDate.getUTCDate() + 7);
