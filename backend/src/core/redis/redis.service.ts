@@ -23,6 +23,15 @@ export class RedisService {
     await this.redis.del(key);
   }
 
+  async incr(key: string): Promise<number> {
+    return await this.redis.incr(key);
+  }
+
+  async expire(key: string, seconds: number): Promise<boolean> {
+    const result = await this.redis.expire(key, seconds);
+    return result === 1;
+  }
+
   async keys(pattern: string): Promise<string[]> {
     return await this.redis.keys(pattern);
   }
