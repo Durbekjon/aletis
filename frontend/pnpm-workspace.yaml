@@ -1,4 +1,7 @@
 packages:
   - '.'
+allowBuilds:
+  '@tailwindcss/oxide': set this to true or false
+  core-js: set this to true or false
 ignoredBuiltDependencies:
   - '@tailwindcss/oxide'
