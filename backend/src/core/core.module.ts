@@ -14,6 +14,7 @@ import { TelegramLoggerModule } from './telegram-logger/telegram-logger.module';
 import { ImageToBase64Module } from './image-to-base64/image-to-base64.module';
 import { ImagekitModule } from './imagekit/imagekit.module';
 import { QueueModule } from './queue/queue.module';
+import { SystemMonitorModule } from './system-monitor/system-monitor.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { QueueModule } from './queue/queue.module';
     ImageToBase64Module,
     ImagekitModule,
     QueueModule,
+    SystemMonitorModule,
   ],
   providers: [EncryptionService, GeminiService, AiUsageRecorderService, RetryService],
   exports: [
@@ -40,6 +42,7 @@ import { QueueModule } from './queue/queue.module';
     ImageToBase64Module,
     ImagekitModule,
     QueueModule,
+    SystemMonitorModule,
   ],
 })
 export class CoreModule {}

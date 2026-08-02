@@ -143,8 +143,6 @@ export class TelegramLoggerService {
    * Sends message to Telegram Bot API
    */
   private async sendTelegramMessage(text: string): Promise<void> {
-    console.log('this.botToken', this.botToken);
-    console.log('this.chatId', this.chatId);
     if (!this.botToken || !this.chatId) {
       throw new Error('Telegram bot token or chat ID not configured');
     }

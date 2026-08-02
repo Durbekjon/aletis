@@ -22,6 +22,8 @@ import { RetentionService } from '@modules/retention/retention.service';
 import { ReplenishmentService } from '@modules/replenishment/replenishment.service';
 import { UsageService, QuotaStatus } from '@modules/usage/usage.service';
 import { LoyaltyService } from '@modules/loyalty/loyalty.service';
+import { TelegramLoggerService } from '@core/telegram-logger/telegram-logger.service';
+import { RedisService } from '@core/redis/redis.service';
 
 @Injectable()
 export class WebhookService {
@@ -45,6 +47,8 @@ export class WebhookService {
     private readonly retentionService: RetentionService,
     private readonly usageService: UsageService,
     private readonly loyaltyService: LoyaltyService,
+    private readonly telegramLogger: TelegramLoggerService,
+    private readonly redisService: RedisService,
     @Optional()
     private readonly replenishmentService?: ReplenishmentService,
   ) {}
@@ -144,6 +148,31 @@ export class WebhookService {
       return { status: 'ok' };
     }
     const { bot, customer } = result;
+
+    // Traffic Monitoring
+    try {
+      const trafficKey = `traffic_monitor:${botId}`;
+      const count = await this.redisService.incr(trafficKey);
+      if (count === 1) {
+        await this.redisService.expire(trafficKey, 60); // Reset every 1 minute
+      }
+      
+      if (count > 50) {
+        const cooldownKey = `traffic_alert_cooldown`;
+        const isCooldown = await this.redisService.get<boolean>(cooldownKey);
+        
+        if (!isCooldown) {
+          await this.redisService.set(cooldownKey, true, 900); // 15 minutes cooldown
+          const orgName = bot.organizationId;
+          const msg = `Bot: ${bot.username} (Org ID: ${orgName})\nTraffic spike detected: >50 messages per minute.`;
+          this.logger.warn(`High traffic alert triggered: ${msg}`);
+          await this.telegramLogger.sendEvent('🚨 High Traffic Alert', msg);
+        }
+      }
+    } catch (err) {
+      this.logger.error(`Error in traffic monitoring: ${err.message}`, err.stack);
+    }
+
     const decyptedToken = this.encryptionService.decrypt(bot.token);
     // Give every message/callback entry point its own validation
     let isValid = false;

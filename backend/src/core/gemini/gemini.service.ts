@@ -4,6 +4,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import type { AiFeature, Message } from '@prisma/client';
 import { PrismaService } from '@/core/prisma/prisma.service';
 import { AiUsageRecorderService } from './ai-usage-recorder.service';
+import { TelegramLoggerService } from '@/core/telegram-logger/telegram-logger.service';
 
 export interface AiCallContext {
   organizationId?: number | null;
@@ -31,6 +32,7 @@ export class GeminiService {
     private readonly configService: ConfigService,
     private readonly prisma: PrismaService,
     private readonly aiUsageRecorder: AiUsageRecorderService,
+    private readonly telegramLogger: TelegramLoggerService,
   ) {
     const raw =
       this.configService.get<string>('GEMINI_API_KEYS') ||
@@ -138,6 +140,13 @@ export class GeminiService {
       success: false,
       errorType: 'QUOTA_EXHAUSTED',
     });
+    
+    // Alert internal team that ALL keys are exhausted
+    void this.telegramLogger.sendEvent(
+      '🛑 All AI Tokens Exhausted',
+      `All Gemini API keys in the .env file have reached their quota limits. Platform AI features are currently blocked.\nModel: ${modelName}\nFeature: ${feature}`
+    );
+
     throw new Error(
       `All ${total} Gemini API key(s) exhausted (quota exceeded)`,
     );
