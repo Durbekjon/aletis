@@ -55,6 +55,7 @@ export class GeminiService {
         }>,
     feature: AiFeature,
     ctx?: AiCallContext,
+    generationConfig?: any,
   ): Promise<string> {
     const total = this.clients.length;
     const startIndex = this.currentKeyIndex;
@@ -63,7 +64,10 @@ export class GeminiService {
     for (let rotation = 0; rotation < total; rotation++) {
       const keyIndex = (startIndex + rotation) % total;
       const client = this.clients[keyIndex];
-      const model = client.getGenerativeModel({ model: modelName });
+      const model = client.getGenerativeModel({ 
+        model: modelName,
+        ...(generationConfig ? { generationConfig } : {}),
+      });
 
       const maxRetries = 2;
       for (let attempt = 1; attempt <= maxRetries; attempt++) {
@@ -138,6 +142,58 @@ export class GeminiService {
       `All ${total} Gemini API key(s) exhausted (quota exceeded)`,
     );
   }
+
+  /**
+   * Generates dynamic, engaging product captions using structured JSON output.
+   */
+  async generateProductCaptions(
+    products: any[],
+    lang: string,
+    contextQuery?: string,
+  ): Promise<{ id: number; caption: string }[]> {
+    if (!products || products.length === 0) return [];
+
+    const prompt = `
+You are an expert copywriter for an e-commerce bot. The user searched for: "${contextQuery || 'products'}"
+Language: ${lang === 'uz' ? 'Uzbek' : lang === 'ru' ? 'Russian' : 'English'}
+
+I am providing you with a list of products in JSON format.
+Your task is to write a highly engaging, personalized product caption for each product.
+Guidelines:
+1. Always include the product name, price (and currency), and stock status (how many available).
+2. If the product is IN STOCK (quantity > 0), add a catchy 1-2 sentence description and end with a call to action like "Would you like to order this?" (translated to the target language).
+3. If the product is OUT OF STOCK (quantity <= 0), clearly state it's currently unavailable and DO NOT ask them to order it.
+4. Output MUST be a valid JSON array of objects.
+5. Each object must have exactly two fields: "id" (the product ID as a number) and "caption" (the generated text string).
+
+Products:
+${JSON.stringify(products.map(p => ({
+  id: p.id,
+  name: p.name,
+  price: p.price,
+  currency: p.currency,
+  quantity: p.quantity,
+  description: p.description
+})), null, 2)}
+`;
+
+    try {
+      const resultStr = await this.callWithRotation(
+        'gemini-2.5-flash',
+        prompt,
+        'PRODUCT_MATCHING',
+        undefined,
+        { responseMimeType: 'application/json' }
+      );
+      
+      const parsed = JSON.parse(resultStr);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch (err) {
+      this.logger.error(`Failed to generate product captions: ${err}`);
+      return [];
+    }
+  }
+
 
   async generateResponse(
     userText: string,
@@ -1851,7 +1907,9 @@ RELEVANCE RULES (follow strictly):
 Return a JSON object (no markdown, no code block) with:
 - "matches": array of truly matching products. Each item: { "id": <integer product ID>, "caption": "<short attractive product card text>" }
   - caption must be in the SAME language as "${lang}"
-  - caption format: product name on first line, price on next line, stock status (in stock count, or out of stock) on next line, then 1-2 line catchy description, end with "Buyurtma bermoqchimisiz?" (or equivalent in detected language) — but if OUT OF STOCK, do not ask this, say it's unavailable instead
+  - write a highly engaging, personalized product caption. Always include the product name, price (and currency), and stock status.
+  - If the product is IN STOCK (quantity > 0), add a catchy 1-2 sentence description and end with a natural call to action (like "Would you like to order this?" translated to the target language).
+  - If the product is OUT OF STOCK (quantity <= 0), clearly state it's currently unavailable and DO NOT ask them to order it.
   - Use Telegram HTML formatting, NOT markdown: wrap the product name in <b>...</b> for bold. Do NOT use *asterisks* for bold — they render literally.
   - Use emojis in caption: 🛍️ for name, 💰 for price, 📦 for stock, ✨ for features
   - Keep caption under 250 characters total

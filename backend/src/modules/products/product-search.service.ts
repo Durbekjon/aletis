@@ -255,20 +255,36 @@ export class ProductSearchService {
     });
     const productById = new Map(products.map((p) => [p.id, p]));
 
+    const candidates = hits.map((hit) => {
+      const p = productById.get(hit.id);
+      return {
+        id: hit.id,
+        name: p?.name,
+        price: p?.price,
+        currency: p?.currency,
+        quantity: p?.quantity,
+        description: hit.description,
+      };
+    }).filter(c => c.name);
+
+    // AI formats engaging captions dynamically
+    const captionsList = await this.geminiService.generateProductCaptions(
+      candidates,
+      lang || 'uz',
+      'Image search match'
+    );
+    const captionById = new Map(captionsList.map(c => [c.id, c.caption]));
+
     const matches: ProductSearchMatch[] = [];
     for (const hit of hits) {
       const product = productById.get(hit.id);
       if (!product) continue;
+      
+      const defaultCaption = `🛍️ <b>${product.name}</b>\n💰 ${product.price} ${product.currency}`;
+      
       matches.push({
         id: product.id,
-        caption: this.buildCaption(
-          product.name,
-          product.price,
-          String(product.currency),
-          product.quantity,
-          hit.description,
-          lang,
-        ),
+        caption: captionById.get(product.id) || defaultCaption,
         imageKey: product.images[0]?.url ?? null,
       });
     }
@@ -276,44 +292,6 @@ export class ProductSearchService {
     return { matches, noResultText: '' };
   }
 
-  /** Telegram HTML parse_mode requires these to be escaped in text content. */
-  private escapeHtml(text: string): string {
-    return text
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;');
-  }
-
-  private buildCaption(
-    name: string,
-    price: number,
-    currency: string,
-    quantity: number,
-    description: string | undefined,
-    lang: string | null | undefined,
-  ): string {
-    const desc = description ? this.escapeHtml(description.substring(0, 100)) : '';
-    const footer =
-      lang === 'ru'
-        ? 'Хотите заказать это?'
-        : lang === 'en'
-          ? 'Would you like to order this?'
-          : 'Buyurtma bermoqchimisiz?';
-    const stock =
-      quantity <= 0
-        ? lang === 'ru'
-          ? '❌ Нет в наличии'
-          : lang === 'en'
-            ? '❌ Out of stock'
-            : '❌ Hozircha mavjud emas'
-        : lang === 'ru'
-          ? `📦 В наличии: ${quantity} шт.`
-          : lang === 'en'
-            ? `📦 ${quantity} in stock`
-            : `📦 ${quantity} dona mavjud`;
-
-    return `🛍️ <b>${this.escapeHtml(name)}</b>\n💰 ${price} ${currency}\n${stock}${desc ? `\n✨ ${desc}` : ''}\n\n${footer}`;
-  }
 
   private async searchViaFullCatalogFallback(
     organizationId: number,

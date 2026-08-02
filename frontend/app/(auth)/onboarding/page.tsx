@@ -17,6 +17,7 @@ import { OnboardingStep as BackendOnboardingStep } from "@/src/api/authApi"
 import authApi from "@/src/api/authApi"
 import { useTranslation } from "@/src/context/I18nContext"
 import Image from "next/image"
+import { MascotGuide } from "@/components/onboarding/mascot-guide"
 
 const STEP_I18N: Record<number, { titleKey: string; descKey: string }> = {
   1: { titleKey: "onboarding.steps.organizationTitle", descKey: "onboarding.steps.organizationDesc" },
@@ -72,12 +73,27 @@ export default function OnboardingPage() {
   const { t } = useTranslation()
 
   useEffect(() => {
+    const fetchProgress = async () => {
+      try {
+        const progress = await authApi.getOnboardingProgress()
+        if (progress && progress.status === "COMPLETE") {
+          router.push("/dashboard")
+        } else if (progress && progress.nextStep in STEP_MAPPING) {
+          setCurrentStep(STEP_MAPPING[progress.nextStep])
+        }
+      } catch (error) {
+        // If error (e.g. no organization yet), stay on step 1
+      }
+    }
+
     const stepParam = searchParams.get("step")
     if (stepParam && stepParam in STEP_MAPPING) {
       const stepNumber = STEP_MAPPING[stepParam as BackendOnboardingStep]
       setCurrentStep(stepNumber)
+    } else {
+      fetchProgress()
     }
-  }, [searchParams])
+  }, [searchParams, router])
 
   const updateOnboardingData = (data: Partial<OnboardingData>) => {
     setOnboardingData((prev) => ({ ...prev, ...data }))
@@ -160,8 +176,14 @@ export default function OnboardingPage() {
   }
 
   return (
-    <div className="relative z-10 min-h-screen p-4 py-8">
-      <div className="max-w-4xl mx-auto">
+    <div className="relative min-h-screen p-4 py-8 overflow-hidden bg-slate-50/50">
+      {/* Dark overlay for dimming effect */}
+      <div className="fixed inset-0 z-40 bg-black/40 pointer-events-none" />
+
+      {/* Mascot Guide */}
+      <MascotGuide currentStep={currentStep} />
+
+      <div className="relative z-50 max-w-2xl lg:max-w-3xl lg:ml-auto lg:mr-12 xl:mr-32 w-full">
         <OnboardingProvider>
           {/* Header */}
           <div className="flex items-center justify-center gap-2 mb-8">
