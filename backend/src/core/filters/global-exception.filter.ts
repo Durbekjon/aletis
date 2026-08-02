@@ -29,7 +29,13 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     let message = 'Internal server error';
     let details: any = null;
 
-    if (exception instanceof HttpException) {
+    const isTokenError = exception && (exception as any).name === 'TokenError';
+
+    if (isTokenError) {
+      status = HttpStatus.BAD_REQUEST;
+      message = (exception as Error).message || 'Invalid or expired OAuth token';
+      details = (exception as Error).stack;
+    } else if (exception instanceof HttpException) {
       status = exception.getStatus();
       const exceptionResponse = exception.getResponse();
 
@@ -48,7 +54,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     // Client errors (4xx) are logged as warnings or debug
     const isServerError = status >= HttpStatus.INTERNAL_SERVER_ERROR;
     const isClientError = status >= HttpStatus.BAD_REQUEST && status < HttpStatus.INTERNAL_SERVER_ERROR;
-    const isUnexpectedError = !(exception instanceof HttpException);
+    const isUnexpectedError = !(exception instanceof HttpException) && !isTokenError;
 
     if (isServerError || isUnexpectedError) {
       this.logger.error(`Request failed: ${request.method} ${request.url}`, {

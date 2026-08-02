@@ -370,6 +370,14 @@ export class RetentionService {
     try {
       await this.sendToCustomer(attempt.channel, attempt.organizationId, customer, text);
     } catch (err: any) {
+      if (err.message?.startsWith('UNREACHABLE:')) {
+        this.logger.log(`Win-back #${attemptId} stopped: customer unreachable (${err.message})`);
+        await this.prisma.winBackAttempt.update({
+          where: { id: attemptId },
+          data: { status: WinBackStatus.FAILED },
+        });
+        return;
+      }
       await this.fail(attemptId, err.message);
       return;
     }
@@ -412,6 +420,9 @@ export class RetentionService {
           { chat_id: customer.telegramId, text, parse_mode: 'HTML' },
         );
         if (res && res.ok === false) {
+          if (res.description?.includes('chat not found') || res.description?.includes('bot was blocked')) {
+             throw new Error(`UNREACHABLE: Telegram send failed: ${res.description}`);
+          }
           throw new Error(
             `Telegram send failed: ${res.description ?? 'unknown'}`,
           );
