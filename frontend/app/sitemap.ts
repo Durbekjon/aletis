@@ -2,15 +2,14 @@
 // Next.js `app/sitemap.ts` should export a default function that returns an array
 // of objects with `url` and optional `lastModified`.
 export default async function sitemap() {
-  const base = "https://yourdomain.com"
+  const base = "https://www.aletis.me"
 
-  // TODO: fetch dynamic routes (products, posts) and map to objects below
   const staticRoutes = [
-    { url: `${base}/` },
-    { url: `${base}/login` },
-    { url: `${base}/register` },
-    { url: `${base}/products` },
-    { url: `${base}/posts` },
+    { url: `${base}/`, lastModified: new Date().toISOString() },
+    { url: `${base}/login`, lastModified: new Date().toISOString() },
+    { url: `${base}/register`, lastModified: new Date().toISOString() },
+    { url: `${base}/privacy/policy`, lastModified: new Date().toISOString() },
+    { url: `${base}/privacy/terms`, lastModified: new Date().toISOString() },
   ]
 
   return staticRoutes
