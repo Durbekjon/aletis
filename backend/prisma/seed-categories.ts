@@ -1,73 +1,74 @@
-import { PrismaClient, FieldType } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
+import fs from 'fs';
+import path from 'path';
 
 const prisma = new PrismaClient();
 
-const defaultCategories = [
-  { id: 1, parent_id: null, title_uz: 'Kanselyariya tovarlari', title_ru: 'Канцтовары', title_en: 'Stationery' },
-  { id: 2, parent_id: 1, title_uz: 'Daftarlar', title_ru: 'Тетради', title_en: 'Notebooks' },
-  { id: 3, parent_id: 1, title_uz: 'Ruchkalar', title_ru: 'Ручки', title_en: 'Pens' },
-  { id: 4, parent_id: null, title_uz: 'Kitoblar', title_ru: 'Книги', title_en: 'Books' },
-  { id: 5, parent_id: 4, title_uz: 'Badiiy adabiyot', title_ru: 'Художественная литература', title_en: 'Fiction' },
-  { id: 6, parent_id: 4, title_uz: 'O\'quv qurollari', title_ru: 'Учебники', title_en: 'Textbooks' },
-  { id: 7, parent_id: null, title_uz: 'Kiyimlar', title_ru: 'Одежда', title_en: 'Clothing' },
-  { id: 8, parent_id: 7, title_uz: 'Erkaklar kiyimi', title_ru: 'Мужская одежда', title_en: 'Men\'s Clothing' },
-  { id: 9, parent_id: 7, title_uz: 'Ayollar kiyimi', title_ru: 'Женская одежда', title_en: 'Women\'s Clothing' },
-  { id: 10, parent_id: null, title_uz: 'Elektronika', title_ru: 'Электроника', title_en: 'Electronics' },
-];
-
 async function main() {
-  console.log('Starting default categories seed...');
+  console.log('Starting categories seed from JSON...');
   
   await prisma.itemSpecValue.deleteMany({});
   await prisma.itemSpec.deleteMany({});
   await prisma.category.deleteMany({});
   console.log('Cleared existing categories.');
 
-  for (const cat of defaultCategories) {
-    await prisma.category.create({
-      data: {
-        id: cat.id,
-        parentId: cat.parent_id,
-        name_uz: cat.title_uz,
-        name_ru: cat.title_ru,
-        name_en: cat.title_en,
-        isLeaf: !defaultCategories.some(c => c.parent_id === cat.id)
-      }
-    });
+  const categoriesPath = path.join(__dirname, 'categories.json');
+  const itemSpecsPath = path.join(__dirname, 'item_specs.json');
+
+  if (!fs.existsSync(categoriesPath) || !fs.existsSync(itemSpecsPath)) {
+    throw new Error('JSON data files not found in prisma directory.');
   }
 
+  const categories = JSON.parse(fs.readFileSync(categoriesPath, 'utf8'));
+  const itemSpecs = JSON.parse(fs.readFileSync(itemSpecsPath, 'utf8'));
+
+  console.log(`Found ${categories.length} categories and ${itemSpecs.length} item specs. Executing insert...`);
+
+  // We can't insert all categories at once if there are foreign key constraints on parentId 
+  // Wait, if it's a self-relation, createMany might fail if the parent doesn't exist yet!
+  // To avoid this, we can insert level by level, or disable foreign key checks temporarily.
+  // Postgres allows temporarily deferring constraints if they are DEFERRABLE, but Prisma doesn't make this easy.
+  // The easiest way is to insert them sequentially sorted by parentId (null first, then level 1, etc)
+  
+  // Actually, since we extracted them from a DB, sorting by ID might naturally sort by depth if they were created sequentially.
+  // Let's sort by parentId (null first)
+  const sortedCategories = [];
+  const map = new Map();
+  categories.forEach(c => map.set(c.id, c));
+  
+  const inserted = new Set();
+  let remaining = categories;
+  
+  while(remaining.length > 0) {
+    const batch = remaining.filter(c => c.parentId === null || inserted.has(c.parentId));
+    if (batch.length === 0) {
+       // fallback if there's a loop or broken reference
+       console.warn('Broken references found, inserting remaining forcefully');
+       await prisma.category.createMany({ data: remaining });
+       break;
+    }
+    
+    // Insert batch
+    await prisma.category.createMany({ data: batch });
+    batch.forEach(c => inserted.add(c.id));
+    remaining = remaining.filter(c => !inserted.has(c.id));
+  }
+  
   console.log('Categories inserted.');
 
-  // Create ItemSpecs for specific root categories
-  const booksCat = await prisma.category.findUnique({ where: { id: 4 } });
-  if (booksCat) {
-    // find leaf nodes
-    const leaves = defaultCategories.filter(c => c.parent_id === 4);
-    for (const leaf of leaves) {
-      await prisma.itemSpec.createMany({
-        data: [
-          { categoryId: leaf.id, name: 'Author', type: FieldType.STRING, required: false },
-          { categoryId: leaf.id, name: 'Publisher', type: FieldType.STRING, required: false },
-          { categoryId: leaf.id, name: 'Pages', type: FieldType.NUMBER, required: false },
-        ]
-      });
-    }
+  // Insert ItemSpecs
+  await prisma.itemSpec.createMany({ data: itemSpecs });
+  console.log('ItemSpecs inserted.');
+
+  // Update autoincrement sequences
+  try {
+    await prisma.$executeRaw`SELECT setval('categories_id_seq', (SELECT MAX(id) FROM categories));`;
+    await prisma.$executeRaw`SELECT setval('item_specs_id_seq', (SELECT MAX(id) FROM item_specs));`;
+    console.log('Updated sequences.');
+  } catch (e) {
+    console.log('Could not update sequences automatically, might not be postgres', e);
   }
 
-  const stationeryCat = await prisma.category.findUnique({ where: { id: 1 } });
-  if (stationeryCat) {
-    const leaves = defaultCategories.filter(c => c.parent_id === 1);
-    for (const leaf of leaves) {
-      await prisma.itemSpec.createMany({
-        data: [
-          { categoryId: leaf.id, name: 'Brand', type: FieldType.STRING, required: false },
-          { categoryId: leaf.id, name: 'Color', type: FieldType.STRING, required: false },
-        ]
-      });
-    }
-  }
-
-  console.log('ItemSpecs created.');
   console.log('Seed completed successfully!');
 }
 
