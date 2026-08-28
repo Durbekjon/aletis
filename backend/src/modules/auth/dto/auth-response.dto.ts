@@ -4,14 +4,11 @@ class OnboardingProgressDto {
   @ApiProperty({ type: Number, example: 1 })
   id: number;
 
-  @ApiProperty({ type: Number, example: 80 })
+  @ApiProperty({ type: Number, example: 20 })
   percentage: number;
 
-  @ApiProperty({ type: Boolean, example: true })
-  isCategorySelected: boolean;
-
   @ApiProperty({ type: Boolean, example: false })
-  isSchemaConfigured: boolean;
+  isCategorySelected: boolean;
 
   @ApiProperty({ type: Boolean, example: false })
   isFirstProductAdded: boolean;

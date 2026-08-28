@@ -134,16 +134,21 @@ export class ProductResponseDto {
   status: ProductStatus;
 
   @ApiProperty({
-    description: 'The ID of the schema this product belongs to',
+    description: 'The ID of the category this product belongs to',
     example: 1,
   })
-  schemaId: number;
+  categoryId: number | null;
 
   @ApiProperty({
-    description: 'The name of the schema',
-    example: 'Electronics Schema',
+    description: 'The category details of the product',
+    example: { id: 1, name_uz: 'Elektronika', name_ru: 'Электроника', name_en: 'Electronics' },
   })
-  schemaName: string;
+  category: {
+    id: number;
+    name_uz: string;
+    name_ru: string;
+    name_en: string;
+  } | null;
 
   @ApiProperty({
     description: 'The ID of the organization',
@@ -158,10 +163,10 @@ export class ProductResponseDto {
   images: ProductImageResponseDto[];
 
   @ApiProperty({
-    description: 'Array of field values',
+    description: 'Array of item spec values',
     type: [FieldValueResponseDto],
   })
-  fields: FieldValueResponseDto[];
+  itemSpecValues: FieldValueResponseDto[];
 
   @ApiProperty({
     description: 'The timestamp when the product was created',

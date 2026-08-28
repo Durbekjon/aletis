@@ -9,6 +9,8 @@ import { TelegramLoggerService } from '@/core/telegram-logger/telegram-logger.se
 export interface AiCallContext {
   organizationId?: number | null;
   botId?: number | null;
+  customerId?: number | null;
+  fulfillmentSettings?: any;
 }
 
 export interface AiResponse {
@@ -52,9 +54,9 @@ export class GeminiService {
     prompt:
       | string
       | Array<{
-          text?: string;
-          inlineData?: { mimeType: string; data: string };
-        }>,
+        text?: string;
+        inlineData?: { mimeType: string; data: string };
+      }>,
     feature: AiFeature,
     ctx?: AiCallContext,
     generationConfig?: any,
@@ -66,7 +68,7 @@ export class GeminiService {
     for (let rotation = 0; rotation < total; rotation++) {
       const keyIndex = (startIndex + rotation) % total;
       const client = this.clients[keyIndex];
-      const model = client.getGenerativeModel({ 
+      const model = client.getGenerativeModel({
         model: modelName,
         ...(generationConfig ? { generationConfig } : {}),
       });
@@ -74,7 +76,19 @@ export class GeminiService {
       const maxRetries = 2;
       for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
-          const result = await model.generateContent(prompt as any);
+          let timer: NodeJS.Timeout;
+          const timeout = new Promise<never>((_, reject) => {
+            timer = setTimeout(() => reject(new Error('Gemini API timeout after 15s')), 15000);
+          });
+          let result: any;
+          try {
+            result = await Promise.race([
+              model.generateContent(prompt as any),
+              timeout
+            ]);
+          } finally {
+            clearTimeout(timer!);
+          }
           this.currentKeyIndex = keyIndex; // remember last working key
           const usage = result.response.usageMetadata;
           void this.aiUsageRecorder.record({
@@ -140,7 +154,7 @@ export class GeminiService {
       success: false,
       errorType: 'QUOTA_EXHAUSTED',
     });
-    
+
     // Alert internal team that ALL keys are exhausted
     void this.telegramLogger.sendEvent(
       '🛑 All AI Tokens Exhausted',
@@ -150,6 +164,62 @@ export class GeminiService {
     throw new Error(
       `All ${total} Gemini API key(s) exhausted (quota exceeded)`,
     );
+  }
+
+  public async callWithRotationRaw(
+    modelName: string,
+    prompt: any,
+    feature: AiFeature,
+    ctx?: AiCallContext,
+    generationConfig?: any,
+    tools?: any[]
+  ): Promise<any> {
+    const total = this.clients.length;
+    const startIndex = this.currentKeyIndex;
+    const startedAt = Date.now();
+    let lastError: any;
+
+    for (let rotation = 0; rotation < total; rotation++) {
+      const keyIndex = (startIndex + rotation) % total;
+      const client = this.clients[keyIndex];
+      const model = client.getGenerativeModel({
+        model: modelName,
+        ...(generationConfig ? { generationConfig } : {}),
+        ...(tools ? { tools } : {})
+      });
+
+      const maxRetries = 2;
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        try {
+          let timer: NodeJS.Timeout;
+          const timeout = new Promise<never>((_, reject) => {
+            timer = setTimeout(() => reject(new Error('Gemini API timeout after 15s')), 15000);
+          });
+          try {
+            const result = await Promise.race([
+              model.generateContent(prompt),
+              timeout
+            ]);
+            this.currentKeyIndex = keyIndex; // remember last working key
+            return result.response;
+          } finally {
+            clearTimeout(timer!);
+          }
+        } catch (error: any) {
+          lastError = error;
+          const msg: string = error?.message ?? String(error);
+          if (/429|quota/i.test(msg)) {
+            break; // move to next key
+          }
+          if (/503|overloaded|unavailable/i.test(msg) && attempt < maxRetries) {
+            await this.delay(500 * attempt);
+            continue;
+          }
+          break; // other error, try next key
+        }
+      }
+    }
+    throw lastError;
   }
 
   /**
@@ -177,13 +247,13 @@ Guidelines:
 
 Products:
 ${JSON.stringify(products.map(p => ({
-  id: p.id,
-  name: p.name,
-  price: p.price,
-  currency: p.currency,
-  quantity: p.quantity,
-  description: p.description
-})), null, 2)}
+      id: p.id,
+      name: p.name,
+      price: p.price,
+      currency: p.currency,
+      quantity: p.quantity,
+      description: p.description
+    })), null, 2)}
 `;
 
     try {
@@ -194,7 +264,7 @@ ${JSON.stringify(products.map(p => ({
         undefined,
         { responseMimeType: 'application/json' }
       );
-      
+
       const parsed = JSON.parse(resultStr);
       return Array.isArray(parsed) ? parsed : [];
     } catch (err) {
@@ -213,7 +283,7 @@ ${JSON.stringify(products.map(p => ({
     orgContext?: { name: string; description?: string; category?: string },
     ctx?: AiCallContext,
   ): Promise<AiResponse> {
-    const prompt = this.buildPrompt(
+    const prompt = this.buildSystemInstruction(
       userText,
       conversationHistory,
       productContext,
@@ -225,7 +295,7 @@ ${JSON.stringify(products.map(p => ({
     try {
       this.logger.log('Generating AI response...');
       const text = await this.callWithRotation(
-        'gemini-flash-latest',
+        'gemini-3.6-flash',
         prompt,
         'SALES_CHAT',
         ctx,
@@ -243,13 +313,14 @@ ${JSON.stringify(products.map(p => ({
     }
   }
 
-  private buildPrompt(
+  public buildSystemInstruction(
     userText: string,
     history: Message[],
     productContext?: string,
     userOrders?: any[],
     lang?: string,
     orgContext?: { name: string; description?: string; category?: string },
+    fulfillmentSettings?: any,
   ): string {
     // Build conversation context (limit to last 6 messages to avoid repetition)
     const recentHistory = history.slice(0, 6);
@@ -260,7 +331,7 @@ ${JSON.stringify(products.map(p => ({
 
     const productInfo =
       productContext ||
-      'No product count available. You do NOT have the full product list loaded. You MUST use [INTENT:SEARCH_PRODUCT] to find products.';
+      'No product count available. You do NOT have the full product list loaded. You MUST use `search_products` tool to find products.';
     const baseUrl = this.configService.get<string>('PUBLIC_BASE_URL') || '';
 
     let langInstruction = '';
@@ -290,7 +361,7 @@ CRITICAL BUSINESS RULES:
 5. Only sell products that are actually in stock
 6. Be honest about availability - don't promise what you don't have
 7. Use relevant emojis (such as 💵, 💳, 📦, 🛒, 📱) to highlight money, payment, or product details where appropriate, but keep them minimal and natural.
-8. UNKNOWN PRODUCTS: You do not know what products are in stock until you search. If a user asks for a product, ALWAYS use [INTENT:SEARCH_PRODUCT]. Do NOT say "we don't have it" without searching first.
+8. UNKNOWN PRODUCTS: You do not know what products are in stock until you search. If a user asks for a product, ALWAYS use the 'search_products' tool. Do NOT say "we don't have it" without searching first.
 
 LANGUAGE DETECTION RULES:
 - Detect the language of the customer's message automatically
@@ -326,10 +397,19 @@ CONVERSATION FLOW
 
 3. Ordering Logic:
    - If the user says "yes" or clearly wants to order:
-     → Immediately proceed to collect order details:
-       - Delivery address
-       - Phone number
-       - Payment method (cash / card / online)
+     → Immediately proceed to collect order details based on fulfillment mode.
+     ${
+       fulfillmentSettings?.fulfillmentMode === 'PICKUP_ONLY'
+         ? `- Since this store is PICKUP ONLY, do NOT ask for a delivery address.
+       - Tell the user they can pick up their order at: ${fulfillmentSettings.pickupAddress || 'our store'}.
+       - Ask for their Phone number and Name.`
+         : fulfillmentSettings?.fulfillmentMode === 'PICKUP_AND_DELIVERY'
+         ? `- Ask the user whether they want DELIVERY or if they will PICK UP the order themselves.
+       - If they choose delivery, ask for their Delivery Address.
+       - If they choose pickup, inform them they can pick it up at: ${fulfillmentSettings.pickupAddress || 'our store'}.
+       - Always ask for their Phone number and Name.`
+         : `- Ask for their Delivery Address, Phone number, and Name.`
+     }
    - Ask for order details step by step, not all at once.
 
 4. Product Information:
@@ -363,195 +443,48 @@ ${productInfo}
 
 INVENTORY RULES:
 1. You do NOT have the product catalog loaded — only the count above. You MUST use
-   [INTENT:SEARCH_PRODUCT] with a search query to look up actual products before
+   the 'search_products' tool with a search query to look up actual products before
    naming, pricing, or offering any specific item.
 2. When user sends a greeting (salom, hi, hello, привет, etc.) with no specific
    request, greet them warmly and ask what they're looking for — do NOT list
    product names, since you don't have them loaded.
-3. If user asks about a NEW product or category you haven't already shown them,
-   use [INTENT:SEARCH_PRODUCT] so we can search for it and show it with its photo.
-4. If a "RECENTLY VIEWED PRODUCT(S)" section appears below, the customer was just
+3. BROAD INQUIRIES: If the user asks a very general question (e.g., "what products do you have?"), do NOT use the 'search_products' tool immediately. Instead, reply by asking them to specify which CATEGORY of products they are interested in.
+4. If user asks about a NEW specific product or category you haven't already shown them,
+   use 'search_products' so we can search for it and show it with its photo.
+5. If a "RECENTLY VIEWED PRODUCT(S)" section appears below, the customer was just
    shown those exact products. If their next message is a follow-up about one of
-   them — quantity, color, warranty, specs, price, or a vague reference like
-   "u", "shu", "bu", "it", "that one" — answer DIRECTLY from that data in plain
-   text. Do NOT trigger [INTENT:SEARCH_PRODUCT] again just to re-answer a
-   question about a product you already have full details for — that only
-   re-sends the same photo and wastes the customer's time. Only search again if
-   they ask about something genuinely different, or the listed details don't
-   cover what they asked.
-5. Do NOT say "we don't have X" unless a search for X returned nothing.
-6. Do NOT make up products or invent details — only describe what a search
+   them (or if they say "yes" to buy it) — answer DIRECTLY from that data in plain text, or proceed to 'create_order' using the Product ID provided in the section. Do NOT trigger 'search_products' again just to re-answer a question or to order a product you already have full details for. Only search again if they ask about something genuinely different.
+6. Do NOT say "we don't have X" unless a search for X returned nothing.
+7. Do NOT make up products or invent details — only describe what a search
    result or the recently-viewed data above actually returns.
 
-${
-  userOrders && userOrders.length > 0
-    ? `CUSTOMER'S ORDER HISTORY:
+${userOrders && userOrders.length > 0
+        ? `CUSTOMER'S ORDER HISTORY:
 ${userOrders.map((order) => `- Order #${order.id}: ${order.details?.items || 'N/A'} (${order.status})`).join('\n')}`
-    : ''
-}
+        : ''
+      }
 
 PRODUCT IMAGE RULES:
 - Product image URLs are already absolute ImageKit CDN URLs (e.g. "https://ik.imagekit.io/.../filename.jpg")
 - When you need to return image URLs, use them exactly as provided — do not modify or prefix them
 
+TOOL USAGE RULES:
+You have access to a set of tools. You must use them to accomplish tasks:
+1. SEARCHING: Use \`search_products\` when the user asks for products.
+2. ORDERING: Use \`create_order\` when the user confirms they want to buy. You MUST ask for phone number/contact info${
+  fulfillmentSettings?.fulfillmentMode === 'PICKUP_ONLY'
+    ? ''
+    : ' and delivery location'
+} before calling \`create_order\`.
+3. ORDER HISTORY: Use \`get_customer_orders\` if they ask about their past orders.
+4. CANCEL ORDER: Use \`cancel_order\` if they want to cancel.
+5. ESCALATION: Use \`escalate_to_human\` if they demand to speak to a manager, are very angry, or ask a question you cannot resolve.
 
-
-ORDER CREATION PROCESS:
-When a customer wants to place an order, follow these steps:
-
-1. FIRST: Respond naturally to the customer with confirmation (e.g., "Great! I'll process your order...")
-2. THEN: Add the order data in this EXACT format at the end of your response:
-
-[INTENT:CREATE_ORDER]
-{
-  "customerName": "extracted name or 'Not provided'",
-  "customerContact": "phone/email if provided or 'Not provided'",
-  "items": [
-    {
-      "productId": "MUST be the exact numeric product ID from inventory OR search results (integer, not product name)",
-      "quantity": "number of items (integer)",
-      "price": "price per unit from inventory OR search results (number)"
-    },
-    {
-      "productId": "MUST be the exact numeric product ID from inventory OR search results (integer, not product name)",
-      "quantity": "number of items (integer)",
-      "price": "price per unit from inventory (number)"
-    }
-  ],
-  "notes": "any special requests or details"
-}
-
-CRITICAL ORDER CREATION RULES:
-🚨 NEVER CREATE AN ORDER WITHOUT ESSENTIAL INFORMATION:
-- Customer contact (phone number or email) - REQUIRED
-- Delivery location/address - REQUIRED
-- Payment method (cash, card, transfer, etc.) - REQUIRED
-- Product details (what they want to buy) - REQUIRED
-
-🚨 IF ANY REQUIRED INFO IS MISSING:
-- DO NOT create an order
-- Ask the customer for the missing information
-- Use [INTENT:ASK_FOR_INFO] instead of [INTENT:CREATE_ORDER]
-- Be polite but firm about needing complete information
-
-CRITICAL RULES FOR MULTIPLE PRODUCTS:
-- If customer mentions multiple products (e.g., "{productName} va telefon", "both X and Y"), create separate items for EACH product
-- Each product mentioned by the customer should have its own item object in the items array
-- Use exact numeric product ID from inventory, NOT product name
-- If a product mentioned by customer is not in inventory, skip that product but include the ones that exist
-- Default quantity is 1 if not specified by customer
-- Extract contact information from the message if provided (phone numbers, email addresses)
-- Look for phone numbers in formats: +998XXXXXXXXX, 998XXXXXXXXX, XXXXXXXXX
-- Look for email addresses in formats: user@domain.com
-- If no contact info is provided, DO NOT CREATE ORDER - ask for it instead
-- The [INTENT:CREATE_ORDER] section will be automatically removed before sending to customer
-- Only the natural response text will be shown to the customer
-- The order data will be processed by the system automatically
-- DO NOT include order confirmation messages (like "Buyurtma muvaffaqiyatli tasdiqlandi") in your response
-- The system will generate the confirmation message automatically after processing the order
-
-MANDATORY MULTIPLE PRODUCTS HANDLING:
-- When customer says "X va Y" (X and Y), you MUST create 2 separate items
-- When customer says "both X and Y", you MUST create 2 separate items
-- When customer says "X ni Y ni birdaniga" (X and Y together), you MUST create 2 separate items
-- ALWAYS check the inventory list above to find the exact Product IDs
-- ALWAYS create a complete JSON with proper closing brackets
-- NEVER create incomplete JSON that will cause parsing errors
-
-EXAMPLES:
-- Customer: "{productName} va telefon sotib olaman" → Create 2 items (one for {productName}, one for telefon)
-- Customer: "{productName} va {productName} ni birdaniga sotib olaman" → Create 2 items (one for {productName}, one for {productName})
-- Customer: "3 ta telefon va 2 ta {productName}" → Create 2 items (one with quantity 3 for telefon, one with quantity 2 for {productName})
-
-SPECIFIC EXAMPLE FOR CURRENT CASE:
-Customer: "{productName1} va {productName2} ni birdaniga sotib olaman"
-Available products: Product ID: 1 ({productName1}), Product ID: 2 ({productName2})
-Response should be:
-[INTENT:CREATE_ORDER]
-{
-  "customerName": "Not provided",
-  "customerContact": "Not provided",
-  "items": [
-    {
-      "productId": 2,
-      "quantity": 1,
-      "price": 100
-    },
-    {
-      "productId": 1,
-      "quantity": 1,
-      "price": {productPrice}
-    }
-  ],
-  "notes": ""
-}
-
-CRITICAL: If customer mentions "{productName} va {productName}" or "{productName} va {productName}", you MUST create TWO items:
-- One item with productId: 2 ({productName2}, price: {productPrice2} {productCurrency2})
-- One item with productId: 1 ({productName1}, price: {productPrice1} {productCurrency1})
-- ALWAYS include BOTH products in the items array
-- NEVER create incomplete JSON that stops after the first item
-
-MANDATORY JSON COMPLETION RULES:
-- ALWAYS complete the JSON structure with proper closing brackets
-- ALWAYS include ALL products mentioned by the customer
-- NEVER stop mid-JSON after the first item
-- If you start creating items array, you MUST finish it completely
-- Double-check your JSON before ending the response
-
-2. When customer asks about their orders, use:
-[INTENT:FETCH_ORDERS]
-
-3. When customer wants to cancel an order, use:
-[INTENT:CANCEL_ORDER]
-{
-  "orderId": "extracted order number or null if not specified"
-}
-
-4. When customer wants to order but is missing required information, use:
-[INTENT:ASK_FOR_INFO]
-{
-  "missingInfo": ["contact", "location", "payment", "products"],
-  "message": "polite message asking for missing information"
-}
-
-5. When customer asks about a product (e.g., 'Do you have red dress?', 'Show me shoes', 'I need something for summer'), use:
-[INTENT:SEARCH_PRODUCT]
-{
-  "searchQuery": "extracted search terms (e.g., 'red dress', 'summer shoes')"
-}
-
-EXAMPLES OF SEARCH_PRODUCT:
-- Customer: "Do you have any red dresses?" -> [INTENT:SEARCH_PRODUCT] { "searchQuery": "red dress" }
-- Customer: "Show me sneakers" -> [INTENT:SEARCH_PRODUCT] { "searchQuery": "sneakers" }
-- Customer: "I need a gift for my wife" -> [INTENT:SEARCH_PRODUCT] { "searchQuery": "gift for wife" }
-
-6. When the customer explicitly asks to talk to a human — an admin, operator, manager or support agent — or has a serious complaint/problem that you cannot resolve yourself, connect them to the team. FIRST write a short reassuring message to the customer (in their language) telling them you are connecting them with the team, THEN append:
-[INTENT:ESCALATE_TO_SUPPORT]
-{
-  "reason": "short summary of why the customer needs a human (e.g. 'wants to speak with a manager', 'received a defective product', 'delivery complaint')",
-  "sentiment": "URGENT | NORMAL | COMPLAINT"
-}
-- Use "COMPLAINT" when the customer is unhappy about a product/order, "URGENT" when they are angry or it is time-sensitive, otherwise "NORMAL".
-- Only use this intent when the customer genuinely wants a human. Do NOT use it for normal product questions, prices, or ordering — handle those yourself.
-
-EXAMPLES OF ESCALATE_TO_SUPPORT:
-- Customer: "Meni administrator bilan bog'lang" -> reassure + [INTENT:ESCALATE_TO_SUPPORT] { "reason": "wants to speak with an admin", "sentiment": "NORMAL" }
-- Customer: "Buyurtmam buzuq keldi, javob bering!" -> reassure + [INTENT:ESCALATE_TO_SUPPORT] { "reason": "received a defective order", "sentiment": "COMPLAINT" }
-- Customer: "Свяжите меня с оператором" -> reassure + [INTENT:ESCALATE_TO_SUPPORT] { "reason": "wants to talk to an operator", "sentiment": "NORMAL" }
-
-EXAMPLES OF ASK_FOR_INFO:
-- Customer: "{productName} sotib olaman" (no contact/location/payment) → Ask for missing info
-- Customer: "{productName} va {productName} sotib olaman, telefon: +998901234567" (missing location/payment) → Ask for location and payment method
-- Customer: "{productName} sotib olaman, manzil: Toshkent" (missing contact/payment) → Ask for contact and payment method
-
+CRITICAL: If the customer mentions multiple products, you MUST create separate items in the \`create_order\` tool array for EACH product. Never skip products.
 
 IMPORTANT CONVERSATION RULES:
-- If customer has already agreed to order something, don't ask again - proceed with order details
-- If customer says "yes" to ordering, immediately create the order and confirm
-- Don't repeat the same product suggestion multiple times
-- If customer seems confused, ask clarifying questions instead of repeating
-- Keep the conversation flowing naturally - don't get stuck in loops
+- Keep the conversation flowing naturally - don't get stuck in loops.
+- If the customer has already agreed to order something, don't ask again - proceed with order details.
 
 Conversation History:
 ${contextMessages}
@@ -559,6 +492,79 @@ ${contextMessages}
 Customer: ${userText}
 
 IMPORTANT: Read the conversation history carefully. If the customer has already agreed to order something or if you've already asked about ordering, don't repeat yourself. Move the conversation forward naturally.`;
+  }
+
+  async runAgentLoop(
+    userText: string,
+    history: Message[],
+    systemInstruction: string,
+    executeTool: (name: string, args: any) => Promise<any>,
+    ctx?: AiCallContext,
+  ): Promise<{ text: string, toolSideEffects: any[] }> {
+    let contents: any[] = history.map(h => ({
+      role: h.sender === 'USER' ? 'user' : 'model',
+      parts: [{ text: h.content }]
+    }));
+
+    contents.push({ role: 'user', parts: [{ text: userText }] });
+
+    let finalAiText = '';
+    let toolSideEffects: any[] = [];
+    let iterations = 0;
+    const MAX_ITERATIONS = 10;
+
+    while (iterations < MAX_ITERATIONS) {
+      iterations++;
+      this.logger.log(`Agent Loop Iteration ${iterations}`);
+
+      try {
+        const { agentTools } = await import('./gemini.tools');
+
+        const response = await this.callWithRotationRaw(
+          'gemini-3.6-flash',
+          { contents, systemInstruction },
+          'SALES_CHAT',
+          ctx,
+          undefined,
+          [{ functionDeclarations: agentTools }]
+        );
+
+        const functionCalls = response.functionCalls();
+
+        if (functionCalls && functionCalls.length > 0) {
+          const call = functionCalls[0];
+          this.logger.log(`Executing tool: ${call.name}`);
+
+          const result = await executeTool(call.name, call.args);
+
+          if (result && result._sideEffects) {
+            toolSideEffects.push(result._sideEffects);
+            delete result._sideEffects;
+          }
+
+          contents.push({ role: 'model', parts: response.parts || [] });
+          // The Google API currently drops functionResponse when role is 'user' (and rejects 'function' role).
+          // We pass the tool result as a system-like text message from the 'user' role so the AI can read it.
+          contents.push({
+            role: 'user',
+            parts: [{ text: `[TOOL_RESULT: ${call.name}]\n${JSON.stringify(result || { success: true })}` }]
+          });
+        } else {
+          finalAiText = response.text() || '';
+          break;
+        }
+      } catch (error: any) {
+        this.logger.error(`Error in agent loop iteration ${iterations}: ${error.message}`);
+        finalAiText = "I apologize, but I'm having trouble processing your request right now.";
+        break;
+      }
+    }
+
+    if (!finalAiText && toolSideEffects.length === 0) {
+      finalAiText = "I apologize, but I couldn't complete that request.";
+    }
+
+    return { text: finalAiText, toolSideEffects };
   }
 
   private async parseResponse(aiText: string): Promise<AiResponse> {
@@ -742,12 +748,12 @@ IMPORTANT: Read the conversation history carefully. If the customer has already 
         // Use the longer match if available
         const finalProductIds =
           fullTextProductIds &&
-          fullTextProductIds.length > (productIdMatches?.length || 0)
+            fullTextProductIds.length > (productIdMatches?.length || 0)
             ? fullTextProductIds
             : productIdMatches;
         const finalQuantities =
           fullTextQuantities &&
-          fullTextQuantities.length > (quantityMatches?.length || 0)
+            fullTextQuantities.length > (quantityMatches?.length || 0)
             ? fullTextQuantities
             : quantityMatches;
         const finalPrices =
@@ -1141,7 +1147,7 @@ Is there anything else I can help you with?
 Generate the confirmation message now:`;
 
       const confirmationMessage = await this.callWithRotation(
-        'gemini-flash-latest',
+        'gemini-3.6-flash',
         prompt,
         'ORDER_CONFIRMATION',
         ctx,
@@ -1194,7 +1200,7 @@ Return only the language code:`;
 
       const languageCode = (
         await this.callWithRotation(
-          'gemini-1.5-flash',
+          'gemini-3.6-flash',
           prompt,
           'LANGUAGE_DETECTION',
           ctx,
@@ -1268,7 +1274,7 @@ ${message}
 
 Translated message:`;
 
-      return (await this.callWithRotation('gemini-1.5-flash', prompt, 'TRANSLATION', ctx)).trim();
+      return (await this.callWithRotation('gemini-3.6-flash', prompt, 'TRANSLATION', ctx)).trim();
     } catch (error) {
       this.logger.warn(`Translation failed: ${error.message}`);
       return message; // Return original message if translation fails
@@ -1316,7 +1322,7 @@ INSTRUCTIONS:
 
 Generate a natural, friendly response:`;
 
-      return (await this.callWithRotation('gemini-1.5-flash', prompt, 'ORDERS_LIST', ctx)).trim();
+      return (await this.callWithRotation('gemini-3.6-flash', prompt, 'ORDERS_LIST', ctx)).trim();
     } catch (error) {
       this.logger.warn(
         `Failed to generate orders list response: ${error.message}`,
@@ -1371,7 +1377,7 @@ INSTRUCTIONS:
 
 Generate a natural, friendly response:`;
 
-      return (await this.callWithRotation('gemini-1.5-flash', prompt, 'ORDER_CANCELLATION', ctx)).trim();
+      return (await this.callWithRotation('gemini-3.6-flash', prompt, 'ORDER_CANCELLATION', ctx)).trim();
     } catch (error) {
       this.logger.warn(
         `Failed to generate cancellation response: ${error.message}`,
@@ -1514,7 +1520,7 @@ priceSensitivity rules:
 Return only valid JSON, no other text.`;
 
     return this.callWithRotation(
-      'gemini-flash-latest',
+      'gemini-3.6-flash',
       prompt,
       'CUSTOMER_INSIGHTS',
       ctx,
@@ -1594,7 +1600,7 @@ Message:`;
     try {
       const text = (
         await this.callWithRotation(
-          'gemini-flash-latest',
+          'gemini-3.6-flash',
           prompt,
           'WIN_BACK',
           ctx,
@@ -1659,7 +1665,7 @@ Message:`;
     try {
       return (
         await this.callWithRotation(
-          'gemini-flash-latest',
+          'gemini-3.6-flash',
           prompt,
           'CAMPAIGN_BROADCAST',
           ctx,
@@ -1687,7 +1693,7 @@ Message:`;
       'Output ONLY the transcription with no quotes, labels or commentary. ' +
       'If there is no intelligible speech, output nothing.';
     try {
-      const text = await this.callWithRotation('gemini-flash-latest', [
+      const text = await this.callWithRotation('gemini-3.6-flash', [
         { text: prompt },
         { inlineData: { mimeType, data: base64 } },
       ], 'AUDIO_TRANSCRIPTION', ctx);
@@ -1736,7 +1742,7 @@ JSON only:`;
     try {
       const raw = this.stripJson(
         await this.callWithRotation(
-          'gemini-flash-latest',
+          'gemini-3.6-flash',
           prompt,
           'CONSUMABLE_CLASSIFICATION',
           ctx,
@@ -1784,7 +1790,7 @@ Only report values actually implied by the text. JSON only:`;
     try {
       const raw = this.stripJson(
         await this.callWithRotation(
-          'gemini-flash-latest',
+          'gemini-3.6-flash',
           prompt,
           'USAGE_RATE_EXTRACTION',
           ctx,
@@ -1845,7 +1851,7 @@ Message:`;
     try {
       const text = (
         await this.callWithRotation(
-          'gemini-flash-latest',
+          'gemini-3.6-flash',
           prompt,
           'REPLENISHMENT_REMINDER',
           ctx,
@@ -1917,8 +1923,8 @@ Return a JSON object (no markdown, no code block) with:
 - "matches": array of truly matching products. Each item: { "id": <integer product ID>, "caption": "<short attractive product card text>" }
   - caption must be in the SAME language as "${lang}"
   - write a highly engaging, personalized product caption. Always include the product name, price (and currency), and stock status.
-  - If the product is IN STOCK (quantity > 0), add a catchy 1-2 sentence description and end with a natural call to action (like "Would you like to order this?" translated to the target language).
-  - If the product is OUT OF STOCK (quantity <= 0), clearly state it's currently unavailable and DO NOT ask them to order it.
+  - If the product is IN STOCK (quantity > 0), add a catchy 1-2 sentence description. Do NOT add a call to action at the end of each product.
+  - If the product is OUT OF STOCK (quantity <= 0), clearly state it's currently unavailable.
   - Use Telegram HTML formatting, NOT markdown: wrap the product name in <b>...</b> for bold. Do NOT use *asterisks* for bold — they render literally.
   - Use emojis in caption: 🛍️ for name, 💰 for price, 📦 for stock, ✨ for features
   - Keep caption under 250 characters total
@@ -1927,19 +1933,14 @@ Return a JSON object (no markdown, no code block) with:
 Only match products from the list above. Never suggest outside items.
 JSON only:`;
 
-      const raw = (
-        await this.callWithRotation(
-          'gemini-flash-latest',
-          prompt,
-          'PRODUCT_MATCHING',
-          ctx,
-        )
-      )
-        .trim()
-        .replace(/^```json[\s\S]*?```/g, (m: string) =>
-          m.replace(/^```json/, '').replace(/```$/, ''),
-        )
-        .trim();
+      const rawResponse = await this.callWithRotation(
+        'gemini-3.6-flash',
+        prompt,
+        'PRODUCT_MATCHING',
+        ctx,
+        { responseMimeType: 'application/json' }
+      );
+      const raw = this.stripJson(rawResponse);
       const parsed = JSON.parse(raw);
       return {
         matches: Array.isArray(parsed.matches) ? parsed.matches : [],

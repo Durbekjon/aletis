@@ -726,7 +726,8 @@
     "tabs": {
       "profile": "Profil",
       "organization": "Tashkilot",
-      "security": "Xavfsizlik"
+      "security": "Xavfsizlik",
+      "fulfillment": "Yetkazib berish"
     },
     "toasts": {
       "noChanges": "Saqlash uchun o'zgarishlar yo'q",
@@ -827,11 +828,55 @@
       "passwordMismatch": "Parollar mos kelmayapti",
       "update": "Parolni yangilash",
       "updating": "Yangilanmoqda..."
+    },
+    "fulfillment": {
+      "cardTitle": "Yetkazib berish sozlamalari",
+      "cardDescription": "Mijozlar buyurtmalarini qanday olishini tanlang.",
+      "notConfiguredTitle": "Yetkazib berish sozlanmagan",
+      "notConfiguredDesc": "Iltimos, ishni boshlashdan oldin mijozlar buyurtmalarini qanday olishini sozlang.",
+      "modeLabel": "Yetkazib berish rejimi",
+      "modeDescription": "Mijozlaringizga mavjud bo'lgan variantlarni tanlang.",
+      "modes": {
+        "PICKUP_ONLY": "Faqat olib ketish",
+        "DELIVERY": "Yetkazib berish",
+        "PICKUP_AND_DELIVERY": "Olib ketish + Yetkazib berish"
+      },
+      "deliverySection": "Yetkazib berish sozlamalari",
+      "methodLabel": "Yetkazib berish usuli",
+      "methods": {
+        "MERCHANT": "Sotuvchi yetkazib beradi",
+        "EXTERNAL_COURIER": "Tashqi kuryer xizmati"
+      },
+      "feeLabel": "Yetkazib berish narxi",
+      "feeTypes": {
+        "FREE": "Bepul",
+        "FIXED": "Belgilangan narx",
+        "CUSTOMER_PAYS_SEPARATELY": "Mijoz alohida to'laydi"
+      },
+      "feeAmountLabel": "Yetkazib berish miqdori",
+      "feeAmountPlaceholder": "Masalan: 20000",
+      "pickupSection": "Olib ketish ma'lumoti",
+      "pickupAddressLabel": "Olib ketish manzili",
+      "pickupAddressPlaceholder": "Masalan: Toshkent, Chilonzor tumani, 5-uy",
+      "pickupInstructionsLabel": "Olib ketish ko'rsatmalari",
+      "pickupInstructionsPlaceholder": "Masalan: 3-qavatga chiqing, qo'ng'iroq qiling",
+      "save": "Saqlash",
+      "saving": "Saqlanmoqda...",
+      "saveSuccess": "Yetkazib berish sozlamalari saqlandi",
+      "errors": {
+        "load": "Yetkazib berish sozlamalarini yuklashda xatolik",
+        "deliveryMethodRequired": "Yetkazib berish usulini tanlang",
+        "feeTypeRequired": "Yetkazib berish narxi turini tanlang",
+        "feeAmountRequired": "0 dan katta miqdor kiriting"
+      }
     }
   },
   "onboarding": {
     "organization": "Tashkilot",
     "category": "Kategoriya",
+    "selectCategory": "Do'kon kategoriyasini tanlang",
+    "selectCategoryDesc": "Do'koningiz sotadigan asosiy mahsulotlar kategoriyasini tanlang.",
+    "mainCategory": "Asosiy kategoriya",
     "productSchema": "Mahsulot sxemasi",
     "firstProduct": "Birinchi mahsulot",
     "botConnection": "Bot ulanishi",
@@ -1283,6 +1328,11 @@
     "scanBarcode": "Shtrix-kodni skanerlash",
     "schema": "Mahsulot sxemasi",
     "selectSchema": "Sxemani tanlang",
+    "category": "Kategoriya",
+    "selectCategory": "Kategoriyani tanlang",
+    "searchCategory": "Kategoriyani qidirish...",
+    "noCategoriesFound": "Kategoriyalar topilmadi.",
+    "categoryN": "Kategoriya #{{n}}",
     "name": "Mahsulot nomi",
     "namePlaceholder": "Mahsulot nomini kiriting",
     "nameRequired": "Mahsulot nomi majburiy",
@@ -1335,20 +1385,6 @@
     },
     "showAdvancedSettings": "Qo'shimcha sozlamalarni ko'rsatish",
     "hideAdvancedSettings": "Qo'shimcha sozlamalarni yashirish"
-  },
-  "cameraCapture": {
-    "title": "Kameradan rasm olish",
-    "description": "Mahsulot uchun kamera orqali rasm oling",
-    "capture": "Rasm olish",
-    "retake": "Qayta olish",
-    "usePhoto": "Foydalanish",
-    "cancel": "Bekor qilish",
-    "flip": "Kamerani aylantirish",
-    "starting": "Kamera yoqilmoqda...",
-    "errorPermission": "Kameraga ruxsat berilmagan. Brauzer sozlamalarini tekshiring.",
-    "errorNotFound": "Kamera topilmadi.",
-    "errorGeneric": "Kamerani ishga tushirib bo'lmadi.",
-    "tryAgain": "Qayta urinish"
   },
   "cameraCapture": {
     "title": "Kameradan rasm olish",

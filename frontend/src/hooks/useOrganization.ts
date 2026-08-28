@@ -15,8 +15,8 @@ export function useUpdateOrganizationMutation() {
   return useMutation({
     mutationFn: ({ id, payload }: { id: number; payload: UpdateOrganizationDto }) =>
       organizationApi.updateOrganization(id, payload),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["organization"] })
+    onSuccess: (data) => {
+      queryClient.setQueryData(["organization"], data)
       toast.success("Organization updated successfully ✅")
     },
     onError: () => {

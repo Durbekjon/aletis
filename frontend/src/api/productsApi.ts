@@ -1,12 +1,12 @@
 import axiosInstance from "./client"
-import type { BackendProduct, BackendProductSchema } from "@/lib/types/product"
+import type { BackendProduct, BackendCategory } from "@/lib/types/product"
 
 export interface PaginationQuery {
   page?: number
   limit?: number
   search?: string
   status?: string
-  schemaId?: number
+  categoryId?: number
 }
 
 export interface PaginatedResponse<T> {
@@ -24,9 +24,10 @@ export interface CreateProductRequest {
   price: number
   currency: "USD" | "EUR" | "UZS" | "RUB" | "KZT" | "GBP" | "JPY"
   images: number[]
-  fields: {
-    fieldId: number
-    value: string | number | boolean | Date | any
+  categoryId?: number
+  itemSpecValues?: {
+    itemSpecId: number
+    value?: any
   }[]
   status?: string
   autoPublish?: boolean
@@ -37,9 +38,10 @@ export interface UpdateProductRequest {
   price?: number
   currency?: "USD" | "EUR" | "UZS" | "RUB" | "KZT" | "GBP" | "JPY"
   images?: number[]
-  fields?: {
-    fieldId: number
-    value: string | number | boolean | Date | any
+  categoryId?: number
+  itemSpecValues?: {
+    itemSpecId: number
+    value?: any
   }[]
   status?: "ACTIVE" | "DRAFT" | "ARCHIVED"
   quantity?: number
@@ -93,46 +95,16 @@ export const productsApi = {
   },
 }
 
-export const productSchemasApi = {
-  async getProductSchemas(): Promise<BackendProductSchema[]> {
-    const response = await axiosInstance.get('/v1/product-schema')
+export const categoriesApi = {
+  async getCategories(params?: { isRoot?: boolean; parentId?: number }): Promise<BackendCategory[]> {
+    const response = await axiosInstance.get('/v1/categories', { params })
     return response.data
   },
 
-  async getProductSchemaById(id: number): Promise<BackendProductSchema> {
-    const response = await axiosInstance.get(`/v1/product-schema/${id}`)
+  async getCategoryById(id: number): Promise<BackendCategory> {
+    const response = await axiosInstance.get(`/v1/categories/${id}`)
     return response.data
   },
-
-  async createProductSchema(payload: {
-    name: string
-    fields: {
-      name: string
-      type: "TEXT" | "NUMBER" | "BOOLEAN" | "DATE" | "JSON"
-      required: boolean
-      options?: string[]
-    }[]
-  }): Promise<BackendProductSchema> {
-    const response = await axiosInstance.post('/v1/product-schema', payload)
-    return response.data
-  },
-
-  async updateProductSchema(id: number, payload: {
-    name?: string
-    fields?: {
-      name: string
-      type: "TEXT" | "NUMBER" | "BOOLEAN" | "DATE" | "JSON"
-      required: boolean
-      options?: string[]
-    }[]
-  }): Promise<BackendProductSchema> {
-    const response = await axiosInstance.patch(`/v1/product-schema/${id}`, payload)
-    return response.data
-  },
-
-  async deleteProductSchema(id: number): Promise<void> {
-    await axiosInstance.delete(`/v1/product-schema/${id}`)
-  }
 }
 
 export default productsApi

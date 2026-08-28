@@ -258,7 +258,7 @@ export class AuthController {
         );
         url.searchParams.set(
           'onboardSchema',
-          String(onboarding.isSchemaConfigured),
+          String(onboarding.isCategorySelected),
         );
       }
     }

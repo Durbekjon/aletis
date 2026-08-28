@@ -145,8 +145,8 @@ export class EmbadingService implements OnModuleInit {
     const productUuid = this.productUuid(product.id);
 
     // Extract description from fields if available
-    const descriptionField = product.fields.find(
-      (f) => f.fieldName.toLowerCase() === 'description',
+    const descriptionField = product.itemSpecValues?.find(
+      (f: any) => f.itemSpec?.name?.toLowerCase() === 'description',
     );
     const description = descriptionField?.valueText || '';
 
@@ -268,18 +268,29 @@ export class EmbadingService implements OnModuleInit {
       return [];
     }
     const collection = this.client.collections.get('Product');
-    const result = await collection.query.bm25(query, {
-      limit,
-      filters: this.productOrgFilter(organizationId),
-      returnProperties: [
-        'productId',
-        'name',
-        'description',
-        'price',
-        'organizationId',
-      ],
+    let timer: NodeJS.Timeout;
+    const timeout = new Promise<never>((_, reject) => {
+      timer = setTimeout(() => reject(new Error('Weaviate bm25 timeout after 5s')), 5000);
     });
-    return result.objects;
+    try {
+      const result = await Promise.race([
+        collection.query.bm25(query, {
+          limit,
+          filters: this.productOrgFilter(organizationId),
+          returnProperties: [
+            'productId',
+            'name',
+            'description',
+            'price',
+            'organizationId',
+          ],
+        }),
+        timeout,
+      ]);
+      return result.objects;
+    } finally {
+      clearTimeout(timer!);
+    }
   }
 
   async searchByText(query: string, organizationId: number, limit = 10) {
@@ -288,19 +299,30 @@ export class EmbadingService implements OnModuleInit {
       return [];
     }
     const collection = this.client.collections.get('Product');
-    const result = await collection.query.nearText(query, {
-      limit: limit,
-      distance: this.MAX_TEXT_VECTOR_DISTANCE,
-      filters: this.productOrgFilter(organizationId),
-      returnProperties: [
-        'productId',
-        'name',
-        'description',
-        'price',
-        'organizationId',
-      ],
+    let timer: NodeJS.Timeout;
+    const timeout = new Promise<never>((_, reject) => {
+      timer = setTimeout(() => reject(new Error('Weaviate nearText timeout after 5s')), 5000);
     });
-    return result.objects;
+    try {
+      const result = await Promise.race([
+        collection.query.nearText(query, {
+          limit: limit,
+          distance: this.MAX_TEXT_VECTOR_DISTANCE,
+          filters: this.productOrgFilter(organizationId),
+          returnProperties: [
+            'productId',
+            'name',
+            'description',
+            'price',
+            'organizationId',
+          ],
+        }),
+        timeout,
+      ]);
+      return result.objects;
+    } finally {
+      clearTimeout(timer!);
+    }
   }
 
   async searchByImage(filename: string, organizationId: number, limit = 10) {
@@ -315,25 +337,37 @@ export class EmbadingService implements OnModuleInit {
     }
     const collection = this.client.collections.get('ProductImage');
 
-    // Search for images similar to the input image
-    const result = await collection.query.nearImage(base64, {
-      limit: limit,
-      distance: this.MAX_IMAGE_VECTOR_DISTANCE,
-      filters: this.productImageOrgFilter(organizationId),
-      returnMetadata: ['distance'],
-      returnReferences: [
-        {
-          linkOn: 'product',
-          returnProperties: [
-            'productId',
-            'name',
-            'description',
-            'price',
-            'organizationId',
-          ],
-        },
-      ],
+    let timer: NodeJS.Timeout;
+    const timeout = new Promise<never>((_, reject) => {
+      timer = setTimeout(() => reject(new Error('Weaviate nearImage timeout after 5s')), 5000);
     });
+    let result: any;
+    try {
+      // Search for images similar to the input image
+      result = await Promise.race([
+        collection.query.nearImage(base64, {
+          limit: limit,
+          distance: this.MAX_IMAGE_VECTOR_DISTANCE,
+          filters: this.productImageOrgFilter(organizationId),
+          returnMetadata: ['distance'],
+          returnReferences: [
+            {
+              linkOn: 'product',
+              returnProperties: [
+                'productId',
+                'name',
+                'description',
+                'price',
+                'organizationId',
+              ],
+            },
+          ],
+        }),
+        timeout,
+      ]);
+    } finally {
+      clearTimeout(timer!);
+    }
 
     this.logger.log(
       `[ImageSearch] Weaviate returned ${result.objects.length} raw hits (threshold: ${this.MAX_IMAGE_VECTOR_DISTANCE}) for org ${organizationId}`,

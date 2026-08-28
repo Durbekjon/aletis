@@ -9,6 +9,7 @@ import { PrismaService } from '@/core/prisma/prisma.service';
 import { FileDeleteService } from '@/core/file-delete/file-delete.service';
 import { CreateOrganizationDto } from './dto/create-organization.dto';
 import { UpdateOrganizationDto } from './dto/update-organization.dto';
+import { UpsertFulfillmentSettingsDto } from './dto/fulfillment-settings.dto';
 import {
   Organization,
   MemberRole,
@@ -17,6 +18,9 @@ import {
   OnboardingStep,
   PlanTier,
   SubscriptionStatus,
+  FulfillmentSettings,
+  FulfillmentMode,
+  DeliveryFeeType,
 } from '@prisma/client';
 
 @Injectable()
@@ -59,7 +63,7 @@ export class OrganizationsService {
               status: OnboardingStatus.INCOMPLETE,
               nextStep: dto.category
                 ? OnboardingStep.SELECT_CATEGORY
-                : OnboardingStep.CONFIGURE_SCHEMA,
+                : OnboardingStep.SELECT_CATEGORY,
             },
           },
         },
@@ -109,6 +113,7 @@ export class OrganizationsService {
       orderBy: { createdAt: 'desc' },
       include: { 
         logo: true,
+        categories: true,
        },
     });
     if (!organizations || organizations.length !== 1) {
@@ -125,6 +130,7 @@ export class OrganizationsService {
         bots: true,
         products: true,
         orders: true,
+        categories: true,
       },
     });
     if (!org) throw new NotFoundException('Organization not found');
@@ -178,14 +184,19 @@ export class OrganizationsService {
     }
 
     // Update organization with new data
+    const data: any = {
+      name: dto.name ?? undefined,
+      description: dto.description ?? undefined,
+      category: dto.category ?? undefined,
+      logoId: dto.logoId ?? undefined,
+    };
+    if (dto.categoryIds) {
+      data.categories = { set: dto.categoryIds.map(id => ({ id })) };
+    }
+
     const updatedOrganization = await this.prisma.organization.update({
       where: { id },
-      data: {
-        name: dto.name ?? undefined,
-        description: dto.description ?? undefined,
-        category: dto.category ?? undefined,
-        logoId: dto.logoId ?? undefined,
-      },
+      data,
     });
 
     // Delete old logo file from filesystem if it was replaced
@@ -216,5 +227,85 @@ export class OrganizationsService {
   async deleteOrganization(userId: number, id: number): Promise<Organization> {
     await this.ensureAdmin(userId, id);
     return this.prisma.organization.delete({ where: { id } });
+  }
+
+  // ─── Fulfillment Settings ───────────────────────────────────────────────────
+
+  async getFulfillmentSettings(
+    userId: number,
+    organizationId: number,
+  ): Promise<FulfillmentSettings | null> {
+    // Verify membership (any member can read settings)
+    const membership = await this.prisma.member.findFirst({
+      where: { organizationId, userId },
+      select: { role: true },
+    });
+    if (!membership) {
+      throw new ForbiddenException('You are not a member of this organization');
+    }
+    return this.prisma.fulfillmentSettings.findUnique({
+      where: { organizationId },
+    });
+  }
+
+  async upsertFulfillmentSettings(
+    userId: number,
+    organizationId: number,
+    dto: UpsertFulfillmentSettingsDto,
+  ): Promise<FulfillmentSettings> {
+    await this.ensureAdmin(userId, organizationId);
+
+    // Normalize: determine which fields are relevant for the chosen mode
+    const deliveryEnabled =
+      dto.fulfillmentMode === FulfillmentMode.DELIVERY ||
+      dto.fulfillmentMode === FulfillmentMode.PICKUP_AND_DELIVERY;
+    const pickupEnabled =
+      dto.fulfillmentMode === FulfillmentMode.PICKUP_ONLY ||
+      dto.fulfillmentMode === FulfillmentMode.PICKUP_AND_DELIVERY;
+
+    // Validate delivery requirements when delivery is enabled
+    if (deliveryEnabled) {
+      if (!dto.deliveryMethod) {
+        throw new BadRequestException(
+          'deliveryMethod is required when delivery is enabled',
+        );
+      }
+      if (!dto.deliveryFeeType) {
+        throw new BadRequestException(
+          'deliveryFeeType is required when delivery is enabled',
+        );
+      }
+      if (
+        dto.deliveryFeeType === DeliveryFeeType.FIXED &&
+        (dto.deliveryFee == null || dto.deliveryFee <= 0)
+      ) {
+        throw new BadRequestException(
+          'deliveryFee must be greater than 0 when deliveryFeeType is FIXED',
+        );
+      }
+    }
+
+    // Build normalized data: null out irrelevant fields
+    const data = {
+      fulfillmentMode: dto.fulfillmentMode,
+      // Delivery fields
+      deliveryMethod: deliveryEnabled ? (dto.deliveryMethod ?? null) : null,
+      deliveryFeeType: deliveryEnabled ? (dto.deliveryFeeType ?? null) : null,
+      deliveryFee:
+        deliveryEnabled && dto.deliveryFeeType === DeliveryFeeType.FIXED
+          ? (dto.deliveryFee ?? null)
+          : null,
+      // Pickup fields
+      pickupAddress: pickupEnabled ? (dto.pickupAddress ?? null) : null,
+      pickupInstructions: pickupEnabled
+        ? (dto.pickupInstructions ?? null)
+        : null,
+    };
+
+    return this.prisma.fulfillmentSettings.upsert({
+      where: { organizationId },
+      create: { organizationId, ...data },
+      update: data,
+    });
   }
 }

@@ -726,7 +726,8 @@
     "tabs": {
       "profile": "Profile",
       "organization": "Organization",
-      "security": "Security"
+      "security": "Security",
+      "fulfillment": "Fulfillment"
     },
     "toasts": {
       "noChanges": "No changes to save",
@@ -827,11 +828,55 @@
       "passwordMismatch": "Passwords do not match",
       "update": "Update Password",
       "updating": "Updating..."
+    },
+    "fulfillment": {
+      "cardTitle": "Fulfillment Settings",
+      "cardDescription": "Choose how customers can receive their orders.",
+      "notConfiguredTitle": "Fulfillment not configured",
+      "notConfiguredDesc": "Please set up how customers can receive their orders before going live.",
+      "modeLabel": "Fulfillment Mode",
+      "modeDescription": "Select the options available to your customers.",
+      "modes": {
+        "PICKUP_ONLY": "Pickup only",
+        "DELIVERY": "Delivery",
+        "PICKUP_AND_DELIVERY": "Pickup + Delivery"
+      },
+      "deliverySection": "Delivery Settings",
+      "methodLabel": "Delivery Method",
+      "methods": {
+        "MERCHANT": "Merchant delivery (you deliver)",
+        "EXTERNAL_COURIER": "External courier service"
+      },
+      "feeLabel": "Delivery Fee",
+      "feeTypes": {
+        "FREE": "Free",
+        "FIXED": "Fixed price",
+        "CUSTOMER_PAYS_SEPARATELY": "Customer pays separately"
+      },
+      "feeAmountLabel": "Delivery Fee Amount",
+      "feeAmountPlaceholder": "e.g. 20000",
+      "pickupSection": "Pickup Information",
+      "pickupAddressLabel": "Pickup Address",
+      "pickupAddressPlaceholder": "e.g. 123 Main Street, Tashkent",
+      "pickupInstructionsLabel": "Pickup Instructions",
+      "pickupInstructionsPlaceholder": "e.g. Come to the 3rd floor, ring the bell",
+      "save": "Save Fulfillment Settings",
+      "saving": "Saving...",
+      "saveSuccess": "Fulfillment settings saved",
+      "errors": {
+        "load": "Failed to load fulfillment settings",
+        "deliveryMethodRequired": "Please select a delivery method",
+        "feeTypeRequired": "Please select a delivery fee type",
+        "feeAmountRequired": "Please enter a delivery fee amount greater than 0"
+      }
     }
   },
   "onboarding": {
     "organization": "Organization",
     "category": "Category",
+    "selectCategory": "Select Store Category",
+    "selectCategoryDesc": "Choose the main category of products your store will sell.",
+    "mainCategory": "Main Category",
     "productSchema": "Product Schema",
     "firstProduct": "First Product",
     "botConnection": "Bot Connection",
@@ -1278,11 +1323,16 @@
     }
   },
   "productForm": {
-    "info": "Product Information",
-    "infoDesc": "Fill in the product details based on your schema",
+    "info": "Product information",
+    "infoDesc": "Fill in product details based on your schema",
     "scanBarcode": "Scan barcode",
-    "schema": "Product Schema",
+    "schema": "Product schema",
     "selectSchema": "Select a schema",
+    "category": "Category",
+    "selectCategory": "Select Category",
+    "searchCategory": "Search categories...",
+    "noCategoriesFound": "No categories found.",
+    "categoryN": "Category #{{n}}",
     "name": "Product Name",
     "namePlaceholder": "Enter product name",
     "nameRequired": "Product name is required",
@@ -1335,20 +1385,6 @@
     },
     "showAdvancedSettings": "Show advanced settings",
     "hideAdvancedSettings": "Hide advanced settings"
-  },
-  "cameraCapture": {
-    "title": "Take a Photo",
-    "description": "Use your camera to capture a product image",
-    "capture": "Capture",
-    "retake": "Retake",
-    "usePhoto": "Use Photo",
-    "cancel": "Cancel",
-    "flip": "Flip Camera",
-    "starting": "Starting camera...",
-    "errorPermission": "Camera permission denied. Please check your browser settings.",
-    "errorNotFound": "No camera found on this device.",
-    "errorGeneric": "Failed to start the camera.",
-    "tryAgain": "Try Again"
   },
   "cameraCapture": {
     "title": "Take a Photo",

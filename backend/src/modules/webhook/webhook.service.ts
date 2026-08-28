@@ -371,14 +371,16 @@ export class WebhookService {
                 originalName: true,
               },
             },
-            fields: {
+            itemSpecValues: {
               include: {
-                field: true,
+                itemSpec: true,
               },
             },
-            schema: {
+            category: {
               select: {
-                name: true,
+                name_uz: true,
+                name_ru: true,
+                name_en: true,
               },
             },
           },
@@ -416,7 +418,7 @@ export class WebhookService {
         };
 
         // Format product fields
-        const fieldsText = product.fields
+        const fieldsText = product.itemSpecValues
           .map((fv) => {
             let value = '';
             if (fv.valueText) value = fv.valueText;
@@ -425,7 +427,7 @@ export class WebhookService {
             else if (fv.valueDate)
               value = new Date(fv.valueDate).toLocaleDateString();
             else if (fv.valueJson) value = String(fv.valueJson);
-            return `<b>${fv.field.name}:</b> ${value}`;
+            return `<b>${fv.itemSpec.name}:</b> ${value}`;
           })
           .join('\n');
 
@@ -592,21 +594,13 @@ export class WebhookService {
         10,
       );
 
-      // Process merged message with AI
-      const aiResponse = await this.processWithAI(
+      // Process merged message with AI using Tool Loop
+      const processedResponse = await this.processWithAI(
         flushResult.combinedMessage,
         history,
         bot.organizationId,
         customer,
         bot.id,
-      );
-
-      // Process AI response and handle any order intents
-      const processedResponse = await this.aiResponseHandler.processAiResponse(
-        aiResponse,
-        customer,
-        flushResult.organizationId,
-        flushResult.combinedMessage, // Pass the original user message for language detection
       );
 
       // Send response to Telegram (single message)
@@ -622,7 +616,7 @@ export class WebhookService {
           return;
         }
 
-        const images = (aiResponse as any).images as string[] | undefined;
+        const images = (processedResponse as any).images as string[] | undefined;
         const baseUrl =
           this.configService.get<string>('BASE_URL') ||
           process.env.BASE_URL ||
@@ -680,15 +674,17 @@ export class WebhookService {
                 .replace(/\[INTENT:FETCH_ORDERS\][\s\S]*$/g, '')
                 .replace(/\[INTENT:CANCEL_ORDER\][\s\S]*$/g, '')
                 .trim();
-              await this.telegramService.sendRequest(
-                decryptedToken,
-                'sendMessage',
-                {
-                  chat_id: customer.telegramId,
-                  text: this.markdownToHtml(cleanedText),
-                  parse_mode: 'HTML',
-                },
-              );
+              if (cleanedText) {
+                await this.telegramService.sendRequest(
+                  decryptedToken,
+                  'sendMessage',
+                  {
+                    chat_id: customer.telegramId,
+                    text: this.markdownToHtml(cleanedText),
+                    parse_mode: 'HTML',
+                  },
+                );
+              }
               return;
             }
 
@@ -763,25 +759,27 @@ export class WebhookService {
             .replace(/\[INTENT:CANCEL_ORDER\][\s\S]*$/g, '')
             .trim();
 
-          const htmlMessage = this.markdownToHtml(cleanedText);
-          const res = await this.telegramService.sendRequest(
-            decryptedToken,
-            'sendMessage',
-            {
-              chat_id: customer.telegramId,
-              text: htmlMessage,
-              parse_mode: 'HTML',
-            },
-          );
+          if (cleanedText) {
+            const htmlMessage = this.markdownToHtml(cleanedText);
+            const res = await this.telegramService.sendRequest(
+              decryptedToken,
+              'sendMessage',
+              {
+                chat_id: customer.telegramId,
+                text: htmlMessage,
+                parse_mode: 'HTML',
+              },
+            );
 
-          if (!res.ok) {
-            this.logger.error(
-              `Failed to send message to customer ${customer.id}: ${res.description || 'Unknown error'}`,
-            );
-          } else {
-            this.logger.log(
-              `AI response sent to customer ${customer.id}: "${processedResponse.text.substring(0, 50)}${processedResponse.text.length > 50 ? '...' : ''}"`,
-            );
+            if (!res.ok) {
+              this.logger.error(
+                `Failed to send message to customer ${customer.id}: ${res.description || 'Unknown error'}`,
+              );
+            } else {
+              this.logger.log(
+                `AI response sent to customer ${customer.id}: "${processedResponse.text.substring(0, 50)}${processedResponse.text.length > 50 ? '...' : ''}"`,
+              );
+            }
           }
         }
       } catch (error) {
@@ -862,37 +860,75 @@ export class WebhookService {
       return `${left}/${right}`;
     };
 
-    for (const card of cards) {
-      if (card.imageKey) {
-        const photoUrl = toAbsolute(card.imageKey);
-        this.logger.log(`Sending product photo: ${photoUrl}`);
-        const res = await this.telegramService.sendRequest(token, 'sendPhoto', {
-          chat_id: customer.telegramId,
-          photo: photoUrl,
-          caption: card.caption,
-          parse_mode: 'HTML',
-        });
-        if (!res.ok) {
-          this.logger.warn(`sendPhoto failed (${res.description}), falling back to text`);
-          await this.telegramService.sendRequest(token, 'sendMessage', {
-            chat_id: customer.telegramId,
-            text: card.caption,
-            parse_mode: 'HTML',
-          });
-        }
-      } else {
-        this.logger.warn(`Product card has no imageKey, sending text only`);
+    const cta =
+      customer.lang === 'ru'
+        ? 'Вы хотите заказать это или что-то еще?'
+        : customer.lang === 'en'
+          ? 'Would you like to order these or something else?'
+          : 'Shularmi yoki boshqa narsa buyurtma qilmoqchimisiz?';
+
+    const combinedCaptionText =
+      cards.map((c) => c.caption).join('\n\n') + '\n\n' + cta;
+
+    const withImages = cards.filter((c) => c.imageKey).slice(0, 10);
+
+    if (withImages.length > 1) {
+      const media = withImages.map((c, i) => ({
+        type: 'photo',
+        media: toAbsolute(c.imageKey!),
+        ...(i === 0 && combinedCaptionText.length <= 1024
+          ? {
+              caption: combinedCaptionText,
+              parse_mode: 'HTML',
+            }
+          : {}),
+      }));
+
+      if (combinedCaptionText.length > 1024) {
         await this.telegramService.sendRequest(token, 'sendMessage', {
           chat_id: customer.telegramId,
-          text: card.caption,
+          text: combinedCaptionText,
+          parse_mode: 'HTML',
+        });
+        await this.telegramService.sendRequest(token, 'sendMediaGroup', {
+          chat_id: customer.telegramId,
+          media: JSON.stringify(media),
+        });
+      } else {
+        await this.telegramService.sendRequest(token, 'sendMediaGroup', {
+          chat_id: customer.telegramId,
+          media: JSON.stringify(media),
+        });
+      }
+    } else if (withImages.length === 1) {
+      const photoUrl = toAbsolute(withImages[0].imageKey!);
+      const res = await this.telegramService.sendRequest(token, 'sendPhoto', {
+        chat_id: customer.telegramId,
+        photo: photoUrl,
+        caption: combinedCaptionText.length <= 1024 ? combinedCaptionText : undefined,
+        parse_mode: 'HTML',
+      });
+      if (!res.ok || combinedCaptionText.length > 1024) {
+        if (!res.ok) {
+           this.logger.warn(`sendPhoto failed (${res.description}), falling back to text`);
+        }
+        await this.telegramService.sendRequest(token, 'sendMessage', {
+          chat_id: customer.telegramId,
+          text: combinedCaptionText,
           parse_mode: 'HTML',
         });
       }
+    } else {
+      await this.telegramService.sendRequest(token, 'sendMessage', {
+        chat_id: customer.telegramId,
+        text: combinedCaptionText,
+        parse_mode: 'HTML',
+      });
     }
 
     await this.messagesService._saveMessage(
       customer.id,
-      cards.map((c) => c.caption).join('\n\n'),
+      combinedCaptionText,
       'BOT',
       botId,
     );
@@ -1112,18 +1148,11 @@ export class WebhookService {
       10,
     );
 
-    const aiResponse = await this.processWithAI(
+    return this.processWithAI(
       incomingText,
       history,
       organizationId,
       customer,
-    );
-
-    return this.aiResponseHandler.processAiResponse(
-      aiResponse,
-      customer,
-      organizationId,
-      incomingText,
     );
   }
 
@@ -1134,7 +1163,7 @@ export class WebhookService {
     customer: Customer,
     botId?: number,
   ) {
-    const [userOrders, productCount, organization, recentlyViewed] =
+    const [userOrders, productCount, organization, recentlyViewed, fulfillmentSettings] =
       await Promise.all([
         this.ordersService.getOrdersForAI(organizationId, customer.id),
         this.prisma.product.count({
@@ -1152,6 +1181,9 @@ export class WebhookService {
           customer.id,
           organizationId,
         ),
+        this.prisma.fulfillmentSettings.findUnique({
+          where: { organizationId },
+        }),
       ]);
 
     // The full catalog is deliberately NOT loaded here — it used to be
@@ -1177,19 +1209,50 @@ export class WebhookService {
         }
       : undefined;
 
-    const aiResponse = await this.geminiService.generateResponse(
+    const systemInstruction = this.geminiService.buildSystemInstruction(
       message,
       history,
       productContext,
       userOrders,
       customer.lang || undefined,
       orgContext,
-      { organizationId, botId },
+      fulfillmentSettings,
     );
 
-    console.log({aiResponse});
+    const agentResult = await this.geminiService.runAgentLoop(
+      message,
+      history,
+      systemInstruction,
+      async (toolName, args) => {
+        return await this.aiResponseHandler.executeToolCall(
+          toolName,
+          args,
+          customer,
+          organizationId,
+          message
+        );
+      },
+      { organizationId, botId }
+    );
 
-    return aiResponse;
+    // Extract side effects
+    let productCards: any[] = [];
+    let orderCreated = false;
+    
+    for (const effect of agentResult.toolSideEffects) {
+       if (effect.productCards) {
+          productCards.push(...effect.productCards);
+       }
+       if (effect.orderCreated) {
+          orderCreated = true;
+       }
+    }
+
+    return {
+      text: agentResult.text,
+      productCards: productCards.length > 0 ? productCards : undefined,
+      orderCreated
+    };
   }
 
   private async cleanUpProcessedUpdates() {

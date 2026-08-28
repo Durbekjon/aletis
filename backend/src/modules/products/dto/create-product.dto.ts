@@ -16,17 +16,17 @@ import { Type, Transform } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Currency, ProductStatus } from '@prisma/client';
 
-export class CreateFieldValueDto {
+export class CreateItemSpecValueDto {
   @ApiProperty({
-    description: 'The ID of the field',
+    description: 'The ID of the item spec',
     example: 1,
   })
   @IsInt()
   @Min(1)
-  fieldId: number;
+  itemSpecId: number;
 
   @ApiProperty({
-    description: 'The value for the field (type depends on field type)',
+    description: 'The value for the spec (type depends on spec type)',
     oneOf: [
       { type: 'string' },
       { type: 'number' },
@@ -109,18 +109,28 @@ export class CreateProductDto {
   images?: number[];
 
   @ApiProperty({
-    description: 'Array of field values for the product',
-    type: [CreateFieldValueDto],
+    description: 'The category ID for the product',
+    example: 1,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  categoryId?: number;
+
+  @ApiProperty({
+    description: 'Array of item spec values for the product',
+    type: [CreateItemSpecValueDto],
     example: [
-      { fieldId: 1, value: 'Intel i7' },
-      { fieldId: 2, value: 16 },
-      { fieldId: 3, value: true },
+      { itemSpecId: 1, value: 'Intel i7' },
+      { itemSpecId: 2, value: 16 },
+      { itemSpecId: 3, value: true },
     ],
   })
   @IsArray()
   @ValidateNested({ each: true })
-  @Type(() => CreateFieldValueDto)
-  fields: CreateFieldValueDto[];
+  @Type(() => CreateItemSpecValueDto)
+  itemSpecValues: CreateItemSpecValueDto[];
 
   @ApiPropertyOptional({
     description:
