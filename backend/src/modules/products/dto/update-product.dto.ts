@@ -13,18 +13,18 @@ import { Type, Transform } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Currency, ProductStatus } from '@prisma/client';
 
-export class UpdateFieldValueDto {
+export class UpdateItemSpecValueDto {
   @ApiPropertyOptional({
-    description: 'The ID of the field',
+    description: 'The ID of the item spec',
     example: 1,
   })
   @IsOptional()
   @IsInt()
   @Min(1)
-  fieldId?: number;
+  itemSpecId?: number;
 
   @ApiPropertyOptional({
-    description: 'The value for the field (type depends on field type)',
+    description: 'The value for the item spec (type depends on spec type)',
     oneOf: [
       { type: 'string' },
       { type: 'number' },
@@ -103,16 +103,26 @@ export class UpdateProductDto {
   images?: number[];
 
   @ApiPropertyOptional({
-    description: 'Array of field values for the product',
-    type: [UpdateFieldValueDto],
+    description: 'The category ID for the product',
+    example: 1,
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  categoryId?: number;
+
+  @ApiPropertyOptional({
+    description: 'Array of item spec values for the product',
+    type: [UpdateItemSpecValueDto],
     example: [
-      { fieldId: 1, value: 'Intel i9' },
-      { fieldId: 2, value: 32 },
+      { itemSpecId: 1, value: 'Intel i9' },
+      { itemSpecId: 2, value: 32 },
     ],
   })
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
-  @Type(() => UpdateFieldValueDto)
-  fields?: UpdateFieldValueDto[];
+  @Type(() => UpdateItemSpecValueDto)
+  itemSpecValues?: UpdateItemSpecValueDto[];
 }

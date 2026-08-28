@@ -10,11 +10,12 @@ export class MessagesService {
     customerId: number,
     limit: number = 10,
   ): Promise<Message[]> {
-    return this.prisma.message.findMany({
+    const messages = await this.prisma.message.findMany({
       where: { customerId },
       orderBy: { createdAt: 'desc' },
       take: limit,
     });
+    return messages.reverse();
   }
 
   async _saveMessage(

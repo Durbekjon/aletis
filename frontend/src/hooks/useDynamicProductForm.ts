@@ -8,6 +8,7 @@ export interface FormData {
   currency: "USD" | "EUR" | "UZS" | "RUB" | "KZT" | "GBP" | "JPY"
   quantity: number
   images: number[]
+  categoryId?: number | null
   status: "ACTIVE" | "DRAFT" | "ARCHIVED"
   fields: Record<string, any>
   autoPublish: boolean
@@ -26,6 +27,7 @@ export function useDynamicProductForm(options?: {
       currency: options?.initialValues?.currency ?? "UZS",
       quantity: options?.initialValues?.quantity ?? 0,
       images: options?.initialValues?.images ?? [],
+      categoryId: options?.initialValues?.categoryId ?? null,
       status: options?.initialValues?.status ?? "ACTIVE",
       fields: options?.initialValues?.fields ?? {},
       autoPublish: options?.initialValues?.autoPublish ?? true,
@@ -39,12 +41,12 @@ export function useDynamicProductForm(options?: {
     }
     try {
       // Remove empty/undefined/null/"" fields for correct backend payload
-      const fields = Object.entries(data.fields ?? {})
+      const itemSpecValues = Object.entries(data.fields ?? {})
         .filter(([_, value]) => value !== undefined && value !== null && value !== "")
-        .map(([fieldId, value]) => ({
-          fieldId: Number(fieldId),
-          value,
-        }))
+        .map(([fieldId, value]) => {
+          const base: Record<string, unknown> = { itemSpecId: Number(fieldId), value }
+          return base as any;
+        })
 
       const payload = {
         name: data.name,
@@ -52,7 +54,8 @@ export function useDynamicProductForm(options?: {
         currency: data.currency,
         quantity: data.quantity,
         images: data.images,
-        fields,
+        categoryId: data.categoryId ?? undefined,
+        itemSpecValues,
         status: data.status.toUpperCase(),
         autoPublish: data.autoPublish,
       }

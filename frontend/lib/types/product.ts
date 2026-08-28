@@ -17,39 +17,38 @@ export interface BackendProductField {
   valueJson: any | null
 }
 
+export interface BackendCategory {
+  id: number
+  name_uz: string
+  name_ru: string
+  name_en: string
+  isLeaf?: boolean
+  parentId?: number | null
+  itemSpecs?: BackendItemSpec[]
+}
+
+export interface BackendItemSpec {
+  id: number
+  name: string
+  type: "TEXT" | "NUMBER" | "BOOLEAN" | "DATE" | "ENUM" | "JSON"
+  required: boolean
+  options?: string[]
+}
+
 export interface BackendProduct {
   id: number
   name: string
   price: number
   currency: "USD" | "EUR" | "UZS" | "RUB" | "KZT" | "GBP" | "JPY"
-  schemaId: number
-  schemaName: string
+  categoryId: number | null
+  category: BackendCategory | null
   organizationId: number
   images: BackendProductImage[]
-  fields: BackendProductField[]
+  itemSpecValues: BackendProductField[]
   createdAt: string
   updatedAt: string
   quantity: number
   status?: "ACTIVE" | "DRAFT" | "ARCHIVED"
-}
-
-export interface BackendProductSchema {
-  id: number
-  name: string
-  organizationId: number
-  fields: BackendProductSchemaField[]
-  createdAt?: string
-  updatedAt?: string
-}
-
-export interface BackendProductSchemaField {
-  id: number
-  schemaId: number
-  name: string
-  type: "TEXT" | "NUMBER" | "BOOLEAN" | "DATE" | "ENUM" | "JSON"
-  required: boolean
-  order: number
-  options: string[]
 }
 
 // Frontend Types
@@ -81,11 +80,11 @@ export interface Product {
   status: "ACTIVE" | "DRAFT" | "ARCHIVED"
   createdAt: Date
   updatedAt: Date
-  // Additional fields from backend
-  schemaId?: number
-  schemaName?: string
+  
+  categoryId?: number | null
+  category?: BackendCategory | null
   organizationId?: number
-  fields?: ProductField[]
+  itemSpecValues?: ProductField[]
 }
 
 export interface ProductField {
@@ -94,24 +93,6 @@ export interface ProductField {
   fieldName: string
   fieldType: "TEXT" | "NUMBER" | "BOOLEAN" | "DATE" | "ENUM" | "JSON"
   value: string | number | boolean | Date | any
-}
-
-export interface ProductSchema {
-  id: number
-  name: string
-  organizationId: number
-  fields: ProductSchemaField[]
-  createdAt: Date
-  updatedAt: Date
-}
-
-export interface ProductSchemaField {
-  id: number
-  name: string
-  type: "TEXT" | "NUMBER" | "BOOLEAN" | "DATE" | "ENUM" | "JSON"
-  required: boolean
-  options?: string[]
-  order?: number
 }
 
 export interface ProductFormData {
@@ -130,8 +111,8 @@ export interface ProductFormData {
   images: string[]
   variants: ProductVariant[]
   status: "active" | "draft" | "archived"
-  schemaId?: number
-  fields?: ProductField[]
+  categoryId?: number | null
+  itemSpecValues?: ProductField[]
 }
 
 // Mapping functions
@@ -152,35 +133,15 @@ export function mapBackendProductToFrontend(backendProduct: BackendProduct): Pro
     status: backendProduct.status || "DRAFT",
     createdAt: new Date(backendProduct.createdAt),
     updatedAt: new Date(backendProduct.updatedAt),
-    schemaId: backendProduct.schemaId,
-    schemaName: backendProduct.schemaName,
+    categoryId: backendProduct.categoryId,
+    category: backendProduct.category,
     organizationId: backendProduct.organizationId,
-    fields: backendProduct.fields.map(field => ({
+    itemSpecValues: backendProduct.itemSpecValues ? backendProduct.itemSpecValues.map(field => ({
       id: field.id,
       fieldId: field.fieldId,
       fieldName: field.fieldName,
       fieldType: field.fieldType,
       value: field.valueText || field.valueNumber || field.valueBool || field.valueDate || field.valueJson
-    }))
-  }
-}
-
-export function mapBackendProductSchemaToFrontend(backendSchema: BackendProductSchema): ProductSchema {
-  return {
-    id: backendSchema.id,
-    name: backendSchema.name,
-    organizationId: backendSchema.organizationId,
-    fields: backendSchema.fields
-      .sort((a, b) => a.order - b.order) // Sort by order
-      .map(field => ({
-        id: field.id,
-        name: field.name,
-        type: field.type,
-        required: field.required,
-        options: field.options,
-        order: field.order
-      })),
-    createdAt: backendSchema.createdAt ? new Date(backendSchema.createdAt) : new Date(),
-    updatedAt: backendSchema.updatedAt ? new Date(backendSchema.updatedAt) : new Date()
+    })) : []
   }
 }

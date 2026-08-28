@@ -25,8 +25,8 @@ export default function EditProductPage() {
     if (!productQuery.data) return undefined
     const p = productQuery.data
     const fieldsRecord: Record<string, any> = {}
-    ;(p.fields || []).forEach(f => {
-      fieldsRecord[f.fieldId.toString()] = f.value
+    ;(p.itemSpecValues || []).forEach(f => {
+      fieldsRecord[f.fieldId?.toString() || f.id?.toString()] = f.value
     })
     return {
       name: p.name,
@@ -59,17 +59,17 @@ export default function EditProductPage() {
     }
 
     // Compute changed dynamic fields
-    const originalFieldById = new Map((original.fields || []).map(f => [f.fieldId, f]))
-    const changedFields: { fieldId: number; value: any }[] = []
+    const originalFieldById = new Map((original.itemSpecValues || []).map(f => [f.fieldId || f.id, f]))
+    const changedFields: any[] = []
     Object.entries(data.fields || {}).forEach(([fieldIdStr, newValue]) => {
       const fieldId = Number(fieldIdStr)
       const existing = originalFieldById.get(fieldId)
       const prevValue = existing?.value
       if (newValue !== prevValue) {
-        changedFields.push({ fieldId, value: newValue })
+        changedFields.push({ itemSpecId: fieldId, value: newValue })
       }
     })
-    if (changedFields.length > 0) changedPayload.fields = changedFields
+    if (changedFields.length > 0) changedPayload.itemSpecValues = changedFields
 
     // If nothing changed, succeed silently
     if (Object.keys(changedPayload).length === 0) return true
@@ -136,7 +136,7 @@ export default function EditProductPage() {
       <Separator />
       <DynamicProductForm
         initialValues={initialValues}
-        initialSchemaId={productQuery.data?.schemaId ?? null}
+        initialCategoryId={productQuery.data?.categoryId ?? undefined}
         existingImageUrls={existingImageUrls}
         onSubmitImpl={handleUpdate}
         onSuccess={() => router.push("/products")}

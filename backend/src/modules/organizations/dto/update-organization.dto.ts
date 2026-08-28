@@ -26,4 +26,10 @@ export class UpdateOrganizationDto {
   @IsOptional()
   @Type(() => Number)
   logoId?: number | null;
+
+  @ApiPropertyOptional({ example: [1, 2], description: "Category IDs for this organization" })
+  @IsInt({ each: true })
+  @IsOptional()
+  categoryIds?: number[];
+
 }

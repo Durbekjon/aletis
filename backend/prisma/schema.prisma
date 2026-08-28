@@ -8,12 +8,12 @@ datasource db {
 }
 
 model User {
-  id               Int       @id @default(autoincrement())
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  id               Int           @id @default(autoincrement())
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
   firstName        String?
   lastName         String?
-  email            String    @unique
+  email            String        @unique
   password         String
   refreshToken     String?
   resetToken       String?
@@ -21,7 +21,7 @@ model User {
   member           Member?
   files            File[]
   logoId           Int?
-  logo             File?     @relation("user_logos", fields: [logoId], references: [id], onDelete: SetNull)
+  logo             File?         @relation("user_logos", fields: [logoId], references: [id], onDelete: SetNull)
   activityLogs     ActivityLog[]
   platformRole     PlatformRole?
 
@@ -34,35 +34,38 @@ enum PlatformRole {
 }
 
 model Organization {
-  id                 Int                 @id @default(autoincrement())
-  name               String              @default("Untitled")
-  description        String?
-  category           BUSINESS_CATEGORY   @default(OTHER)
-  bots               Bot[]
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
-  channels           Channel[]
-  members            Member[]
-  products           Product[]
-  orders             Order[]
-  schema             ProductSchema?
-  files              File[]
-  customers          Customer[]
-  onboardingProgress OnboardingProgress?
-  logoId             Int?
-  logo               File?               @relation("organization_logos", fields: [logoId], references: [id], onDelete: SetNull)
-  activityLogs       ActivityLog[]
-  posts              Post[]
-  instagramAccounts  InstagramAccount[]
-  customerAiNotes    CustomerAiNote[]
-  subscription       Subscription?
-  winBackAttempts    WinBackAttempt[]
+  id          Int               @id @default(autoincrement())
+  name        String            @default("Untitled")
+  description String?
+  category    BUSINESS_CATEGORY @default(OTHER)
+  bots        Bot[]
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+  channels    Channel[]
+  members     Member[]
+  products    Product[]
+  categories  Category[]
+
+  orders                 Order[]
+  files                  File[]
+  customers              Customer[]
+  onboardingProgress     OnboardingProgress?
+  logoId                 Int?
+  logo                   File?                   @relation("organization_logos", fields: [logoId], references: [id], onDelete: SetNull)
+  activityLogs           ActivityLog[]
+  posts                  Post[]
+  instagramAccounts      InstagramAccount[]
+  customerAiNotes        CustomerAiNote[]
+  subscription           Subscription?
+  winBackAttempts        WinBackAttempt[]
   replenishmentReminders ReplenishmentReminder[]
-  supportTickets     SupportTicket[]
-  loyaltyTransactions LoyaltyTransaction[]
-  campaigns          Campaign[]
-  aiUsageLogs        AiUsageLog[]
-  aiCostDailyAggregates AiCostDailyAggregate[]
+  supportTickets         SupportTicket[]
+  loyaltyTransactions    LoyaltyTransaction[]
+  campaigns              Campaign[]
+  aiUsageLogs            AiUsageLog[]
+  aiCostDailyAggregates  AiCostDailyAggregate[]
+  fulfillmentSettings    FulfillmentSettings?
+
   @@map("organizations")
 }
 
@@ -79,13 +82,47 @@ enum BUSINESS_CATEGORY {
   OTHER
 }
 
+enum FulfillmentMode {
+  PICKUP_ONLY
+  DELIVERY
+  PICKUP_AND_DELIVERY
+}
+
+enum DeliveryMethod {
+  MERCHANT
+  EXTERNAL_COURIER
+}
+
+enum DeliveryFeeType {
+  FREE
+  FIXED
+  CUSTOMER_PAYS_SEPARATELY
+}
+
+model FulfillmentSettings {
+  id                 Int              @id @default(autoincrement())
+  organizationId     Int              @unique
+  organization       Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  fulfillmentMode    FulfillmentMode
+  // Delivery fields — null when delivery is not part of the mode
+  deliveryMethod     DeliveryMethod?
+  deliveryFeeType    DeliveryFeeType?
+  deliveryFee        Float? // only non-null when deliveryFeeType = FIXED
+  // Pickup fields — null when pickup is not part of the mode
+  pickupAddress      String?
+  pickupInstructions String?
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  @@map("fulfillment_settings")
+}
+
 model OnboardingProgress {
   id                  Int              @id @default(autoincrement())
   organizationId      Int              @unique
   organization        Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   percentage          Int              @default(20)
   isCategorySelected  Boolean          @default(false)
-  isSchemaConfigured  Boolean          @default(false)
   isFirstProductAdded Boolean          @default(false)
   isBotConnected      Boolean          @default(false)
   nextStep            OnboardingStep   @default(SELECT_CATEGORY)
@@ -96,7 +133,6 @@ model OnboardingProgress {
 
 enum OnboardingStep {
   SELECT_CATEGORY
-  CONFIGURE_SCHEMA
   ADD_FIRST_PRODUCT
   CONNECT_BOT
 }
@@ -107,28 +143,28 @@ enum OnboardingStatus {
 }
 
 model Product {
-  id             Int           @id @default(autoincrement())
-  name           String
-  price          Float
-  currency       Currency      @default(USD)
-  images         File[]
-  posts          Post[]
-  quantity       Int           @default(1)
-  schemaId       Int
-  schema         ProductSchema @relation(fields: [schemaId], references: [id])
-  fields         FieldValue[]
-  organizationId Int
-  organization   Organization  @relation(fields: [organizationId], references: [id])
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt()
-  orders         Order[]       @relation("ordered_products")
-  orderItems     OrderItem[]
-  status         ProductStatus @default(DRAFT)
-  deletedAt      DateTime?
-  isDeleted      Boolean       @default(false)
+  id                     Int                     @id @default(autoincrement())
+  name                   String
+  price                  Float
+  currency               Currency                @default(USD)
+  images                 File[]
+  posts                  Post[]
+  quantity               Int                     @default(1)
+  categoryId             Int?
+  category               Category?               @relation(fields: [categoryId], references: [id])
+  itemSpecValues         ItemSpecValue[]
+  organizationId         Int
+  organization           Organization            @relation(fields: [organizationId], references: [id])
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt()
+  orders                 Order[]                 @relation("ordered_products")
+  orderItems             OrderItem[]
+  status                 ProductStatus           @default(DRAFT)
+  deletedAt              DateTime?
+  isDeleted              Boolean                 @default(false)
   // Replenishment: lazily cached consumable classification (see ReplenishmentReminder)
-  isConsumable          Boolean? // null = not yet classified by AI
-  estimatedLifespanDays Int? // AI-estimated days one unit lasts a typical customer
+  isConsumable           Boolean? // null = not yet classified by AI
+  estimatedLifespanDays  Int? // AI-estimated days one unit lasts a typical customer
   replenishmentReminders ReplenishmentReminder[]
 
   @@index([name])
@@ -153,50 +189,55 @@ enum Currency {
   JPY
 }
 
-model ProductSchema {
-  id             Int          @id @default(autoincrement())
-  name           String
-  fields         Field[]
-  products       Product[]
-  organizationId Int          @unique
-  organization   Organization @relation(fields: [organizationId], references: [id])
+model Category {
+  id      Int    @id @default(autoincrement())
+  name_uz String @default("")
+  name_ru String @default("")
+  name_en String @default("")
 
-  @@map("product_schemas")
+  parentId Int?
+  parent   Category?  @relation("CategoryToCategory", fields: [parentId], references: [id])
+  children Category[] @relation("CategoryToCategory")
+
+  isLeaf        Boolean        @default(false)
+  itemSpecs     ItemSpec[]
+  products      Product[]
+  organizations Organization[]
+
+  @@map("categories")
 }
 
-model Field {
-  id          Int           @id @default(autoincrement())
-  schemaId    Int
-  schema      ProductSchema @relation(fields: [schemaId], references: [id])
-  name        String
-  type        FieldType
-  required    Boolean
-  order       Int           @default(0)
-  options     String[]      @default([]) // For ENUM field types
-  fieldValues FieldValue[]
+model ItemSpec {
+  id         Int       @id @default(autoincrement())
+  categoryId Int
+  category   Category  @relation(fields: [categoryId], references: [id])
+  name       String
+  type       FieldType
+  required   Boolean   @default(false)
+  options    String[]  @default([])
 
-  @@map("schema_fields")
+  values ItemSpecValue[]
+
+  @@map("item_specs")
 }
 
-model FieldValue {
-  id        Int     @id @default(autoincrement())
-  productId Int
-  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+model ItemSpecValue {
+  id         Int      @id @default(autoincrement())
+  productId  Int
+  product    Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  itemSpecId Int
+  itemSpec   ItemSpec @relation(fields: [itemSpecId], references: [id], onDelete: Cascade)
 
-  fieldId Int
-  field   Field @relation(fields: [fieldId], references: [id], onDelete: Cascade)
-
-  // qiymatni universal saqlash uchun:
   valueText   String?
   valueNumber Float?
   valueBool   Boolean?
   valueDate   DateTime?
-  valueJson   Json? // ENUM, FILE, IMAGE va boshqalar uchun
+  valueJson   Json?
 
-  @@unique([productId, fieldId]) // har bir product uchun field bir marta bo'lishi kerak
+  @@unique([productId, itemSpecId])
   @@index([valueText])
   @@index([productId])
-  @@map("field_values")
+  @@map("item_spec_values")
 }
 
 enum FieldType {
@@ -305,32 +346,32 @@ enum BotStatus {
 }
 
 model Customer {
-  id             Int             @id @default(autoincrement())
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  telegramId     String
-  name           String
-  username       String?
-  organizationId Int
-  messages       Message[]
-  botId          Int
-  bot            Bot             @relation(fields: [botId], references: [id])
-  organization   Organization    @relation(fields: [organizationId], references: [id])
-  orders         Order[]
-  lang           String? // "uz" | "ru" | "en"
-  aiNote         CustomerAiNote?
-  channel        CustomerChannel  @default(TELEGRAM)
-  instagramId    String?
-  winBackAttempts WinBackAttempt[]
+  id                     Int                     @id @default(autoincrement())
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  telegramId             String
+  name                   String
+  username               String?
+  organizationId         Int
+  messages               Message[]
+  botId                  Int
+  bot                    Bot                     @relation(fields: [botId], references: [id])
+  organization           Organization            @relation(fields: [organizationId], references: [id])
+  orders                 Order[]
+  lang                   String? // "uz" | "ru" | "en"
+  aiNote                 CustomerAiNote?
+  channel                CustomerChannel         @default(TELEGRAM)
+  instagramId            String?
+  winBackAttempts        WinBackAttempt[]
   replenishmentReminders ReplenishmentReminder[]
-  supportTickets  SupportTicket[]
+  supportTickets         SupportTicket[]
   // Loyalty + referral
-  referralCode        String?              @unique
-  referredById        Int?
-  referredBy          Customer?            @relation("customer_referrals", fields: [referredById], references: [id], onDelete: SetNull)
-  referrals           Customer[]           @relation("customer_referrals")
-  loyaltyPoints       Int                  @default(0)
-  loyaltyTransactions LoyaltyTransaction[]
+  referralCode           String?                 @unique
+  referredById           Int?
+  referredBy             Customer?               @relation("customer_referrals", fields: [referredById], references: [id], onDelete: SetNull)
+  referrals              Customer[]              @relation("customer_referrals")
+  loyaltyPoints          Int                     @default(0)
+  loyaltyTransactions    LoyaltyTransaction[]
 
   @@unique([telegramId, organizationId, botId])
   @@index([telegramId])
@@ -357,25 +398,25 @@ model Message {
 }
 
 model Order {
-  id                 Int           @id @default(autoincrement())
-  createdAt          DateTime      @default(now())
-  updatedAt          DateTime      @updatedAt
-  status             OrderStatus   @default(NEW)
-  paymentStatus      PaymentStatus @default(PENDING)
-  customerId         Int?
-  customer           Customer?     @relation(fields: [customerId], references: [id], onDelete: SetNull)
-  details            Json?
-  organizationId     Int
-  organization       Organization  @relation(fields: [organizationId], references: [id])
-  totalPrice         Float         @default(0)
-  trackingNumber     String?
-  discountAmount     Float?
-  discountPercentage Float?
-  notes              String?
-  products           Product[]     @relation("ordered_products")
-  orderItems         OrderItem[]
-  currency           String        @default("USD")
-  followUpSentAt     DateTime?
+  id                  Int                  @id @default(autoincrement())
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  status              OrderStatus          @default(NEW)
+  paymentStatus       PaymentStatus        @default(PENDING)
+  customerId          Int?
+  customer            Customer?            @relation(fields: [customerId], references: [id], onDelete: SetNull)
+  details             Json?
+  organizationId      Int
+  organization        Organization         @relation(fields: [organizationId], references: [id])
+  totalPrice          Float                @default(0)
+  trackingNumber      String?
+  discountAmount      Float?
+  discountPercentage  Float?
+  notes               String?
+  products            Product[]            @relation("ordered_products")
+  orderItems          OrderItem[]
+  currency            String               @default("USD")
+  followUpSentAt      DateTime?
   paymentTransactions PaymentTransaction[]
 
   @@index([organizationId, status, createdAt(sort: Desc)], name: "idx_orders_org_status_created")
@@ -515,22 +556,22 @@ enum ConnectionStatus {
 }
 
 model Post {
-  id          Int        @id @default(autoincrement())
-  productId   Int
-  product     Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
-  content     String
-  channelId   Int
-  channel     Channel    @relation(fields: [channelId], references: [id], onDelete: Cascade)
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-  status      PostStatus @default(DRAFT)
+  id             Int          @id @default(autoincrement())
+  productId      Int
+  product        Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
+  content        String
+  channelId      Int
+  channel        Channel      @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  status         PostStatus   @default(DRAFT)
   organizationId Int
-  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  metaData    Json?
-  telegramId  String?
-  scheduledAt DateTime?
-  sentAt      DateTime?
-  failLog     String?
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  metaData       Json?
+  telegramId     String?
+  scheduledAt    DateTime?
+  sentAt         DateTime?
+  failLog        String?
 
   @@index([content])
   @@index([channelId, status])
@@ -575,12 +616,12 @@ enum OrderStatus {
 
 // Activity Log
 model ActivityLog {
-  id             Int           @id @default(autoincrement())
-  createdAt      DateTime      @default(now())
+  id             Int          @id @default(autoincrement())
+  createdAt      DateTime     @default(now())
   userId         Int?
-  user           User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  user           User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
   organizationId Int
-  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   entityType     EntityType
   entityId       Int?
   action         ActionType
@@ -599,7 +640,7 @@ enum EntityType {
   CUSTOMER
   BOT
   CHANNEL
-  SCHEMA
+  CATEGORY
   POST
 }
 
@@ -612,16 +653,16 @@ enum ActionType {
 }
 
 model InstagramAccount {
-  id                  Int       @id @default(autoincrement())
-  organizationId      Int
-  organization        Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  instagramUserId     String    @unique
-  instagramUsername   String?
-  accessTokenEncrypted String
+  id                    Int          @id @default(autoincrement())
+  organizationId        Int
+  organization          Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  instagramUserId       String       @unique
+  instagramUsername     String?
+  accessTokenEncrypted  String
   refreshTokenEncrypted String?
-  tokenExpiresAt      DateTime?
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
+  tokenExpiresAt        DateTime?
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
 
   @@unique([organizationId, instagramUserId])
   @@index([organizationId])
@@ -726,27 +767,27 @@ enum ReplenishmentStatus {
 /// One predicted run-out of a consumable a customer bought, plus the proactive
 /// reorder reminder tied to it. Detect (on order) → predict → remind → track reorder.
 model ReplenishmentReminder {
-  id                    Int                 @id @default(autoincrement())
-  customerId            Int
-  customer              Customer            @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  organizationId        Int
-  organization          Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
-  botId                 Int?
-  productId             Int
-  product               Product             @relation(fields: [productId], references: [id], onDelete: Cascade)
-  quantity              Int                 @default(1)
-  lastOrderId           Int? // order that (re)scheduled this reminder
+  id                     Int                 @id @default(autoincrement())
+  customerId             Int
+  customer               Customer            @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  organizationId         Int
+  organization           Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  botId                  Int?
+  productId              Int
+  product                Product             @relation(fields: [productId], references: [id], onDelete: Cascade)
+  quantity               Int                 @default(1)
+  lastOrderId            Int? // order that (re)scheduled this reminder
   predictedDepletionDate DateTime
-  method                ReplenishmentMethod
-  status                ReplenishmentStatus @default(SCHEDULED)
-  basis                 Json? // { intervalDays, purchaseCount, packSize, unitsPerDay, estimatedLifespanDays, source }
-  generatedMessage      String?
-  sentAt                DateTime?
-  respondedAt           DateTime?
-  purchasedAt           DateTime?
-  purchasedOrderId      Int? // order that closed the loop
-  createdAt             DateTime            @default(now())
-  updatedAt             DateTime            @updatedAt
+  method                 ReplenishmentMethod
+  status                 ReplenishmentStatus @default(SCHEDULED)
+  basis                  Json? // { intervalDays, purchaseCount, packSize, unitsPerDay, estimatedLifespanDays, source }
+  generatedMessage       String?
+  sentAt                 DateTime?
+  respondedAt            DateTime?
+  purchasedAt            DateTime?
+  purchasedOrderId       Int? // order that closed the loop
+  createdAt              DateTime            @default(now())
+  updatedAt              DateTime            @updatedAt
 
   @@index([organizationId, status])
   @@index([customerId, productId])
@@ -785,35 +826,35 @@ enum PaymentProvider {
 }
 
 model SubscriptionPlan {
-  id               Int            @id @default(autoincrement())
-  tier             PlanTier       @unique
-  name             String
-  priceUsd         Float
-  convoLimit       Int            // -1 = unlimited
-  productLimit     Int            // -1 = unlimited
-  botLimit         Int            // -1 = unlimited
-  teamMemberLimit  Int            // -1 = unlimited
-  overagePriceUsd  Float          @default(0)
-  overageCap       Int            @default(0) // max overage convos before hard throttle
-  isActive         Boolean        @default(true)
-  subscriptions    Subscription[]
+  id              Int            @id @default(autoincrement())
+  tier            PlanTier       @unique
+  name            String
+  priceUsd        Float
+  convoLimit      Int // -1 = unlimited
+  productLimit    Int // -1 = unlimited
+  botLimit        Int // -1 = unlimited
+  teamMemberLimit Int // -1 = unlimited
+  overagePriceUsd Float          @default(0)
+  overageCap      Int            @default(0) // max overage convos before hard throttle
+  isActive        Boolean        @default(true)
+  subscriptions   Subscription[]
 
   @@map("subscription_plans")
 }
 
 model Subscription {
-  id                 Int                  @id @default(autoincrement())
-  organizationId     Int                  @unique
-  organization       Organization         @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  id                 Int                    @id @default(autoincrement())
+  organizationId     Int                    @unique
+  organization       Organization           @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   planId             Int
-  plan               SubscriptionPlan     @relation(fields: [planId], references: [id])
-  status             SubscriptionStatus   @default(TRIALING)
+  plan               SubscriptionPlan       @relation(fields: [planId], references: [id])
+  status             SubscriptionStatus     @default(TRIALING)
   currentPeriodStart DateTime
   currentPeriodEnd   DateTime
   trialEndsAt        DateTime?
-  cancelAtPeriodEnd  Boolean              @default(false)
-  createdAt          DateTime             @default(now())
-  updatedAt          DateTime             @updatedAt
+  cancelAtPeriodEnd  Boolean                @default(false)
+  createdAt          DateTime               @default(now())
+  updatedAt          DateTime               @updatedAt
   invoices           Invoice[]
   usageSnapshots     MonthlyUsageSnapshot[]
 
@@ -839,22 +880,22 @@ model MonthlyUsageSnapshot {
 }
 
 model Invoice {
-  id               Int              @id @default(autoincrement())
-  invoiceNumber    String           @unique
-  subscriptionId   Int
-  subscription     Subscription     @relation(fields: [subscriptionId], references: [id])
-  amountUsd        Float
-  overageAmountUsd Float            @default(0)
-  status           InvoiceStatus    @default(DRAFT)
-  provider         PaymentProvider?
-  providerTxId     String?
-  paidAt           DateTime?
-  dueDate          DateTime
-  periodStart      DateTime
-  periodEnd        DateTime
-  paymentUrl       String?
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
+  id                  Int                  @id @default(autoincrement())
+  invoiceNumber       String               @unique
+  subscriptionId      Int
+  subscription        Subscription         @relation(fields: [subscriptionId], references: [id])
+  amountUsd           Float
+  overageAmountUsd    Float                @default(0)
+  status              InvoiceStatus        @default(DRAFT)
+  provider            PaymentProvider?
+  providerTxId        String?
+  paidAt              DateTime?
+  dueDate             DateTime
+  periodStart         DateTime
+  periodEnd           DateTime
+  paymentUrl          String?
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
   paymentTransactions PaymentTransaction[]
 
   @@index([subscriptionId, status])
@@ -900,17 +941,17 @@ enum BarcodeSource {
 // classifier and from merchants' manual entries so external-API calls shrink
 // over time.
 model BarcodeCatalogEntry {
-  id           Int                  @id @default(autoincrement())
-  barcode      String               @unique
-  status       BarcodeCatalogStatus @default(PENDING)
-  source       BarcodeSource?
-  mxikCode     String?
-  imageUrl     String?
-  metadata     Json?
+  id                 Int                         @id @default(autoincrement())
+  barcode            String                      @unique
+  status             BarcodeCatalogStatus        @default(PENDING)
+  source             BarcodeSource?
+  mxikCode           String?
+  imageUrl           String?
+  metadata           Json?
   businessCategories BUSINESS_CATEGORY[]
-  translations BarcodeCatalogTranslation[]
-  createdAt    DateTime             @default(now())
-  updatedAt    DateTime             @updatedAt()
+  translations       BarcodeCatalogTranslation[]
+  createdAt          DateTime                    @default(now())
+  updatedAt          DateTime                    @updatedAt()
 
   @@index([status])
   @@map("barcode_catalog_entries")

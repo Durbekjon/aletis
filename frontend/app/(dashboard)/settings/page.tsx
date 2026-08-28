@@ -14,16 +14,15 @@ import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Building2, Bell, Key, User, Shield, Upload, Copy, Eye, EyeOff, Plus, Trash2, RefreshCw } from "lucide-react"
+import { Building2, Bell, Key, User, Shield, Upload, Copy, Eye, EyeOff, Plus, Trash2, RefreshCw, Truck } from "lucide-react"
 import { useTheme } from "next-themes"
 import { useOrganizationQuery, useUpdateOrganizationMutation } from "@/src/hooks/useOrganization"
 import { useUserQuery, useUpdateProfileMutation, useUpdatePasswordMutation } from "@/src/hooks/useUser"
-import { useSchemaQuery } from "@/src/hooks/useSchema"
-import { ProductSchemaSection } from "@/components/settings/product-schema-section"
 import { toast } from "sonner"
 import { filesApi } from "@/src/api/filesApi"
 import { LanguageSwitcher } from "@/components/language-switcher"
 import { useTranslation } from "@/src/context/I18nContext"
+import { FulfillmentSettingsTab } from "@/src/components/settings/FulfillmentSettingsTab"
 
 export default function SettingsPage() {
   const { t } = useTranslation()
@@ -38,9 +37,7 @@ export default function SettingsPage() {
   const updateProfileMutation = useUpdateProfileMutation()
   const updatePasswordMutation = useUpdatePasswordMutation()
   
-  // Schema hooks
-  const { data: schema } = useSchemaQuery()
-  
+
   // Form state for organization
   const [orgFormData, setOrgFormData] = useState<{
     name: string
@@ -264,7 +261,7 @@ export default function SettingsPage() {
 
       {/* Tabs: Profile first, then Organization */}
       <Tabs defaultValue="profile" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
+        <TabsList className="grid w-full grid-cols-4">
           {/* 1st Tab: Profile */}
           <TabsTrigger value="profile" className="flex items-center gap-2">
             <User className="h-4 w-4" />
@@ -275,15 +272,12 @@ export default function SettingsPage() {
             <Building2 className="h-4 w-4" />
             {t("settings.tabs.organization")}
           </TabsTrigger>
-          {/* The rest */}
-          {/* <TabsTrigger value="notifications" className="flex items-center gap-2">
-            <Bell className="h-4 w-4" />
-            Notifications
-          </TabsTrigger> */}
-          {/* <TabsTrigger value="api-keys" className="flex items-center gap-2">
-            <Key className="h-4 w-4" />
-            API Keys
-          </TabsTrigger> */}
+          {/* 3rd Tab: Fulfillment */}
+          <TabsTrigger value="fulfillment" className="flex items-center gap-2">
+            <Truck className="h-4 w-4" />
+            {t("settings.tabs.fulfillment")}
+          </TabsTrigger>
+          {/* 4th Tab: Security */}
           <TabsTrigger value="security" className="flex items-center gap-2">
             <Shield className="h-4 w-4" />
             {t("settings.tabs.security")}
@@ -545,19 +539,25 @@ export default function SettingsPage() {
                 </CardContent>
               </Card>
 
-              {/* Product Schema Section */}
-              {schema && (
-                <Card className="lp-glass-card">
-                  <CardHeader>
-                    <CardTitle>{t("settings.organization.productSchemaTitle")}</CardTitle>
-                    <CardDescription>{t("settings.organization.productSchemaDescription")}</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <ProductSchemaSection schemaId={schema.id} />
-                  </CardContent>
-                </Card>
-              )}
+
             </>
+          ) : null}
+        </TabsContent>
+
+        {/* Fulfillment TAB */}
+        <TabsContent value="fulfillment" className="space-y-6">
+          {organization ? (
+            <FulfillmentSettingsTab
+              orgId={organization.id}
+            />
+          ) : orgLoading ? (
+            <Card className="lp-glass-card">
+              <CardContent className="pt-6 space-y-4">
+                <Skeleton className="h-6 w-48" />
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+              </CardContent>
+            </Card>
           ) : null}
         </TabsContent>
 

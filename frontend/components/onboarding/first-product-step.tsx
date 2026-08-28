@@ -9,10 +9,10 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import type { OnboardingData } from "@/lib/types/onboarding"
-import { ArrowRight, Upload, X, Eye } from "lucide-react"
+import { ArrowRight, Upload, X, Eye, Loader2 } from "lucide-react"
 import { useOnboarding } from "@/src/hooks/useOnboarding"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import onboardingApi, { SchemaField } from "@/src/services/onboardingApi"
+import onboardingApi from "@/src/services/onboardingApi"
 import { useToast } from "@/hooks/use-toast"
 import { useTranslation } from "@/src/context/I18nContext"
 
@@ -27,7 +27,7 @@ export function FirstProductStep({ data, onUpdate, onNext }: FirstProductStepPro
   const [product, setProduct] = useState(data.firstProduct)
   const [dragOver, setDragOver] = useState(false)
   const { uploadImagesAndCreateProduct, loading, error } = useOnboarding()
-  const [schemaFields, setSchemaFields] = useState<SchemaField[]>([])
+  const [schemaFields, setSchemaFields] = useState<any[]>([])
   const [dynamicValues, setDynamicValues] = useState<Record<number, unknown>>({})
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([])
@@ -43,20 +43,11 @@ export function FirstProductStep({ data, onUpdate, onNext }: FirstProductStepPro
   }, [])
 
   useEffect(() => {
-    let mounted = true
-    ;(async () => {
-      try {
-        // Fetch current organization schema (includes fields)
-        const schema = await onboardingApi.getProductSchema()
-        if (mounted && schema?.fields) setSchemaFields(schema.fields)
-      } catch {
-        // ignore; errors will be shown on submit if needed
-      }
-    })()
-    return () => {
-      mounted = false
+    if (data.categories?.[0]?.itemSpecs) {
+      setSchemaFields(data.categories[0].itemSpecs)
     }
-  }, [])
+  }, [data.categories])
+
 
   const handleNext = async () => {
     if (!product.name || product.price <= 0) return
@@ -64,7 +55,7 @@ export function FirstProductStep({ data, onUpdate, onNext }: FirstProductStepPro
     try {
       const dynamicArray = schemaFields.map((f) => {
         const value = dynamicValues[f.id]
-        return { fieldId: f.id, type: f.type, value }
+        return { itemSpecId: f.id, type: f.type, value }
       })
       await uploadImagesAndCreateProduct(
         product.name,
@@ -121,7 +112,7 @@ export function FirstProductStep({ data, onUpdate, onNext }: FirstProductStepPro
     }))
   }
 
-  const setDynamicFieldValue = (fieldId: number, type: SchemaField["type"], raw: any) => {
+  const setDynamicFieldValue = (fieldId: number, type: string, raw: any) => {
     let value: unknown = raw
     if (type === "NUMBER") value = Number(raw)
     if (type === "BOOLEAN") value = Boolean(raw)
@@ -218,7 +209,7 @@ export function FirstProductStep({ data, onUpdate, onNext }: FirstProductStepPro
               {f.type === "ENUM" && (
                 <select className="border rounded px-3 py-2" onChange={(e) => setDynamicFieldValue(f.id, f.type, e.target.value)}>
                   <option value="">Select...</option>
-                  {(f.options || []).map((opt) => (
+                  {(f.options || []).map((opt: string) => (
                     <option key={opt} value={opt}>{opt}</option>
                   ))}
                 </select>
@@ -273,9 +264,10 @@ export function FirstProductStep({ data, onUpdate, onNext }: FirstProductStepPro
                 variant="outline"
                 size="sm"
                 onClick={() => document.getElementById("image-upload")?.click()}
-                disabled={product.images.length >= 3}
+                disabled={product.images.length >= 3 || isUploading}
               >
-                {t("onboarding.product.selectImages")}
+                {isUploading ? <Loader2 className="animate-spin h-4 w-4 mr-2" /> : null}
+                {isUploading ? "Uploading..." : t("onboarding.product.selectImages")}
               </Button>
             </div>
 

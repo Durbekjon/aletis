@@ -42,15 +42,16 @@ export function CompletionStep({ data, onComplete }: CompletionStepProps) {
           </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground">{t("onboarding.completionStep.category")}:</span>
-            <span className="font-medium capitalize">{data.category}</span>
+            <span className="font-medium capitalize">
+              {data.categories && data.categories.length > 0 
+                ? data.categories.map(c => c.name_uz || c.name_ru || c.name_en || "Custom").join(", ")
+                : (data.categoryIds && data.categoryIds.length > 0 ? `${data.categoryIds.length} categories` : "Not Selected")
+              }
+            </span>
           </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground">{t("onboarding.completionStep.botConnected")}:</span>
             <span className="font-medium">{data.botToken ? t("onboarding.completionStep.yes") : t("onboarding.completionStep.no")}</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-muted-foreground">Product Fields:</span>
-            <span className="font-medium">{data.productSchema.length} fields</span>
           </div>
           <div className="flex justify-between">
             <span className="text-muted-foreground">First Product:</span>

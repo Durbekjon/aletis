@@ -27,7 +27,7 @@ export function PostForm({ initialData, onSubmit, isLoading = false, isEditing =
   const [selectedChannel, setSelectedChannel] = useState<string>("")
   const [selectedProduct, setSelectedProduct] = useState<string>("")
   const [content, setContent] = useState("")
-  const [status, setStatus] = useState<PostStatus>("DRAFT")
+  const [status, setStatus] = useState<PostStatus>("SENT")
   const [scheduledAt, setScheduledAt] = useState("")
 
   const { data: channels } = useChannelsQuery()

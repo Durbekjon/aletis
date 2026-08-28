@@ -1,4 +1,4 @@
-import type { ProductSchemaField } from "@/lib/types/product"
+import type { BackendItemSpec } from "@/lib/types/product"
 
 export type BarcodeAttr = "description" | "brandName" | "categoryName" | "unitName"
 
@@ -14,9 +14,9 @@ const KEYWORDS: Record<BarcodeAttr, string[]> = {
 // guarantee — used both to prefill from a resolved barcode and, in reverse, to
 // read back what the merchant typed when completing an unresolved one.
 export function findMatchingField(
-  fields: ProductSchemaField[],
+  fields: BackendItemSpec[],
   attr: BarcodeAttr,
-): ProductSchemaField | undefined {
+): BackendItemSpec | undefined {
   const keywords = KEYWORDS[attr]
   return fields.find((field) =>
     keywords.some((keyword) => field.name.toLowerCase().includes(keyword)),

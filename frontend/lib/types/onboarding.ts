@@ -1,9 +1,11 @@
+import { BackendCategory } from "./product"
+
 export interface OnboardingData {
   organizationName: string
   organizationDescription?: string
   botToken?: string
-  category: string
-  productSchema: ProductSchemaField[]
+  categoryIds?: number[]
+  categories?: BackendCategory[]
   firstProduct: {
     name: string
     price: number
@@ -15,13 +17,6 @@ export interface OnboardingData {
 }
 
 export type FieldType = "TEXT" | "NUMBER" | "BOOLEAN" | "DATE" | "ENUM"
-export interface ProductSchemaField {
-  id: string
-  name: string
-  type: FieldType
-  required: boolean
-  options?: string[]
-}
 
 export interface OnboardingStep {
   id: number

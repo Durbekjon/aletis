@@ -87,7 +87,7 @@ export class ProductSearchService {
       return this.searchViaFullCatalogFallback(
         organizationId,
         searchQuery,
-        userMessage,
+        lang,
       );
     }
 
@@ -105,7 +105,7 @@ export class ProductSearchService {
         return this.searchViaFullCatalogFallback(
           organizationId,
           searchQuery,
-          userMessage,
+          lang,
         );
       }
 
@@ -156,7 +156,7 @@ export class ProductSearchService {
         await this.geminiService.matchProductsInContext(
           candidates,
           searchQuery,
-          userMessage,
+          lang || 'uz',
           { organizationId },
         );
 
@@ -183,7 +183,7 @@ export class ProductSearchService {
       return this.searchViaFullCatalogFallback(
         organizationId,
         searchQuery,
-        userMessage,
+        lang,
       );
     }
   }
@@ -296,7 +296,7 @@ export class ProductSearchService {
   private async searchViaFullCatalogFallback(
     organizationId: number,
     searchQuery: string,
-    userMessage: string,
+    lang: string | null | undefined,
   ): Promise<ProductSearchResult> {
     const products =
       await this.productsService.getProductsForOrganization(organizationId);
@@ -307,7 +307,7 @@ export class ProductSearchService {
       await this.geminiService.matchProductsInContext(
         products,
         searchQuery,
-        userMessage,
+        lang || 'uz',
         { organizationId },
       );
     const productById = new Map(products.map((p) => [p.id, p]));
@@ -374,7 +374,7 @@ export class ProductSearchService {
       .map((p) => {
         const stockLine =
           p.quantity <= 0 ? 'OUT OF STOCK' : `${p.quantity} in stock`;
-        const fieldLines = p.fields
+        const fieldLines = p.itemSpecValues
           .map((f) => {
             const value = this.formatFieldValue(f);
             return value ? `  - ${f.fieldName}: ${value}` : null;

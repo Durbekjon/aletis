@@ -8,8 +8,8 @@ import { Progress } from "@/components/ui/progress"
 import type { OnboardingData, OnboardingStep } from "@/lib/types/onboarding"
 import { OrganizationStep } from "@/components/onboarding/organization-step"
 import { BotConnectionStep } from "@/components/onboarding/bot-connection-step"
-import { CategoryStep } from "@/components/onboarding/category-step"
-import { ProductSchemaStep } from "@/components/onboarding/product-schema-step"
+
+import { CategorySelectionStep } from "@/components/onboarding/category-selection-step"
 import { FirstProductStep } from "@/components/onboarding/first-product-step"
 import { CompletionStep } from "@/components/onboarding/completion-step"
 import { OnboardingProvider } from "@/src/context/OnboardingContext"
@@ -22,32 +22,30 @@ import { MascotGuide } from "@/components/onboarding/mascot-guide"
 const STEP_I18N: Record<number, { titleKey: string; descKey: string }> = {
   1: { titleKey: "onboarding.steps.organizationTitle", descKey: "onboarding.steps.organizationDesc" },
   2: { titleKey: "onboarding.steps.categoryTitle", descKey: "onboarding.steps.categoryDesc" },
-  3: { titleKey: "onboarding.steps.schemaTitle", descKey: "onboarding.steps.schemaDesc" },
-  4: { titleKey: "onboarding.steps.firstProductTitle", descKey: "onboarding.steps.firstProductDesc" },
-  5: { titleKey: "onboarding.steps.botTitle", descKey: "onboarding.steps.botDesc" },
-  6: { titleKey: "onboarding.steps.completionTitle", descKey: "onboarding.steps.completionDesc" },
+  3: { titleKey: "onboarding.steps.firstProductTitle", descKey: "onboarding.steps.firstProductDesc" },
+  4: { titleKey: "onboarding.steps.botTitle", descKey: "onboarding.steps.botDesc" },
+  5: { titleKey: "onboarding.steps.completionTitle", descKey: "onboarding.steps.completionDesc" },
 }
 
 const ONBOARDING_STEPS: OnboardingStep[] = [
   { id: 1, title: "Organization Name", description: "Tell us about your business", isComplete: false },
   { id: 2, title: "Choose Category", description: "Select your business type", isComplete: false },
-  { id: 3, title: "Configure Product Schema", description: "Set up your product fields", isComplete: false },
-  { id: 4, title: "Create First Product", description: "Add your first product", isComplete: false },
+  { id: 3, title: "Create First Product", description: "Add your first product", isComplete: false },
   {
-    id: 5,
+    id: 4,
     title: "Connect Telegram Bot",
     description: "Connect your Telegram bot using Telegram Bot Token",
     isComplete: false,
     isOptional: true,
   },
-  { id: 6, title: "Completion", description: "You're all set!", isComplete: false },
+  { id: 5, title: "Completion", description: "You're all set!", isComplete: false },
 ]
 
 const STEP_MAPPING: Record<BackendOnboardingStep, number> = {
   [BackendOnboardingStep.SELECT_CATEGORY]: 2,
-  [BackendOnboardingStep.CONFIGURE_SCHEMA]: 3,
-  [BackendOnboardingStep.ADD_FIRST_PRODUCT]: 4,
-  [BackendOnboardingStep.CONNECT_BOT]: 5,
+  [BackendOnboardingStep.CONFIGURE_SCHEMA]: 3, // Skipped effectively
+  [BackendOnboardingStep.ADD_FIRST_PRODUCT]: 3,
+  [BackendOnboardingStep.CONNECT_BOT]: 4,
 }
 
 export default function OnboardingPage() {
@@ -57,15 +55,15 @@ export default function OnboardingPage() {
     organizationName: "",
     organizationDescription: "",
     botToken: "",
-    category: "",
-    productSchema: [],
+    categoryIds: [],
+    categories: [],
     firstProduct: {
       name: "",
       price: 0,
       quantity: 0,
       description: "",
       images: [],
-      currency: "USD" as "USD" | "EUR" | "UZS" | "RUB" | "KZT" | "GBP" | "JPY",
+      currency: "UZS" as "USD" | "EUR" | "UZS" | "RUB" | "KZT" | "GBP" | "JPY",
     },
   })
   const router = useRouter()
@@ -104,14 +102,13 @@ export default function OnboardingPage() {
   }
 
   const handleNext = async () => {
-    if (currentStep < 6) {
+    if (currentStep < 5) {
       markStepComplete(currentStep)
       try {
         if (currentStep === 2) {
-          await authApi.updateOnboardingProgress(BackendOnboardingStep.SELECT_CATEGORY)
-        } else if (currentStep === 3) {
+          // Send CONFIGURE_SCHEMA step update to skip it in backend since it's removed
           await authApi.updateOnboardingProgress(BackendOnboardingStep.CONFIGURE_SCHEMA)
-        } else if (currentStep === 4) {
+        } else if (currentStep === 3) {
           await authApi.updateOnboardingProgress(BackendOnboardingStep.ADD_FIRST_PRODUCT)
         }
       } catch (error) {
@@ -130,7 +127,7 @@ export default function OnboardingPage() {
   const handleSkip = async () => {
     const currentStepData = steps.find((step) => step.id === currentStep)
     if (currentStepData?.isOptional) {
-      if (currentStep === 5) {
+      if (currentStep === 4) {
         try {
           await authApi.updateOnboardingProgress(BackendOnboardingStep.CONNECT_BOT)
         } catch (error) {
@@ -154,12 +151,10 @@ export default function OnboardingPage() {
       case 1:
         return <OrganizationStep data={onboardingData} onUpdate={updateOnboardingData} onNext={handleNext} />
       case 2:
-        return <CategoryStep data={onboardingData} onUpdate={updateOnboardingData} onNext={handleNext} />
+        return <CategorySelectionStep data={onboardingData} onUpdate={updateOnboardingData} onNext={handleNext} />
       case 3:
-        return <ProductSchemaStep data={onboardingData} onUpdate={updateOnboardingData} onNext={handleNext} />
-      case 4:
         return <FirstProductStep data={onboardingData} onUpdate={updateOnboardingData} onNext={handleNext} />
-      case 5:
+      case 4:
         return (
           <BotConnectionStep
             data={onboardingData}
@@ -168,7 +163,7 @@ export default function OnboardingPage() {
             onSkip={handleSkip}
           />
         )
-      case 6:
+      case 5:
         return <CompletionStep data={onboardingData} onComplete={handleComplete} />
       default:
         return null
@@ -176,7 +171,7 @@ export default function OnboardingPage() {
   }
 
   return (
-    <div className="relative min-h-screen p-4 py-8 overflow-hidden bg-slate-50/50">
+    <div className="relative min-h-screen p-4 py-8 overflow-hidden bg-slate-50/50 dark:bg-zinc-950">
       {/* Dark overlay for dimming effect */}
       <div className="fixed inset-0 z-40 bg-black/40 pointer-events-none" />
 
@@ -223,7 +218,7 @@ export default function OnboardingPage() {
           </Card>
 
           {/* Navigation */}
-          {currentStep < 6 && (
+          {currentStep < 5 && (
             <div className="flex items-center justify-end mt-6">
               <div className="flex items-center gap-2">
                 {currentStepData?.isOptional && (
