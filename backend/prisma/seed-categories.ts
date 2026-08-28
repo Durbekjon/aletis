@@ -1,192 +1,73 @@
 import { PrismaClient, FieldType } from '@prisma/client';
-import fs from 'fs';
-import path from 'path';
-import csv from 'csv-parser';
 
 const prisma = new PrismaClient();
 
-interface UzumCategory {
-  id: number;
-  parent_id: number | null;
-  title_uz: string;
-  title_ru: string;
-}
+const defaultCategories = [
+  { id: 1, parent_id: null, title_uz: 'Kanselyariya tovarlari', title_ru: 'Канцтовары', title_en: 'Stationery' },
+  { id: 2, parent_id: 1, title_uz: 'Daftarlar', title_ru: 'Тетради', title_en: 'Notebooks' },
+  { id: 3, parent_id: 1, title_uz: 'Ruchkalar', title_ru: 'Ручки', title_en: 'Pens' },
+  { id: 4, parent_id: null, title_uz: 'Kitoblar', title_ru: 'Книги', title_en: 'Books' },
+  { id: 5, parent_id: 4, title_uz: 'Badiiy adabiyot', title_ru: 'Художественная литература', title_en: 'Fiction' },
+  { id: 6, parent_id: 4, title_uz: 'O\'quv qurollari', title_ru: 'Учебники', title_en: 'Textbooks' },
+  { id: 7, parent_id: null, title_uz: 'Kiyimlar', title_ru: 'Одежда', title_en: 'Clothing' },
+  { id: 8, parent_id: 7, title_uz: 'Erkaklar kiyimi', title_ru: 'Мужская одежда', title_en: 'Men\'s Clothing' },
+  { id: 9, parent_id: 7, title_uz: 'Ayollar kiyimi', title_ru: 'Женская одежда', title_en: 'Women\'s Clothing' },
+  { id: 10, parent_id: null, title_uz: 'Elektronika', title_ru: 'Электроника', title_en: 'Electronics' },
+];
 
 async function main() {
-  console.log('Starting Uzum categories seed...');
+  console.log('Starting default categories seed...');
   
-  const csvPath = path.join(__dirname, '../../uzum_categories.csv');
-  if (!fs.existsSync(csvPath)) {
-    throw new Error(`Categories file not found at ${csvPath}`);
-  }
+  await prisma.itemSpecValue.deleteMany({});
+  await prisma.itemSpec.deleteMany({});
+  await prisma.category.deleteMany({});
+  console.log('Cleared existing categories.');
 
-  const categories: UzumCategory[] = [];
-  
-  await new Promise((resolve, reject) => {
-    fs.createReadStream(csvPath)
-      .pipe(csv())
-      .on('data', (data) => {
-        const id = parseInt(data.id);
-        const parent_id = data.parent_id ? parseInt(data.parent_id) : null;
-        if (!isNaN(id)) {
-          categories.push({
-            id,
-            parent_id,
-            title_uz: data.title_uz || data.title,
-            title_ru: data.title_ru || data.title,
-          });
-        }
-      })
-      .on('end', resolve)
-      .on('error', reject);
-  });
-
-  console.log(`Loaded ${categories.length} categories from CSV.`);
-
-  // Clean existing data
-  console.log('Clearing existing ItemSpecValue, ItemSpec, Category...');
-  await prisma.itemSpecValue.deleteMany();
-  await prisma.itemSpec.deleteMany();
-  await prisma.category.deleteMany();
-
-  // Find all parent ids to determine which nodes are leaves
-  const parentIds = new Set(categories.map(c => c.parent_id).filter(id => id !== null));
-
-  // Determine root: Node 1 is "Barcha toifalar". We can skip it and make its children root,
-  // or we can just insert everything as is, but setting parentId=null for nodes where parent_id=1
-  // Let's set parent_id=null for children of 1, and skip 1 itself.
-  
-  const cleanCategories = categories.filter(c => c.id !== 1).map(c => ({
-    id: c.id,
-    name_uz: c.title_uz,
-    name_ru: c.title_ru,
-    name_en: c.title_uz,
-    parentId: c.parent_id === 1 ? null : c.parent_id,
-    isLeaf: !parentIds.has(c.id)
-  }));
-
-  // To insert safely with foreign keys, we need to sort by depth.
-  // We can do this by iteratively finding nodes whose parents are already inserted.
-  let remaining = [...cleanCategories];
-  const insertedIds = new Set<number>();
-  let level = 1;
-
-  while (remaining.length > 0) {
-    const toInsert = remaining.filter(c => c.parentId === null || insertedIds.has(c.parentId));
-    
-    if (toInsert.length === 0) {
-      console.warn(`Circular dependency or missing parents for ${remaining.length} nodes. Skipping them.`);
-      break;
-    }
-
-    console.log(`Inserting ${toInsert.length} Level ${level} categories...`);
-    
-    // Chunk the inserts to avoid parameter limits in Postgres
-    const chunkSize = 2000;
-    for (let i = 0; i < toInsert.length; i += chunkSize) {
-      await prisma.category.createMany({
-        data: toInsert.slice(i, i + chunkSize),
-        skipDuplicates: true,
-      });
-    }
-
-    toInsert.forEach(c => insertedIds.add(c.id));
-    remaining = remaining.filter(c => !insertedIds.has(c.id));
-    level++;
-  }
-
-  console.log('Adding dynamic ItemSpecs to Leaf Categories...');
-  
-  // Build parent map for fast traversal
-  const parentMap = new Map<number, number | null>();
-  for (const c of cleanCategories) {
-    parentMap.set(c.id, c.parentId);
-  }
-
-  // Helper to find root category name
-  const findRootName = (id: number): string | null => {
-    let curr = id;
-    let prev = id;
-    while (curr) {
-      prev = curr;
-      const parent = parentMap.get(curr);
-      if (!parent) break;
-      curr = parent;
-    }
-    const rootCat = cleanCategories.find(c => c.id === prev);
-    return rootCat ? rootCat.name_ru || rootCat.name_uz : null;
-  };
-
-  const leafCategoryIds = cleanCategories.filter(c => c.isLeaf).map(c => c.id);
-  
-  const specs: any[] = [];
-  for (const catId of leafCategoryIds) {
-    const rootName = findRootName(catId);
-    
-    // Books
-    if (rootName === 'Книги' || rootName === 'Kitoblar') {
-      specs.push({ categoryId: catId, name: 'Muallif', type: FieldType.TEXT, required: false });
-      specs.push({ categoryId: catId, name: 'Nashriyot', type: FieldType.TEXT, required: false });
-      specs.push({ categoryId: catId, name: 'Til', type: FieldType.ENUM, required: false, options: ['O\'zbek', 'Rus', 'Ingliz'] });
-      specs.push({ categoryId: catId, name: 'Muqova turi', type: FieldType.ENUM, required: false, options: ['Qattiq', 'Yumshoq'] });
-      specs.push({ categoryId: catId, name: 'Sahifalar soni', type: FieldType.NUMBER, required: false });
-      specs.push({ categoryId: catId, name: 'Nashr yili', type: FieldType.NUMBER, required: false });
-      specs.push({ categoryId: catId, name: 'ISBN', type: FieldType.TEXT, required: false });
-    }
-    // Stationery
-    else if (rootName === 'Канцтовары' || rootName === 'Kanselyariya') {
-      specs.push({ categoryId: catId, name: 'Rang', type: FieldType.TEXT, required: false });
-      specs.push({ categoryId: catId, name: 'Material', type: FieldType.TEXT, required: false });
-      specs.push({ categoryId: catId, name: 'To\'plamdagi soni', type: FieldType.NUMBER, required: false });
-    }
-    // Clothing & Shoes
-    else if (rootName === 'Одежда' || rootName === 'Обувь') {
-      specs.push({ categoryId: catId, name: 'O\'lcham', type: FieldType.ENUM, required: false, options: ['XS', 'S', 'M', 'L', 'XL', 'XXL', '3XL', 'Boshqa'] });
-      specs.push({ categoryId: catId, name: 'Rang', type: FieldType.TEXT, required: false });
-      specs.push({ categoryId: catId, name: 'Material', type: FieldType.TEXT, required: false });
-      specs.push({ categoryId: catId, name: 'Jins', type: FieldType.ENUM, required: false, options: ['Erkaklar', 'Ayollar', 'Uniseks', 'Bolalar'] });
-      specs.push({ categoryId: catId, name: 'Brend', type: FieldType.TEXT, required: false });
-    }
-    // Electronics & Home Appliances
-    else if (rootName === 'Электроника' || rootName === 'Бытовая техника') {
-      specs.push({ categoryId: catId, name: 'Brend', type: FieldType.TEXT, required: false });
-      specs.push({ categoryId: catId, name: 'Kafolat muddati', type: FieldType.TEXT, required: false });
-      specs.push({ categoryId: catId, name: 'Rang', type: FieldType.TEXT, required: false });
-      specs.push({ categoryId: catId, name: 'Holati', type: FieldType.ENUM, required: false, options: ['Yangi', 'Foydalanilgan'] });
-    }
-    // Auto
-    else if (rootName === 'Автотовары') {
-      specs.push({ categoryId: catId, name: 'Brend', type: FieldType.TEXT, required: false });
-      specs.push({ categoryId: catId, name: 'Avtomobil markasi', type: FieldType.TEXT, required: false });
-      specs.push({ categoryId: catId, name: 'Model', type: FieldType.TEXT, required: false });
-      specs.push({ categoryId: catId, name: 'Yili', type: FieldType.NUMBER, required: false });
-    }
-    // Furniture
-    else if (rootName === 'Мебель') {
-      specs.push({ categoryId: catId, name: 'Material', type: FieldType.TEXT, required: false });
-      specs.push({ categoryId: catId, name: 'Rang', type: FieldType.TEXT, required: false });
-      specs.push({ categoryId: catId, name: 'O\'lchamlari', type: FieldType.TEXT, required: false });
-    }
-    // Kids
-    else if (rootName === 'Детские товары') {
-      specs.push({ categoryId: catId, name: 'Yosh chegarasi', type: FieldType.ENUM, required: false, options: ['0-12 oy', '1-3 yosh', '3-6 yosh', '7-12 yosh', '12+ yosh'] });
-      specs.push({ categoryId: catId, name: 'Brend', type: FieldType.TEXT, required: false });
-    }
-    // Default
-    else {
-      specs.push({ categoryId: catId, name: 'Rang', type: FieldType.TEXT, required: false });
-      specs.push({ categoryId: catId, name: 'Brend', type: FieldType.TEXT, required: false });
-    }
-  }
-
-  const chunkSpecs = 3000;
-  for (let i = 0; i < specs.length; i += chunkSpecs) {
-    await prisma.itemSpec.createMany({
-      data: specs.slice(i, i + chunkSpecs),
-      skipDuplicates: true,
+  for (const cat of defaultCategories) {
+    await prisma.category.create({
+      data: {
+        id: cat.id,
+        parentId: cat.parent_id,
+        name_uz: cat.title_uz,
+        name_ru: cat.title_ru,
+        name_en: cat.title_en,
+        isLeaf: !defaultCategories.some(c => c.parent_id === cat.id)
+      }
     });
   }
 
+  console.log('Categories inserted.');
+
+  // Create ItemSpecs for specific root categories
+  const booksCat = await prisma.category.findUnique({ where: { id: 4 } });
+  if (booksCat) {
+    // find leaf nodes
+    const leaves = defaultCategories.filter(c => c.parent_id === 4);
+    for (const leaf of leaves) {
+      await prisma.itemSpec.createMany({
+        data: [
+          { categoryId: leaf.id, name: 'Author', type: FieldType.STRING, required: false },
+          { categoryId: leaf.id, name: 'Publisher', type: FieldType.STRING, required: false },
+          { categoryId: leaf.id, name: 'Pages', type: FieldType.NUMBER, required: false },
+        ]
+      });
+    }
+  }
+
+  const stationeryCat = await prisma.category.findUnique({ where: { id: 1 } });
+  if (stationeryCat) {
+    const leaves = defaultCategories.filter(c => c.parent_id === 1);
+    for (const leaf of leaves) {
+      await prisma.itemSpec.createMany({
+        data: [
+          { categoryId: leaf.id, name: 'Brand', type: FieldType.STRING, required: false },
+          { categoryId: leaf.id, name: 'Color', type: FieldType.STRING, required: false },
+        ]
+      });
+    }
+  }
+
+  console.log('ItemSpecs created.');
   console.log('Seed completed successfully!');
 }
 
