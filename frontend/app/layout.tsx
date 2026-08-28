@@ -50,7 +50,8 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head>
         <script async src="https://www.googletagmanager.com/gtag/js?id=G-SGFLRW3G1M"></script>
-        <script dangerouslySetInnerHTML={{ __html: `
+        <script dangerouslySetInnerHTML={{
+          __html: `
           window.dataLayer = window.dataLayer || [];
           function gtag(){dataLayer.push(arguments);}
           gtag('js', new Date());

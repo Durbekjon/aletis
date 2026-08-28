@@ -1,26 +1,16 @@
 import axiosInstance from "@/src/api/client"
+import { BackendCategory } from "@/lib/types/product"
 
 // DTOs
-export type Organization = { id: number; name: string; description?: string; category?: string; createdAt: string }
+export type Organization = { id: number; name: string; description?: string; categoryId?: number; createdAt: string }
 export type CreateOrganizationDto = { name: string; description?: string }
-export type UpdateCategoryDto = { category: string }
-
-export type ProductSchema = { id: number; name: string; organizationId: number }
-export type CreateSchemaDto = { name: string }
-
-export type CreateSchemaFieldDto = { name: string; type: "TEXT" | "NUMBER" | "BOOLEAN" | "DATE" | "ENUM"; required: boolean; order: number; options?: string[] }
-export type ReorderFieldsDto = { fields: { fieldId: number; order: number }[] }
-export type SchemaField = {
-  id: number
-  name: string
-  type: "TEXT" | "NUMBER" | "BOOLEAN" | "DATE" | "ENUM"
-  required: boolean
-  options?: string[]
+export interface UpdateCategoryDto {
+  categoryIds?: number[]
 }
 
 export type UploadedFile = { id: number; key: string; url: string; originalName: string; mimeType: string; size: number }
 
-export type CreateProductDto = { name: string; price: number; currency: "USD" | "EUR" | "UZS" | "RUB" | "KZT" | "GBP" | "JPY"; quantity: number; images: number[] }
+export type CreateProductDto = { name: string; price: number; currency: "USD" | "EUR" | "UZS" | "RUB" | "KZT" | "GBP" | "JPY"; quantity: number; images: number[]; categoryId?: number; itemSpecValues?: Array<{ itemSpecId: number, value?: any }> }
 
 export type Bot = { id: number; token: string }
 export type CreateBotDto = { token: string }
@@ -37,25 +27,10 @@ const onboardingApi = {
     return data
   },
 
-  // Product Schema
-  async createProductSchema(payload: CreateSchemaDto): Promise<ProductSchema> {
-    const { data } = await axiosInstance.post<ProductSchema>("/v1/product-schema", payload)
-    return data
-  },
-  async addSchemaFields(schemaId: number, payload: CreateSchemaFieldDto): Promise<unknown> {
-    const { data } = await axiosInstance.post<unknown>(`/v1/product-schema/${schemaId}/fields`, payload)
-    return data
-  },
-  async reorderSchemaFields(schemaId: number, payload: ReorderFieldsDto): Promise<unknown> {
-    const { data } = await axiosInstance.patch<unknown>(`/v1/product-schema/${schemaId}/fields/reorder`, payload)
-    return data
-  },
-  async getSchemaFields(schemaId: number): Promise<SchemaField[]> {
-    const { data } = await axiosInstance.get<SchemaField[]>(`/v1/product-schema/${schemaId}/fields`)
-    return data
-  },
-  async getProductSchema(): Promise<{ id: number; name: string; fields: SchemaField[] }> {
-    const { data } = await axiosInstance.get<{ id: number; name: string; fields: SchemaField[] }>(`/v1/product-schema`)
+  // Categories
+  async getCategories(isRoot?: boolean): Promise<BackendCategory[]> {
+    const params = isRoot !== undefined ? { isRoot } : {}
+    const { data } = await axiosInstance.get<BackendCategory[]>("/v1/categories", { params })
     return data
   },
 
@@ -78,7 +53,7 @@ const onboardingApi = {
   },
 
   // Products
-  async createProduct(payload: CreateProductDto & { fields?: Array<Record<string, unknown>> }): Promise<unknown> {
+  async createProduct(payload: CreateProductDto): Promise<unknown> {
     const { data } = await axiosInstance.post<unknown>("/v1/products", payload)
     return data
   },
@@ -95,5 +70,3 @@ const onboardingApi = {
 }
 
 export default onboardingApi
-
-

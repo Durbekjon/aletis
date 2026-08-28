@@ -53,7 +53,7 @@ async function wipePrevious(): Promise<void> {
 async function ensureOrgBotSchema(): Promise<{
   orgId: number;
   botId: number;
-  schemaId: number;
+  categoryId: number;
 }> {
   // Target org selection (so the demo lands in the org you're logged into):
   //   SEED_ORG_ID=3         → force a specific org
@@ -102,21 +102,20 @@ async function ensureOrgBotSchema(): Promise<{
     select: { id: true },
   });
 
-  let schema = await prisma.productSchema.findFirst({
-    where: { organizationId: org.id },
+  let category = await prisma.category.findFirst({
     select: { id: true },
   });
-  schema ??= await prisma.productSchema.create({
-    data: { name: 'Default', organizationId: org.id },
+  category ??= await prisma.category.create({
+    data: { name_uz: 'Default', name_ru: 'Default', name_en: 'Default' },
     select: { id: true },
   });
 
-  return { orgId: org.id, botId: bot.id, schemaId: schema.id };
+  return { orgId: org.id, botId: bot.id, categoryId: category.id };
 }
 
 async function main() {
   await wipePrevious();
-  const { orgId, botId, schemaId } = await ensureOrgBotSchema();
+  const { orgId, botId, categoryId } = await ensureOrgBotSchema();
   console.log(`Seeding replenishment demo into org #${orgId}, bot #${botId}`);
 
   // ── Consumable products (pre-classified so the AI classifier is skipped) ──
@@ -127,8 +126,8 @@ async function main() {
       currency: Currency.UZS,
       quantity: 50,
       status: ProductStatus.ACTIVE,
+      categoryId,
       organizationId: orgId,
-      schemaId,
       isConsumable: true,
       estimatedLifespanDays: 30,
     },
@@ -140,8 +139,8 @@ async function main() {
       currency: Currency.UZS,
       quantity: 40,
       status: ProductStatus.ACTIVE,
+      categoryId,
       organizationId: orgId,
-      schemaId,
       isConsumable: true,
       estimatedLifespanDays: 30,
     },
@@ -150,12 +149,12 @@ async function main() {
   // ── Case 1: CADENCE — Feruza bought shampoo twice ~30 days apart ──
   const feruza = await prisma.customer.create({
     data: {
+      organizationId: orgId,
       telegramId: `${TG_PREFIX}cadence_${Date.now()}`,
       name: 'Feruza Toshpulatova',
       username: 'feruza_t',
       lang: 'uz',
       channel: CustomerChannel.TELEGRAM,
-      organizationId: orgId,
       botId,
       createdAt: ago(65),
     },
@@ -164,10 +163,10 @@ async function main() {
   for (const daysAgo of [61, 31]) {
     const order = await prisma.order.create({
       data: {
+        organizationId: orgId,
         status: OrderStatus.DELIVERED,
         paymentStatus: PaymentStatus.PAID,
         customerId: feruza.id,
-        organizationId: orgId,
         totalPrice: shampoo.price,
         currency: CURRENCY,
         details: { source: 'DEMO_SEED' },
@@ -180,8 +179,8 @@ async function main() {
   }
   await prisma.replenishmentReminder.create({
     data: {
-      customerId: feruza.id,
       organizationId: orgId,
+      customerId: feruza.id,
       botId,
       productId: shampoo.id,
       quantity: 1,
@@ -200,22 +199,22 @@ async function main() {
   // ── Case 2: DOSAGE — Bekzod bought vitamins once, prescription in chat ──
   const bekzod = await prisma.customer.create({
     data: {
+      organizationId: orgId,
       telegramId: `${TG_PREFIX}dosage_${Date.now()}`,
       name: 'Bekzod Aliyev',
       username: 'bekzod_a',
       lang: 'uz',
       channel: CustomerChannel.TELEGRAM,
-      organizationId: orgId,
       botId,
       createdAt: ago(30),
     },
   });
   const vitOrder = await prisma.order.create({
     data: {
+      organizationId: orgId,
       status: OrderStatus.DELIVERED,
       paymentStatus: PaymentStatus.PAID,
       customerId: bekzod.id,
-      organizationId: orgId,
       totalPrice: vitamins.price,
       currency: CURRENCY,
       details: { source: 'DEMO_SEED' },
@@ -241,8 +240,8 @@ async function main() {
   }
   await prisma.replenishmentReminder.create({
     data: {
-      customerId: bekzod.id,
       organizationId: orgId,
+      customerId: bekzod.id,
       botId,
       productId: vitamins.id,
       quantity: 1,

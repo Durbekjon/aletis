@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '@/core/prisma/prisma.service';
+import { PrismaService } from '../../core/prisma/prisma.service';
 import {
   MemberRole,
   OnboardingProgress,
@@ -28,13 +28,18 @@ export class OnboardingProgressService {
     });
     if (!onboardingProgress)
       throw new NotFoundException('Onboarding progress not found');
-    return { step: onboardingProgress.nextStep };
+    return {
+      isCategorySelected: onboardingProgress.isCategorySelected,
+      isFirstProductAdded: onboardingProgress.isFirstProductAdded,
+      isBotConnected: onboardingProgress.isBotConnected,
+      nextStep: onboardingProgress.nextStep,
+      status: onboardingProgress.status,
+    };
   }
 
   getOnboardingSteps(): OnboardingStepsResponseDto {
     const steps = [
       OnboardingStep.SELECT_CATEGORY,
-      OnboardingStep.CONFIGURE_SCHEMA,
       OnboardingStep.ADD_FIRST_PRODUCT,
       OnboardingStep.CONNECT_BOT,
     ];
@@ -56,19 +61,6 @@ export class OnboardingProgressService {
     return onboardingProgress;
   }
 
-  async getOnboardingProgress(userId: number): Promise<any> {
-    const organization = await this.prisma.member.findUnique({
-      where: { userId, role: MemberRole.ADMIN },
-      select: { organizationId: true },
-    });
-    if (!organization)
-      throw new NotFoundException('User is not a member of any organization');
-    const onboardingProgress = await this.prisma.onboardingProgress.findUnique({
-      where: { organizationId: organization.organizationId },
-    });
-    return onboardingProgress;
-  }
-
   async handleNextStep(
     userId: number,
     step: OnboardingStep,
@@ -79,6 +71,7 @@ export class OnboardingProgressService {
     });
     if (!organization)
       throw new NotFoundException('User is not a member of any organization');
+    
     const stepKey = this.getStepKey(step);
     if (stepKey) {
       await this.prisma.onboardingProgress.update({
@@ -86,19 +79,21 @@ export class OnboardingProgressService {
         data: { [stepKey]: true },
       });
     }
+
     const percentage =
       step === OnboardingStep.SELECT_CATEGORY
         ? 40
-        : step === OnboardingStep.CONFIGURE_SCHEMA
-          ? 60
-          : step === OnboardingStep.ADD_FIRST_PRODUCT
-            ? 80
-            : step === OnboardingStep.CONNECT_BOT
-              ? 100
-              : 0;
+        : step === OnboardingStep.ADD_FIRST_PRODUCT
+          ? 80
+          : step === OnboardingStep.CONNECT_BOT
+            ? 100
+            : 0;
+            
     let status: OnboardingStatus = OnboardingStatus.INCOMPLETE;
     if (percentage === 100) status = OnboardingStatus.COMPLETED;
-    const nextStep = this.getNextStepKey(step)
+    
+    const nextStep = this.getNextStepKey(step);
+    
     return this.prisma.onboardingProgress.update({
       where: { organizationId: organization.organizationId },
       data: { nextStep, percentage, status },
@@ -109,8 +104,6 @@ export class OnboardingProgressService {
     switch (step) {
       case OnboardingStep.SELECT_CATEGORY:
         return 'isCategorySelected';
-      case OnboardingStep.CONFIGURE_SCHEMA:
-        return 'isSchemaConfigured';
       case OnboardingStep.ADD_FIRST_PRODUCT:
         return 'isFirstProductAdded';
       case OnboardingStep.CONNECT_BOT:
@@ -127,6 +120,9 @@ export class OnboardingProgressService {
       if (currentStep === steps[i]) {
         nextStepIndex = i + 1;
       }
+    }
+    if (nextStepIndex >= steps.length) {
+      return steps[steps.length - 1];
     }
     return steps[nextStepIndex];
   }

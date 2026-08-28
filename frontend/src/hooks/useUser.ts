@@ -17,8 +17,8 @@ export function useUpdateProfileMutation() {
 
   return useMutation({
     mutationFn: (payload: UpdateProfilePayload) => authApi.updateProfile(payload),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["user"] })
+    onSuccess: (data) => {
+      queryClient.setQueryData(["user"], data)
       toast.success("Profile updated successfully ✅")
     },
     onError: (error: any) => {

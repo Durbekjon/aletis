@@ -30,19 +30,21 @@ import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { X, Upload, Loader2, AlertCircle, ScanBarcode, Camera } from "lucide-react"
-import { useProductSchema } from "@/src/context/ProductSchemaContext"
+import { useCategoriesQuery, useCategoryQuery } from "@/src/hooks/useCategoriesQuery"
 import { useDynamicProductForm, type FormData } from "@/src/hooks/useDynamicProductForm"
 import { useUploadManyFilesMutation, useDeleteFileByKeyMutation } from "@/src/hooks/useFilesQuery"
 import { useCompleteBarcodeMutation } from "@/src/hooks/useBarcodeCatalogQuery"
 import { useChannelsQuery } from "@/src/hooks/useChannelsQuery"
+import { useOrganizationQuery } from "@/src/hooks/useOrganization"
+import { CategoryTreeSelect } from "@/components/ui/category-tree-select"
 import { findMatchingField } from "@/src/lib/barcode-field-matching"
 import { BarcodeScanDialog, type BarcodeScanResolution } from "@/components/product/barcode-scan-dialog"
 import { CameraCaptureDialog } from "@/components/product/camera-capture-dialog"
-import type { ProductSchemaField } from "@/lib/types/product"
+import type { BackendItemSpec, BackendCategory } from "@/lib/types/product"
 
 interface DynamicProductFormProps {
   initialValues?: Partial<FormData>
-  initialSchemaId?: number | null
+  initialCategoryId?: number | null
   onSubmitImpl?: (data: FormData) => Promise<boolean>
   existingImageUrls?: string[]
   onSuccess?: () => void
@@ -50,20 +52,20 @@ interface DynamicProductFormProps {
   hideSubmitUntilDirty?: boolean
 }
 
-export function DynamicProductForm({ initialValues, initialSchemaId, onSubmitImpl, existingImageUrls, onSuccess, onCancel, hideSubmitUntilDirty }: DynamicProductFormProps) {
-  const { t } = useTranslation()
-  const { schemas, isLoading: schemaLoading, error: schemaError, defaultSchema } = useProductSchema()
+export function DynamicProductForm({ initialValues, initialCategoryId, onSubmitImpl, existingImageUrls, onSuccess, onCancel, hideSubmitUntilDirty }: DynamicProductFormProps) {
+  const { t, language } = useTranslation()
   const { form, onSubmit, isLoading: formLoading } = useDynamicProductForm({ initialValues, onSubmitImpl })
   const uploadFilesMutation = useUploadManyFilesMutation()
   const deleteFileByKeyMutation = useDeleteFileByKeyMutation()
   const { data: channelsData } = useChannelsQuery()
   const hasConnectedChannel = channelsData?.items.some((c) => c.isConnected) ?? false
+  const { data: organization } = useOrganizationQuery()
   
   // Maintain numeric image IDs in form while previewing keys/URLs
   const [images, setImages] = useState<number[]>(initialValues?.images ?? [])
   const [imageFiles, setImageFiles] = useState<File[]>([])
   const [uploadedImages, setUploadedImages] = useState<any[]>([])
-  const [selectedSchema, setSelectedSchema] = useState<number | null>(initialSchemaId ?? null)
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(initialCategoryId ?? initialValues?.categoryId ?? null)
   const [scanDialogOpen, setScanDialogOpen] = useState(false)
   const [cameraDialogOpen, setCameraDialogOpen] = useState(false)
   const [showAdvanced, setShowAdvanced] = useState(false)
@@ -82,24 +84,22 @@ export function DynamicProductForm({ initialValues, initialSchemaId, onSubmitImp
   const watchedStatus = watch("status")
   const watchedAutoPublish = watch("autoPublish")
 
-  const currentSchema = schemas.find(schema => schema.id === selectedSchema)
+  // We only fetch the specific category to populate fields
+  const { data: categoryData, isLoading: schemaLoading, error: schemaError } = useCategoryQuery(selectedCategoryId)
 
-  // Set default schema when available
+  const currentCategory = categoryData;
+
+  // Set default category when available
   useEffect(() => {
-    if (!selectedSchema && (initialSchemaId || defaultSchema)) {
-      if (initialSchemaId) {
-        setSelectedSchema(initialSchemaId)
-      } else if (defaultSchema) {
-      setSelectedSchema(defaultSchema.id)
-      }
+    if (!selectedCategoryId && initialCategoryId) {
+      setSelectedCategoryId(initialCategoryId)
     }
-  }, [defaultSchema, selectedSchema, initialSchemaId])
+  }, [selectedCategoryId, initialCategoryId])
 
-  // Initialize form fields when schema changes
   useEffect(() => {
-    if (currentSchema && !didPrefillRef.current) {
+    if (currentCategory && currentCategory.itemSpecs && !didPrefillRef.current) {
       const initialFields: Record<string, any> = {}
-      currentSchema.fields.forEach(field => {
+      currentCategory.itemSpecs.forEach(field => {
         // Set appropriate default values based on field type
         switch (field.type) {
           case "NUMBER":
@@ -121,7 +121,7 @@ export function DynamicProductForm({ initialValues, initialSchemaId, onSubmitImp
       setValue('fields', initialFields)
     }
     
-  }, [currentSchema, setValue, initialValues?.fields])
+  }, [currentCategory, setValue, initialValues?.fields])
   
   // Initialize provided initial base fields
   useEffect(() => {
@@ -234,7 +234,7 @@ export function DynamicProductForm({ initialValues, initialSchemaId, onSubmitImp
       if (productName) {
         setValue("name", productName, { shouldDirty: true })
       }
-      if (currentSchema) {
+      if (currentCategory && currentCategory.itemSpecs) {
         const matches: Array<[string | undefined, "description" | "brandName" | "categoryName" | "unitName"]> = [
           [description, "description"],
           [brandName, "brandName"],
@@ -243,7 +243,7 @@ export function DynamicProductForm({ initialValues, initialSchemaId, onSubmitImp
         ]
         matches.forEach(([value, attr]) => {
           if (!value) return
-          const field = findMatchingField(currentSchema.fields, attr)
+          const field = findMatchingField(currentCategory.itemSpecs as any, attr)
           if (field) {
             setValue(`fields.${field.id}`, value, { shouldDirty: true })
           }
@@ -259,7 +259,7 @@ export function DynamicProductForm({ initialValues, initialSchemaId, onSubmitImp
     if (success) {
       if (pendingBarcode) {
         const findValue = (attr: "description" | "brandName" | "categoryName" | "unitName") => {
-          const field = currentSchema && findMatchingField(currentSchema.fields, attr)
+          const field = currentCategory && currentCategory.itemSpecs && findMatchingField(currentCategory.itemSpecs as any, attr)
           return field ? data.fields?.[field.id] : undefined
         }
         completeBarcodeMutation
@@ -281,7 +281,7 @@ export function DynamicProductForm({ initialValues, initialSchemaId, onSubmitImp
     }
   }
 
-  const renderField = (field: ProductSchemaField) => {
+  const renderField = (field: BackendItemSpec) => {
     const fieldName = `fields.${field.id}` as any
     const required = field.required
     const hasError = errors.fields?.[field.id] as any
@@ -515,24 +515,19 @@ export function DynamicProductForm({ initialValues, initialSchemaId, onSubmitImp
             )}
           </CardHeader>
           <CardContent className="space-y-4">
-            {/* Schema Selection */}
-            {schemas.length > 1 && (
-              <div className="space-y-2">
-                <Label htmlFor="schema">{t('productForm.schema')}</Label>
-                <Select value={selectedSchema?.toString()} onValueChange={(value) => setSelectedSchema(parseInt(value))}>
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder={t('productForm.selectSchema')} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {schemas.map((schema) => (
-                      <SelectItem key={schema.id} value={schema.id.toString()}>
-                        {schema.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+            {/* Category Selection */}
+            <div className="space-y-2">
+              <Label htmlFor="category">{t('productForm.category')}</Label>
+              <CategoryTreeSelect
+                value={selectedCategoryId}
+                preferredCategories={organization?.categories as unknown as BackendCategory[]}
+                onChange={(value) => {
+                  setSelectedCategoryId(value)
+                  setValue('categoryId', value, { shouldDirty: true })
+                }}
+                placeholder={t('productForm.selectCategory')}
+              />
+            </div>
 
             {/* Basic Fields */}
             <div className="space-y-2">
@@ -671,18 +666,17 @@ export function DynamicProductForm({ initialValues, initialSchemaId, onSubmitImp
                   </div>
                 )}
 
-                {currentSchema && currentSchema.fields.length > 0 && (
+                {currentCategory && currentCategory.itemSpecs && currentCategory.itemSpecs.length > 0 && (
                   <>
                     <Separator />
                     <div className="space-y-4">
-                      {currentSchema.fields
-                        .sort((a, b) => (a.order || 0) - (b.order || 0))
+                      {currentCategory.itemSpecs
                         .map(renderField)}
                     </div>
                   </>
                 )}
 
-                {currentSchema && currentSchema.fields.length === 0 && (
+                {currentCategory && currentCategory.itemSpecs && currentCategory.itemSpecs.length === 0 && (
                   <div className="text-center py-4 text-muted-foreground">
                     <p className="text-sm">{t('productForm.noFields')}</p>
                   </div>

@@ -726,7 +726,8 @@
     "tabs": {
       "profile": "Профиль",
       "organization": "Организация",
-      "security": "Безопасность"
+      "security": "Безопасность",
+      "fulfillment": "Доставка"
     },
     "toasts": {
       "noChanges": "Нет изменений для сохранения",
@@ -827,11 +828,55 @@
       "passwordMismatch": "Пароли не совпадают",
       "update": "Обновить пароль",
       "updating": "Обновление..."
+    },
+    "fulfillment": {
+      "cardTitle": "Настройки доставки",
+      "cardDescription": "Выберите, как клиенты могут получать свои заказы.",
+      "notConfiguredTitle": "Доставка не настроена",
+      "notConfiguredDesc": "Пожалуйста, настройте способы получения заказов перед запуском.",
+      "modeLabel": "Режим доставки",
+      "modeDescription": "Выберите варианты, доступные вашим клиентам.",
+      "modes": {
+        "PICKUP_ONLY": "Только самовывоз",
+        "DELIVERY": "Доставка",
+        "PICKUP_AND_DELIVERY": "Самовывоз + Доставка"
+      },
+      "deliverySection": "Настройки доставки",
+      "methodLabel": "Способ доставки",
+      "methods": {
+        "MERCHANT": "Собственная доставка (вы доставляете)",
+        "EXTERNAL_COURIER": "Курьерская служба"
+      },
+      "feeLabel": "Стоимость доставки",
+      "feeTypes": {
+        "FREE": "Бесплатно",
+        "FIXED": "Фиксированная цена",
+        "CUSTOMER_PAYS_SEPARATELY": "Клиент платит отдельно"
+      },
+      "feeAmountLabel": "Сумма за доставку",
+      "feeAmountPlaceholder": "Например: 20000",
+      "pickupSection": "Информация о самовывозе",
+      "pickupAddressLabel": "Адрес самовывоза",
+      "pickupAddressPlaceholder": "Например: Ташкент, ул. Амира Темура, 1",
+      "pickupInstructionsLabel": "Инструкции для самовывоза",
+      "pickupInstructionsPlaceholder": "Например: 3-й этаж, позвоните в звонок",
+      "save": "Сохранить настройки",
+      "saving": "Сохранение...",
+      "saveSuccess": "Настройки доставки сохранены",
+      "errors": {
+        "load": "Не удалось загрузить настройки доставки",
+        "deliveryMethodRequired": "Выберите способ доставки",
+        "feeTypeRequired": "Выберите тип стоимости доставки",
+        "feeAmountRequired": "Введите сумму больше 0"
+      }
     }
   },
   "onboarding": {
     "organization": "Организация",
     "category": "Категория",
+    "selectCategory": "Выберите категорию магазина",
+    "selectCategoryDesc": "Выберите основную категорию товаров для вашего магазина.",
+    "mainCategory": "Основная категория",
     "productSchema": "Схема товара",
     "firstProduct": "Первый товар",
     "botConnection": "Подключение бота",
@@ -891,6 +936,8 @@
       "priceLabel": "Цена",
       "currencyLabel": "Валюта",
       "quantityLabel": "Количество",
+      "category": "Категория",
+      "selectCategory": "Выберите категорию",
       "additionalFields": "Дополнительные поля",
       "images": "Изображения товара (до 3)",
       "dragDrop": "Перетащите изображения сюда или нажмите для выбора",
@@ -1283,6 +1330,11 @@
     "scanBarcode": "Сканировать штрихкод",
     "schema": "Схема товара",
     "selectSchema": "Выберите схему",
+    "category": "Категория",
+    "selectCategory": "Выберите категорию",
+    "searchCategory": "Поиск категорий...",
+    "noCategoriesFound": "Категории не найдены.",
+    "categoryN": "Категория #{{n}}",
     "name": "Название товара",
     "namePlaceholder": "Введите название товара",
     "nameRequired": "Название товара обязательно",
@@ -1335,20 +1387,6 @@
     },
     "showAdvancedSettings": "Показать дополнительные настройки",
     "hideAdvancedSettings": "Скрыть дополнительные настройки"
-  },
-  "cameraCapture": {
-    "title": "Сделать фото",
-    "description": "Используйте камеру для съёмки товара",
-    "capture": "Снять",
-    "retake": "Переснять",
-    "usePhoto": "Использовать",
-    "cancel": "Отмена",
-    "flip": "Перевернуть камеру",
-    "starting": "Включение камеры...",
-    "errorPermission": "Нет доступа к камере. Проверьте настройки браузера.",
-    "errorNotFound": "Камера не найдена.",
-    "errorGeneric": "Не удалось запустить камеру.",
-    "tryAgain": "Попробовать снова"
   },
   "cameraCapture": {
     "title": "Сделать фото",

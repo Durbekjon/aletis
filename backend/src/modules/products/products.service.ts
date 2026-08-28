@@ -255,14 +255,15 @@ export class ProductsService {
    * Validates field value based on field type and requirements
    */
   private validateFieldValue(
-    field: { type: FieldType; required: boolean; options?: string[] },
+    field: { type: FieldType; required: boolean; options?: string[]; name?: string },
     value: any,
   ): void {
     if (
       field.required &&
       (value === null || value === undefined || value === '')
     ) {
-      throw new BadRequestException(`Field ${field.type} is required`);
+      const fieldName = field.name || field.type;
+      throw new BadRequestException(`Field "${fieldName}" is required`);
     }
 
     if (value === null || value === undefined || value === '') {
@@ -411,16 +412,17 @@ export class ProductsService {
         await this.usageService.checkProductLimit(organizationId);
       }
 
-      // Get the organization's schema
-      const schema = await this.prisma.productSchema.findUnique({
-        where: { organizationId },
-        include: { fields: true },
-      });
+      // Validate category if provided
+      let category: any = null;
+      if (createProductDto.categoryId) {
+        category = await this.prisma.category.findUnique({
+          where: { id: createProductDto.categoryId },
+          include: { itemSpecs: true },
+        });
 
-      if (!schema) {
-        throw new NotFoundException(
-          'Product schema not found for organization',
-        );
+        if (!category) {
+          throw new NotFoundException('Category not found');
+        }
       }
 
       // Validate images if provided
@@ -430,17 +432,34 @@ export class ProductsService {
           organizationId,
         );
       }
-      // Validate field values
-      const fieldMap = new Map(schema.fields.map((field) => [field.id, field]));
-      for (const fieldValue of createProductDto.fields) {
-        const field = fieldMap.get(fieldValue.fieldId);
-        if (!field) {
+      // Validate item spec values
+      let specMap = new Map();
+      if (category && category.itemSpecs) {
+        specMap = new Map(category.itemSpecs.map((spec) => [spec.id, spec]));
+      }
+      const itemSpecValues = createProductDto.itemSpecValues || [];
+      for (const specValue of itemSpecValues) {
+        const spec = specMap.get(specValue.itemSpecId);
+        if (!spec) {
           throw new BadRequestException(
-            `Field with ID ${fieldValue.fieldId} not found in schema`,
+            `Item spec with ID ${specValue.itemSpecId} not found in category`,
           );
         }
-        fieldValue.value = this.coerceFieldValue(field.type, fieldValue.value);
-        this.validateFieldValue(field, fieldValue.value);
+        specValue.value = this.coerceFieldValue(spec.type, specValue.value);
+        this.validateFieldValue(spec, specValue.value);
+      }
+
+      if (category && category.itemSpecs) {
+        for (const spec of category.itemSpecs) {
+          if (spec.required) {
+            const hasValue = itemSpecValues.some(
+              (val) => val.itemSpecId === spec.id && val.value !== null && val.value !== undefined && val.value !== ''
+            );
+            if (!hasValue) {
+              throw new BadRequestException(`Field "${spec.name}" is required`);
+            }
+          }
+        }
       }
 
       // Create product with field values in a transaction
@@ -453,7 +472,7 @@ export class ProductsService {
             quantity: createProductDto.quantity,
             status: createProductDto.status,
             currency: createProductDto.currency,
-            schemaId: schema.id,
+            categoryId: createProductDto.categoryId,
             organizationId,
             images: createProductDto.images
               ? {
@@ -463,20 +482,17 @@ export class ProductsService {
           },
         });
 
-        // Create field values in a single batched insert instead of N
-        // individual creates — matters most for schemas with many fields,
-        // and keeps the transaction open for less time.
-        if (createProductDto.fields.length > 0) {
-          await tx.fieldValue.createMany({
-            data: createProductDto.fields.map((fieldValue) => {
-              const field = fieldMap.get(fieldValue.fieldId)!;
+        if (itemSpecValues.length > 0) {
+          await tx.itemSpecValue.createMany({
+            data: itemSpecValues.map((specValue) => {
+              const spec = specMap.get(specValue.itemSpecId)!;
               const transformedValue = this.transformFieldValue(
-                field.type,
-                fieldValue.value,
+                spec.type,
+                specValue.value,
               );
               return {
                 productId: product.id,
-                fieldId: fieldValue.fieldId,
+                itemSpecId: specValue.itemSpecId,
                 ...transformedValue,
               };
             }),
@@ -529,8 +545,10 @@ export class ProductsService {
       // Invalidate organization product caches since a new product was created
       await this.invalidateOrganizationProductCaches(organizationId);
 
-      // Invalidate schema product caches if applicable
-      await this.invalidateSchemaProductCaches(schema.id);
+      // Invalidate category product caches if applicable
+      if (createProductDto.categoryId) {
+        // cache logic can be added later
+      }
 
       // Notify customers who have shown interest in similar products (fire-and-forget)
       if (
@@ -589,7 +607,7 @@ export class ProductsService {
       // Check if product exists and belongs to user's organization
       const existingProduct = await this.prisma.product.findFirst({
         where: { id: productId, organizationId },
-        include: { schema: { include: { fields: true } } },
+        include: { category: { include: { itemSpecs: true } } },
       });
 
       if (!existingProduct) {
@@ -606,25 +624,25 @@ export class ProductsService {
         );
       }
 
-      // Validate field values if provided
-      if (updateProductDto.fields) {
-        const fieldMap = new Map(
-          existingProduct.schema.fields.map((field) => [field.id, field]),
+      // Validate item spec values if provided
+      if (updateProductDto.itemSpecValues && existingProduct.category) {
+        const specMap = new Map(
+          existingProduct.category.itemSpecs.map((spec) => [spec.id, spec]),
         );
-        for (const fieldValue of updateProductDto.fields) {
-          if (fieldValue.fieldId) {
-            const field = fieldMap.get(fieldValue.fieldId);
-            if (!field) {
+        for (const specValue of updateProductDto.itemSpecValues) {
+          if (specValue.itemSpecId) {
+            const spec = specMap.get(specValue.itemSpecId);
+            if (!spec) {
               throw new BadRequestException(
-                `Field with ID ${fieldValue.fieldId} not found in schema`,
+                `Item spec with ID ${specValue.itemSpecId} not found in category`,
               );
             }
-            if (fieldValue.value !== undefined) {
-              fieldValue.value = this.coerceFieldValue(
-                field.type,
-                fieldValue.value,
+            if (specValue.value !== undefined) {
+              specValue.value = this.coerceFieldValue(
+                spec.type,
+                specValue.value,
               );
-              this.validateFieldValue(field, fieldValue.value);
+              this.validateFieldValue(spec, specValue.value);
             }
           }
         }
@@ -657,30 +675,30 @@ export class ProductsService {
           },
         });
 
-        // Update field values if provided
-        if (updateProductDto.fields) {
-          for (const fieldValue of updateProductDto.fields) {
-            if (fieldValue.fieldId && fieldValue.value !== undefined) {
-              const field = existingProduct.schema.fields.find(
-                (f) => f.id === fieldValue.fieldId,
+        // Update item spec values if provided
+        if (updateProductDto.itemSpecValues && existingProduct.category) {
+          for (const specValue of updateProductDto.itemSpecValues) {
+            if (specValue.itemSpecId && specValue.value !== undefined) {
+              const spec = existingProduct.category.itemSpecs.find(
+                (f) => f.id === specValue.itemSpecId,
               );
-              if (field) {
+              if (spec) {
                 const transformedValue = this.transformFieldValue(
-                  field.type,
-                  fieldValue.value,
+                  spec.type,
+                  specValue.value,
                 );
 
-                await tx.fieldValue.upsert({
+                await tx.itemSpecValue.upsert({
                   where: {
-                    productId_fieldId: {
+                    productId_itemSpecId: {
                       productId: productId,
-                      fieldId: fieldValue.fieldId,
+                      itemSpecId: specValue.itemSpecId,
                     },
                   },
                   update: transformedValue,
                   create: {
                     productId: productId,
-                    fieldId: fieldValue.fieldId,
+                    itemSpecId: specValue.itemSpecId,
                     ...transformedValue,
                   },
                 });
@@ -725,7 +743,6 @@ export class ProductsService {
       await Promise.all([
         this.invalidateProductCaches(productId),
         this.invalidateOrganizationProductCaches(organizationId),
-        this.invalidateSchemaProductCaches(existingProduct.schemaId),
       ]);
 
       // Re-sync the Weaviate embedding so search reflects the new name/price/
@@ -795,7 +812,7 @@ export class ProductsService {
       // Get product details before deletion for cache invalidation
       const productToDelete = await this.prisma.product.findUnique({
         where: { id: productId },
-        select: { schemaId: true },
+        select: { categoryId: true },
       });
 
       // Delete product (field values will be cascade deleted)
@@ -825,9 +842,6 @@ export class ProductsService {
       await Promise.all([
         this.invalidateProductCaches(productId),
         this.invalidateOrganizationProductCaches(organizationId),
-        productToDelete
-          ? this.invalidateSchemaProductCaches(productToDelete.schemaId)
-          : Promise.resolve(),
       ]);
 
       this.logger.log(`Product deleted successfully: ${productId}`);
@@ -877,11 +891,11 @@ export class ProductsService {
           const product = await this.prisma.product.findFirst({
             where: { id: productId, organizationId },
             include: {
-              schema: true,
+              category: true,
               images: true,
-              fields: {
+              itemSpecValues: {
                 include: {
-                  field: true,
+                  itemSpec: true,
                 },
               },
             },
@@ -916,8 +930,8 @@ export class ProductsService {
     quantity: number;
     currency: any;
     status: any;
-    schemaId: number;
-    schema: { name: string };
+    categoryId: number | null;
+    category?: { id: number, name_uz: string, name_ru: string, name_en: string } | null;
     organizationId: number;
     images: {
       id: number;
@@ -927,13 +941,13 @@ export class ProductsService {
       size: number;
       mimeType: string;
     }[];
-    fields: any[];
+    itemSpecValues: any[];
     createdAt: Date;
     updatedAt: Date;
   }): ProductResponseDto {
-    const transformedFields: FieldValueResponseDto[] = product.fields.map(
-      (fieldValue) =>
-        this.transformFieldValueResponse(fieldValue, fieldValue.field),
+    const transformedFields: FieldValueResponseDto[] = product.itemSpecValues.map(
+      (specValue) =>
+        this.transformFieldValueResponse(specValue, specValue.itemSpec),
     );
 
     const transformedImages: ProductImageResponseDto[] = product.images.map(
@@ -954,11 +968,16 @@ export class ProductsService {
       quantity: product.quantity,
       currency: product.currency,
       status: product.status,
-      schemaId: product.schemaId,
-      schemaName: product.schema.name,
+      categoryId: product.categoryId,
+      category: product.category ? {
+        id: product.category.id,
+        name_uz: product.category.name_uz,
+        name_ru: product.category.name_ru,
+        name_en: product.category.name_en,
+      } : null,
       organizationId: product.organizationId,
       images: transformedImages,
-      fields: transformedFields,
+      itemSpecValues: transformedFields,
       createdAt: product.createdAt,
       updatedAt: product.updatedAt,
     };
@@ -975,9 +994,9 @@ export class ProductsService {
     const product = await this.prisma.product.findUnique({
       where: { id: productId },
       include: {
-        schema: true,
+        category: true,
         images: true,
-        fields: { include: { field: true } },
+        itemSpecValues: { include: { itemSpec: true } },
       },
     });
     if (!product) return null;
@@ -1000,9 +1019,9 @@ export class ProductsService {
     const products = await this.prisma.product.findMany({
       where: { id: { in: productIds }, organizationId, isDeleted: false },
       include: {
-        schema: true,
+        category: true,
         images: true,
-        fields: { include: { field: true } },
+        itemSpecValues: { include: { itemSpec: true } },
       },
     });
     return products.map((p) => this.toProductResponseDto(p));
@@ -1053,7 +1072,7 @@ export class ProductsService {
                 },
               },
               {
-                fields: {
+                itemSpecValues: {
                   some: {
                     OR: [
                       {
@@ -1093,7 +1112,7 @@ export class ProductsService {
               skip,
               take,
               include: {
-                schema: true,
+                category: true,
                 images: {
                   select: {
                     id: true,
@@ -1101,9 +1120,9 @@ export class ProductsService {
                     url: true,
                   },
                 },
-                fields: {
+                itemSpecValues: {
                   include: {
-                    field: true,
+                    itemSpec: true,
                   },
                 },
               },
@@ -1117,10 +1136,10 @@ export class ProductsService {
           const transformedProducts: ProductResponseDto[] = products.map(
             (product) => {
               const transformedFields: FieldValueResponseDto[] =
-                product.fields.map((fieldValue) =>
+                product.itemSpecValues.map((specValue) =>
                   this.transformFieldValueResponse(
-                    fieldValue,
-                    fieldValue.field,
+                    specValue,
+                    specValue.itemSpec,
                   ),
                 );
 
@@ -1137,12 +1156,17 @@ export class ProductsService {
                 price: product.price,
                 quantity: product.quantity,
                 status: product.status,
-                schemaId: product.schemaId,
-                schemaName: product.schema.name,
+                categoryId: product.categoryId,
+                category: product.category ? {
+                  id: product.category.id,
+                  name_uz: product.category.name_uz,
+                  name_ru: product.category.name_ru,
+                  name_en: product.category.name_en,
+                } : null,
                 organizationId: product.organizationId,
                 currency: product.currency,
                 images: transformedImages,
-                fields: transformedFields,
+                itemSpecValues: transformedFields,
                 createdAt: product.createdAt,
                 updatedAt: product.updatedAt,
               };
@@ -1187,7 +1211,7 @@ export class ProductsService {
       // Check if all products exist and belong to user's organization
       const products = await this.prisma.product.findMany({
         where: { id: { in: productIds }, organizationId },
-        select: { id: true, schemaId: true },
+        select: { id: true, categoryId: true },
       });
 
       if (products.length !== productIds.length) {
@@ -1199,7 +1223,7 @@ export class ProductsService {
       }
 
       // Get unique schema IDs for cache invalidation
-      const schemaIds = [...new Set(products.map((p) => p.schemaId))];
+      const categoryIds = [...new Set(products.map((p) => p.categoryId))];
 
       // Delete products in a transaction
       await this.prisma.$transaction(
@@ -1217,9 +1241,7 @@ export class ProductsService {
         // Invalidate organization product caches
         this.invalidateOrganizationProductCaches(organizationId),
         // Invalidate schema product caches
-        ...schemaIds.map((schemaId) =>
-          this.invalidateSchemaProductCaches(schemaId),
-        ),
+        
       ]);
 
       this.logger.log(`Successfully deleted ${products.length} products`);
@@ -1249,10 +1271,10 @@ export class ProductsService {
         price: true,
         currency: true,
         quantity: true,
-        fields: {
+        itemSpecValues: {
           select: {
             valueText: true,
-            field: { select: { name: true } },
+            itemSpec: { select: { name: true } },
           },
         },
         images: {
@@ -1268,7 +1290,7 @@ export class ProductsService {
       price: p.price,
       currency: String(p.currency),
       description:
-        p.fields.find((f) => f.field.name.toLowerCase() === 'description')
+        p.itemSpecValues.find((f) => f.itemSpec.name.toLowerCase() === 'description')
           ?.valueText || '',
       // Full ImageKit CDN URL; consumers send it to Telegram as-is.
       imageKey: p.images[0]?.url ?? null,

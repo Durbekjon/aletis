@@ -609,39 +609,43 @@ export class OrdersService {
       });
 
       if (validItems.length > 0) {
-        // Calculate total price from valid items
-        calculatedTotalPrice = validItems.reduce((sum: number, item: any) => {
-          const itemPrice = parseFloat(item.price) || 0;
-          const itemQuantity = parseInt(item.quantity) || 1;
-          return sum + itemPrice * itemQuantity;
-        }, 0);
-
-        // Create order items data
-        orderItemsData = validItems.map((item: any) => ({
-          productId: parseInt(item.productId),
-          quantity: parseInt(item.quantity) || 1,
-          price: parseFloat(item.price) || 0,
-        }));
-
-        // Validate that all products exist in the organization
-        const productIds = orderItemsData.map((item) => item.productId);
+        const requestedProductIds = validItems.map((item: any) => parseInt(item.productId));
+        
+        // Fetch existing products from DB to get the true price and availability
         const existingProducts = await this.prisma.product.findMany({
           where: {
-            id: { in: productIds },
+            id: { in: requestedProductIds },
             organizationId,
+            isDeleted: false,
           },
           select: { id: true, name: true, price: true },
         });
 
-        this.logger.log(
-          `Found ${existingProducts.length} existing products out of ${productIds.length} requested`,
-        );
+        const productsMap = new Map(existingProducts.map(p => [p.id, p]));
 
-        if (existingProducts.length !== productIds.length) {
-          this.logger.warn(
-            `Some products not found in webhook order. Requested: ${productIds.join(', ')}, Found: ${existingProducts.map((p) => p.id).join(', ')}`,
-          );
+        // Filter and build orderItemsData
+        for (const item of validItems) {
+          const productId = parseInt(item.productId);
+          const product = productsMap.get(productId);
+          
+          if (!product) {
+            this.logger.warn(`Product ID ${productId} not found in DB. Skipping.`);
+            continue;
+          }
+
+          const quantity = parseInt(item.quantity) || 1;
+          const price = product.price; // USE REAL DB PRICE!
+
+          orderItemsData.push({
+            productId,
+            quantity,
+            price,
+          });
+
+          calculatedTotalPrice += (price * quantity);
         }
+
+        this.logger.log(`Found ${existingProducts.length} existing products out of ${requestedProductIds.length} requested`);
       }
     }
 

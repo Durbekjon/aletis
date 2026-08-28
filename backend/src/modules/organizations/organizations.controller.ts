@@ -15,6 +15,7 @@ import { CurrentUser } from '@auth/decorators/current-user.decorator';
 import type { JwtPayload } from '@auth/strategies/jwt.strategy';
 import { CreateOrganizationDto } from './dto/create-organization.dto';
 import { UpdateOrganizationDto } from './dto/update-organization.dto';
+import { UpsertFulfillmentSettingsDto, FulfillmentSettingsResponseDto } from './dto/fulfillment-settings.dto';
 import {
   ApiBearerAuth,
   ApiBody,
@@ -79,5 +80,29 @@ export class OrganizationsController {
     @Param('id', ParseIntPipe) id: number,
   ) {
     return this.service.deleteOrganization(Number(user.userId), id);
+  }
+
+  // ─── Fulfillment Settings ───────────────────────────────────────────
+
+  @Get(':id/fulfillment')
+  @ApiOperation({ summary: 'Get fulfillment settings for an organization' })
+  @ApiOkResponse({ type: FulfillmentSettingsResponseDto, description: 'Fulfillment settings, or null if not configured' })
+  getFulfillmentSettings(
+    @CurrentUser() user: JwtPayload,
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    return this.service.getFulfillmentSettings(Number(user.userId), id);
+  }
+
+  @Patch(':id/fulfillment')
+  @ApiOperation({ summary: 'Create or update fulfillment settings (admin only)' })
+  @ApiBody({ type: UpsertFulfillmentSettingsDto })
+  @ApiOkResponse({ type: FulfillmentSettingsResponseDto })
+  upsertFulfillmentSettings(
+    @CurrentUser() user: JwtPayload,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpsertFulfillmentSettingsDto,
+  ) {
+    return this.service.upsertFulfillmentSettings(Number(user.userId), id, dto);
   }
 }

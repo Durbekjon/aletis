@@ -178,16 +178,13 @@ export class ReplenishmentService {
     };
   }
 
-  /** Best-effort category from the product's dynamic schema fields (for AI context). */
+  /** Best-effort category from the product (for AI context). */
   private async getProductCategory(productId: number): Promise<string | null> {
-    const fv = await this.prisma.fieldValue.findFirst({
-      where: {
-        productId,
-        field: { name: { contains: 'categor', mode: 'insensitive' } },
-      },
-      select: { valueText: true },
+    const p = await this.prisma.product.findUnique({
+      where: { id: productId },
+      include: { category: { select: { name_uz: true } } },
     });
-    return fv?.valueText ?? null;
+    return p?.category?.name_uz ?? null;
   }
 
   /**

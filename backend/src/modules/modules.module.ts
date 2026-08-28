@@ -3,7 +3,8 @@ import { AuthModule } from '@auth/auth.module';
 import { TelegramModule } from '@telegram/telegram.module';
 import { ChannelsModule } from '@channels/channels.module';
 import { OrganizationsModule } from '@organizations/organizations.module';
-import { SchemaModule } from '@modules/product-schema/schema.module';
+import { CategoriesModule } from './categories/categories.module';
+
 import { FileModule } from '@file/file.module';
 import { ProductsModule } from '@products/products.module';
 import { BotsModule } from '@bots/bots.module';
@@ -37,7 +38,8 @@ import { AdminModule } from './admin/admin.module';
   imports: [
     AuthModule,
     OrganizationsModule,
-    SchemaModule,
+    CategoriesModule,
+    
     FileModule,
     ProductsModule,
     BotsModule,
