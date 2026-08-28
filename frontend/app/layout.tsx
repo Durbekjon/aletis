@@ -7,6 +7,7 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/sonner"
 import { Suspense } from "react"
 import { AuthProvider } from "@/src/context/AuthContext"
+
 import { QueryProvider } from "@/src/providers/QueryProvider"
 import { I18nProvider } from "@/src/context/I18nContext"
 import "./globals.css"
@@ -23,26 +24,21 @@ export const metadata: Metadata = {
     "Build and manage your Telegram bot / Instagram Store with AI-powered product management, order tracking, and analytics.",
   generator: "Aletis",
   keywords: ["telegram bot", "instagram store", "e-commerce", "uzbekistan", "online store", "ai assistant"],
-}
-
-// Set the canonical base URL for metadata (update to your production URL)
-export const metadataBase = new URL("https://aletis.me")
-
-// Add sensible Open Graph and Twitter defaults; per-page metadata should override these
-export const defaultOpenGraph = {
-  title: metadata.title,
-  description: metadata.description,
-  url: metadataBase.href,
-  siteName: "Aletis",
-  images: ["/placeholder-logo.png"],
-  type: "website",
-}
-
-export const defaultTwitter = {
-  card: "summary_large_image",
-  title: metadata.title,
-  description: metadata.description,
-  images: ["/placeholder-logo.png"],
+  metadataBase: new URL("https://www.aletis.me"),
+  openGraph: {
+    title: "Aletis - Sales Assistant AI",
+    description: "Build and manage your Telegram bot / Instagram Store with AI-powered product management, order tracking, and analytics.",
+    url: "https://www.aletis.me",
+    siteName: "Aletis",
+    images: ["/placeholder-logo.png"],
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Aletis - Sales Assistant AI",
+    description: "Build and manage your Telegram bot / Instagram Store with AI-powered product management, order tracking, and analytics.",
+    images: ["/placeholder-logo.png"],
+  }
 }
 
 export default function RootLayout({

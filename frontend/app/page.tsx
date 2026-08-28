@@ -96,6 +96,47 @@ export default function HomePage() {
 
   return (
     <div className="min-h-screen bg-background relative overflow-x-hidden">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "WebSite",
+            "name": "Aletis",
+            "url": "https://www.aletis.me",
+            "potentialAction": {
+              "@type": "SearchAction",
+              "target": "https://www.aletis.me/search?q={search_term_string}",
+              "query-input": "required name=search_term_string"
+            }
+          })
+        }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": ["SoftwareApplication", "Organization"],
+            "name": "Aletis",
+            "url": "https://www.aletis.me",
+            "logo": "https://www.aletis.me/images/aletis-logo.jpg",
+            "operatingSystem": "All",
+            "applicationCategory": "BusinessApplication",
+            "offers": {
+              "@type": "Offer",
+              "price": "0",
+              "priceCurrency": "USD"
+            },
+            "sameAs": [
+              "https://t.me/aletis_uz",
+              "https://www.linkedin.com/company/aletis",
+              "https://twitter.com/aletis",
+              "https://www.instagram.com/aletis_uz/"
+            ]
+          })
+        }}
+      />
       {/* ── Animated background orbs ── */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
         <div className="lp-orb lp-orb-1" />
