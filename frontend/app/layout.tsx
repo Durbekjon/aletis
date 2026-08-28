@@ -7,7 +7,6 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/sonner"
 import { Suspense } from "react"
 import { AuthProvider } from "@/src/context/AuthContext"
-import { ProductSchemaProvider } from "@/src/context/ProductSchemaContext"
 import { QueryProvider } from "@/src/providers/QueryProvider"
 import { I18nProvider } from "@/src/context/I18nContext"
 import "./globals.css"
@@ -68,9 +67,7 @@ export default function RootLayout({
             <QueryProvider>
               <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
                 <AuthProvider>
-                  <ProductSchemaProvider>
-                    {children}
-                  </ProductSchemaProvider>
+                  {children}
                 </AuthProvider>
               </ThemeProvider>
             </QueryProvider>
