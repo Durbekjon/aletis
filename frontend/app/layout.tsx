@@ -7,7 +7,6 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { Toaster } from "@/components/ui/sonner"
 import { Suspense } from "react"
 import { AuthProvider } from "@/src/context/AuthContext"
-import { ProductSchemaProvider } from "@/src/context/ProductSchemaContext"
 import { QueryProvider } from "@/src/providers/QueryProvider"
 import { I18nProvider } from "@/src/context/I18nContext"
 import "./globals.css"
@@ -27,7 +26,7 @@ export const metadata: Metadata = {
 }
 
 // Set the canonical base URL for metadata (update to your production URL)
-export const metadataBase = new URL("https://Aletis.app")
+export const metadataBase = new URL("https://aletis.me")
 
 // Add sensible Open Graph and Twitter defaults; per-page metadata should override these
 export const defaultOpenGraph = {
@@ -55,7 +54,8 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head>
         <script async src="https://www.googletagmanager.com/gtag/js?id=G-SGFLRW3G1M"></script>
-        <script dangerouslySetInnerHTML={{ __html: `
+        <script dangerouslySetInnerHTML={{
+          __html: `
           window.dataLayer = window.dataLayer || [];
           function gtag(){dataLayer.push(arguments);}
           gtag('js', new Date());
@@ -68,9 +68,7 @@ export default function RootLayout({
             <QueryProvider>
               <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
                 <AuthProvider>
-                  <ProductSchemaProvider>
-                    {children}
-                  </ProductSchemaProvider>
+                  {children}
                 </AuthProvider>
               </ThemeProvider>
             </QueryProvider>
