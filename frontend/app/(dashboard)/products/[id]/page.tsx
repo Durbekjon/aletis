@@ -7,7 +7,7 @@ import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { AlertCircle, ArrowLeft } from "lucide-react"
+import { AlertCircle, ArrowLeft, Copy } from "lucide-react"
 import { DynamicProductForm } from "@/src/components/DynamicProductForm"
 import { useProductQuery, useUpdateProductMutation } from "@/src/hooks/useProductsQuery"
 import type { FormData } from "@/src/hooks/useDynamicProductForm"
@@ -100,6 +100,12 @@ export default function ProductDetailPage() {
           <Link href="/products">
             <ArrowLeft className="h-4 w-4 mr-2" />
             {t('products.backToProducts')}
+          </Link>
+        </Button>
+        <Button variant="outline" size="sm" asChild>
+          <Link href={`/products/new?duplicateFrom=${productId}`}>
+            <Copy className="h-4 w-4 mr-2" />
+            {t('common.duplicate', { defaultValue: 'Nusxa ko\'chirish' })}
           </Link>
         </Button>
       </div>

@@ -60,6 +60,7 @@ import {
   Search,
   Trash2,
   Upload,
+  Copy,
 } from 'lucide-react';
 import Link from 'next/link';
 import { useMemo, useState } from 'react';
@@ -464,6 +465,12 @@ export default function ProductsPage() {
                             >
                               <Edit className="mr-2 h-4 w-4" />
                               {t('products.actionEdit')}
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem asChild>
+                            <Link href={`/products/new?duplicateFrom=${product.id}`} className="flex items-center">
+                              <Copy className="mr-2 h-4 w-4" />
+                              {t('common.duplicate', { defaultValue: 'Nusxa ko\'chirish' })}
                             </Link>
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
