@@ -145,6 +145,7 @@ enum OnboardingStatus {
 
 model Product {
   id                     Int                     @id @default(autoincrement())
+  barcode                String?
   name                   String
   price                  Float
   currency               Currency                @default(USD)
@@ -169,8 +170,10 @@ model Product {
   replenishmentReminders ReplenishmentReminder[]
 
   @@index([name])
+  @@index([status])
   @@index([isDeleted])
   @@index([organizationId, createdAt])
+  @@index([barcode])
   @@map("products")
 }
 

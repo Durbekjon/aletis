@@ -20,6 +20,7 @@ function Duplicator({ id, onSuccess, onCancel }: { id: number, onSuccess: () => 
     })
     return {
       name: `${p.name} (Copy)`,
+      barcode: p.barcode,
       price: p.price,
       currency: p.currency,
       quantity: p.quantity,

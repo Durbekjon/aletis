@@ -256,6 +256,13 @@ export function DynamicProductForm({ initialValues, initialCategoryId, onSubmitI
   }
 
   const handleFormSubmit = async (data: any) => {
+    // Inject barcode into payload
+    if (pendingBarcode) {
+      data.barcode = pendingBarcode
+    } else if (initialValues?.barcode) {
+      data.barcode = initialValues.barcode
+    }
+
     const success = await onSubmit(data)
     if (success) {
       if (pendingBarcode) {
