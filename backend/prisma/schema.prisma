@@ -58,6 +58,7 @@ model Organization {
   customerAiNotes        CustomerAiNote[]
   subscription           Subscription?
   winBackAttempts        WinBackAttempt[]
+  posShifts              PosShift[]
   replenishmentReminders ReplenishmentReminder[]
   supportTickets         SupportTicket[]
   loyaltyTransactions    LoyaltyTransaction[]
@@ -300,6 +301,7 @@ model Member {
   role           MemberRole   @default(ADMIN)
   status         MemberStatus @default(INACTIVE)
   createdAt      DateTime     @default(now())
+  shifts         PosShift[]
 
   @@unique([userId, organizationId])
   @@map("members")
@@ -313,6 +315,7 @@ enum MemberStatus {
 enum MemberRole {
   ADMIN
   SELLER
+  CASHIER
 }
 
 model Bot {
@@ -401,6 +404,7 @@ model Order {
   id                  Int                  @id @default(autoincrement())
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
+  source              OrderSource          @default(TELEGRAM_BOT)
   status              OrderStatus          @default(NEW)
   paymentStatus       PaymentStatus        @default(PENDING)
   customerId          Int?
@@ -523,6 +527,11 @@ model OrderItem {
   @@index([orderId], name: "idx_order_items_order_id")
   @@index([productId], name: "idx_order_items_product_id")
   @@map("order_items")
+}
+
+enum OrderSource {
+  TELEGRAM_BOT
+  POS
 }
 
 model Channel {
@@ -823,6 +832,8 @@ enum PaymentProvider {
   CLICK
   BANK_TRANSFER
   MANUAL
+  POS_CASH
+  POS_CARD
 }
 
 model SubscriptionPlan {
@@ -1084,4 +1095,28 @@ model Campaign {
 
   @@index([organizationId, status])
   @@map("campaigns")
+}
+
+model PosShift {
+  id             Int          @id @default(autoincrement())
+  organizationId Int
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  cashierId      Int
+  cashier        Member       @relation(fields: [cashierId], references: [id])
+  openedAt       DateTime     @default(now())
+  closedAt       DateTime?
+  startingCash   Float        @default(0)
+  expectedCash   Float?
+  actualCash     Float?
+  discrepancy    Float?
+  status         ShiftStatus  @default(OPEN)
+
+  @@index([organizationId])
+  @@index([cashierId])
+  @@map("pos_shifts")
+}
+
+enum ShiftStatus {
+  OPEN
+  CLOSED
 }
