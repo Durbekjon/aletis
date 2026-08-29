@@ -693,6 +693,9 @@ export class ProductsService implements OnModuleInit {
             ...(updateProductDto.status !== undefined && {
               status: updateProductDto.status,
             }),
+            ...(updateProductDto.categoryId !== undefined && {
+              categoryId: updateProductDto.categoryId,
+            }),
             ...(updateProductDto.currency !== undefined && {
               currency: updateProductDto.currency,
             }),
