@@ -316,18 +316,31 @@ export default function OrdersPage() {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-3">
-                        <Link href={`/customers/${order.customer.id}`} className="flex items-center gap-3 group">
-                          <Avatar className="h-8 w-8 rounded-lg">
-                            {/* <AvatarImage src="/diverse-user-avatars.png" /> */}
-                            <AvatarFallback className="rounded-lg bg-primary-foreground">
-                              {order.customer.name?.split(' ').map((name) => name[0]).join('')}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div className="font-medium group-hover:underline">{order.customer.name}</div>
-                        </Link>
-                        {order.customer.username && (
-                          <div className="text-sm text-muted-foreground">
-                            <a href={getCustomerLink(order.customer)} target="_blank" rel="noopener noreferrer">@{order.customer.username ? order.customer.username : order.customer.telegramId}</a>
+                        {order.customer ? (
+                          <>
+                            <Link href={`/customers/${order.customer.id}`} className="flex items-center gap-3 group">
+                              <Avatar className="h-8 w-8 rounded-lg">
+                                {/* <AvatarImage src="/diverse-user-avatars.png" /> */}
+                                <AvatarFallback className="rounded-lg bg-primary-foreground">
+                                  {order.customer.name?.split(' ').map((name) => name[0]).join('')}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="font-medium group-hover:underline">{order.customer.name}</div>
+                            </Link>
+                            {order.customer.username && (
+                              <div className="text-sm text-muted-foreground">
+                                <a href={getCustomerLink(order.customer)} target="_blank" rel="noopener noreferrer">@{order.customer.username ? order.customer.username : order.customer.telegramId}</a>
+                              </div>
+                            )}
+                          </>
+                        ) : (
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-8 w-8 rounded-lg">
+                              <AvatarFallback className="rounded-lg bg-muted text-muted-foreground">
+                                POS
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="font-medium">{t("orders.walkInCustomer", { defaultValue: "Kassadan xarid" })}</div>
                           </div>
                         )}
                       </div>
@@ -335,7 +348,7 @@ export default function OrdersPage() {
                     <TableCell>{getStatusBadge(order.status)}</TableCell>
                     <TableCell>{getPaymentBadge(order.paymentStatus)}</TableCell>
                     <TableCell>
-                      <div className="font-medium">${order.totalPrice}</div>
+                      <div className="font-medium">{order.totalPrice.toLocaleString()} UZS</div>
                     </TableCell>
                     <TableCell>
                       <div className="text-sm">{formatDate(order.createdAt)}</div>
