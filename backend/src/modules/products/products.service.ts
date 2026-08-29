@@ -489,12 +489,6 @@ export class ProductsService implements OnModuleInit {
         }
       }
 
-      // Validate and collect initial posts to create
-      const postsToConnect = await this.validateAndConnectPosts(
-        createProductDto.postIds,
-        organizationId,
-      );
-
       // Create product with field values in a transaction
       const result = await this.prisma.$transaction(async (tx) => {
         // Create the product
