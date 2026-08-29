@@ -126,6 +126,21 @@ export default function PosPage() {
             autoFocus
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={async (e) => {
+              if (e.key === 'Enter' && searchQuery.trim().length > 0) {
+                e.preventDefault();
+                // Prevent duplicate add if useBarcodeScanner also fired, though useBarcodeScanner calls preventDefault
+                try {
+                  const res = await productsApi.getProducts({ limit: 5, search: searchQuery.trim() });
+                  if (res.items.length === 1 || (res.items.length > 0 && res.items[0].barcode === searchQuery.trim())) {
+                    addToCart(res.items[0]);
+                    setSearchQuery('');
+                  }
+                } catch (err) {
+                  console.error('Enter search failed', err);
+                }
+              }
+            }}
           />
         </div>
         
