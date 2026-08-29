@@ -295,7 +295,7 @@ ${JSON.stringify(products.map(p => ({
     try {
       this.logger.log('Generating AI response...');
       const text = await this.callWithRotation(
-        'gemini-1.5-flash',
+        'gemini-3.6-flash',
         prompt,
         'SALES_CHAT',
         ctx,
@@ -398,18 +398,17 @@ CONVERSATION FLOW
 3. Ordering Logic:
    - If the user says "yes" or clearly wants to order:
      → Immediately proceed to collect order details based on fulfillment mode.
-     ${
-       fulfillmentSettings?.fulfillmentMode === 'PICKUP_ONLY'
-         ? `- Since this store is PICKUP ONLY, do NOT ask for a delivery address.
+     ${fulfillmentSettings?.fulfillmentMode === 'PICKUP_ONLY'
+        ? `- Since this store is PICKUP ONLY, do NOT ask for a delivery address.
        - Tell the user they can pick up their order at: ${fulfillmentSettings.pickupAddress || 'our store'}.
        - Ask for their Phone number and Name.`
-         : fulfillmentSettings?.fulfillmentMode === 'PICKUP_AND_DELIVERY'
-         ? `- Ask the user whether they want DELIVERY or if they will PICK UP the order themselves.
+        : fulfillmentSettings?.fulfillmentMode === 'PICKUP_AND_DELIVERY'
+          ? `- Ask the user whether they want DELIVERY or if they will PICK UP the order themselves.
        - If they choose delivery, ask for their Delivery Address.
        - If they choose pickup, inform them they can pick it up at: ${fulfillmentSettings.pickupAddress || 'our store'}.
        - Always ask for their Phone number and Name.`
-         : `- Ask for their Delivery Address, Phone number, and Name.`
-     }
+          : `- Ask for their Delivery Address, Phone number, and Name.`
+      }
    - Ask for order details step by step, not all at once.
 
 4. Product Information:
@@ -471,11 +470,10 @@ PRODUCT IMAGE RULES:
 TOOL USAGE RULES:
 You have access to a set of tools. You must use them to accomplish tasks:
 1. SEARCHING: Use \`search_products\` when the user asks for products.
-2. ORDERING: Use \`create_order\` when the user confirms they want to buy. You MUST ask for phone number/contact info${
-  fulfillmentSettings?.fulfillmentMode === 'PICKUP_ONLY'
-    ? ''
-    : ' and delivery location'
-} before calling \`create_order\`.
+2. ORDERING: Use \`create_order\` when the user confirms they want to buy. You MUST ask for phone number/contact info${fulfillmentSettings?.fulfillmentMode === 'PICKUP_ONLY'
+        ? ''
+        : ' and delivery location'
+      } before calling \`create_order\`.
 3. ORDER HISTORY: Use \`get_customer_orders\` if they ask about their past orders.
 4. CANCEL ORDER: Use \`cancel_order\` if they want to cancel.
 5. ESCALATION: Use \`escalate_to_human\` if they demand to speak to a manager, are very angry, or ask a question you cannot resolve.
@@ -521,7 +519,7 @@ IMPORTANT: Read the conversation history carefully. If the customer has already 
         const { agentTools } = await import('./gemini.tools');
 
         const response = await this.callWithRotationRaw(
-          'gemini-1.5-flash',
+          'gemini-3.6-flash',
           { contents, systemInstruction },
           'SALES_CHAT',
           ctx,
@@ -1147,7 +1145,7 @@ Is there anything else I can help you with?
 Generate the confirmation message now:`;
 
       const confirmationMessage = await this.callWithRotation(
-        'gemini-1.5-flash',
+        'gemini-3.6-flash',
         prompt,
         'ORDER_CONFIRMATION',
         ctx,
@@ -1200,7 +1198,7 @@ Return only the language code:`;
 
       const languageCode = (
         await this.callWithRotation(
-          'gemini-1.5-flash',
+          'gemini-3.6-flash',
           prompt,
           'LANGUAGE_DETECTION',
           ctx,
@@ -1274,7 +1272,7 @@ ${message}
 
 Translated message:`;
 
-      return (await this.callWithRotation('gemini-1.5-flash', prompt, 'TRANSLATION', ctx)).trim();
+      return (await this.callWithRotation('gemini-3.6-flash', prompt, 'TRANSLATION', ctx)).trim();
     } catch (error) {
       this.logger.warn(`Translation failed: ${error.message}`);
       return message; // Return original message if translation fails
@@ -1322,7 +1320,7 @@ INSTRUCTIONS:
 
 Generate a natural, friendly response:`;
 
-      return (await this.callWithRotation('gemini-1.5-flash', prompt, 'ORDERS_LIST', ctx)).trim();
+      return (await this.callWithRotation('gemini-3.6-flash', prompt, 'ORDERS_LIST', ctx)).trim();
     } catch (error) {
       this.logger.warn(
         `Failed to generate orders list response: ${error.message}`,
@@ -1377,7 +1375,7 @@ INSTRUCTIONS:
 
 Generate a natural, friendly response:`;
 
-      return (await this.callWithRotation('gemini-1.5-flash', prompt, 'ORDER_CANCELLATION', ctx)).trim();
+      return (await this.callWithRotation('gemini-3.6-flash', prompt, 'ORDER_CANCELLATION', ctx)).trim();
     } catch (error) {
       this.logger.warn(
         `Failed to generate cancellation response: ${error.message}`,
@@ -1520,7 +1518,7 @@ priceSensitivity rules:
 Return only valid JSON, no other text.`;
 
     return this.callWithRotation(
-      'gemini-1.5-flash',
+      'gemini-3.6-flash',
       prompt,
       'CUSTOMER_INSIGHTS',
       ctx,
@@ -1600,7 +1598,7 @@ Message:`;
     try {
       const text = (
         await this.callWithRotation(
-          'gemini-1.5-flash',
+          'gemini-3.6-flash',
           prompt,
           'WIN_BACK',
           ctx,
@@ -1665,7 +1663,7 @@ Message:`;
     try {
       return (
         await this.callWithRotation(
-          'gemini-1.5-flash',
+          'gemini-3.6-flash',
           prompt,
           'CAMPAIGN_BROADCAST',
           ctx,
@@ -1693,7 +1691,7 @@ Message:`;
       'Output ONLY the transcription with no quotes, labels or commentary. ' +
       'If there is no intelligible speech, output nothing.';
     try {
-      const text = await this.callWithRotation('gemini-1.5-flash', [
+      const text = await this.callWithRotation('gemini-3.6-flash', [
         { text: prompt },
         { inlineData: { mimeType, data: base64 } },
       ], 'AUDIO_TRANSCRIPTION', ctx);
@@ -1742,7 +1740,7 @@ JSON only:`;
     try {
       const raw = this.stripJson(
         await this.callWithRotation(
-          'gemini-1.5-flash',
+          'gemini-3.6-flash',
           prompt,
           'CONSUMABLE_CLASSIFICATION',
           ctx,
@@ -1790,7 +1788,7 @@ Only report values actually implied by the text. JSON only:`;
     try {
       const raw = this.stripJson(
         await this.callWithRotation(
-          'gemini-1.5-flash',
+          'gemini-3.6-flash',
           prompt,
           'USAGE_RATE_EXTRACTION',
           ctx,
@@ -1851,7 +1849,7 @@ Message:`;
     try {
       const text = (
         await this.callWithRotation(
-          'gemini-1.5-flash',
+          'gemini-3.6-flash',
           prompt,
           'REPLENISHMENT_REMINDER',
           ctx,
@@ -1934,7 +1932,7 @@ Only match products from the list above. Never suggest outside items.
 JSON only:`;
 
       const rawResponse = await this.callWithRotation(
-        'gemini-1.5-flash',
+        'gemini-3.6-flash',
         prompt,
         'PRODUCT_MATCHING',
         ctx,
