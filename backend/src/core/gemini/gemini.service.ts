@@ -29,6 +29,7 @@ export class GeminiService {
   private readonly logger = new Logger(GeminiService.name);
   private readonly clients: GoogleGenerativeAI[];
   private currentKeyIndex = 0;
+  private readonly defaultModel: string;
 
   constructor(
     private readonly configService: ConfigService,
@@ -46,6 +47,7 @@ export class GeminiService {
       .filter(Boolean);
     if (keys.length === 0) throw new Error('No GEMINI_API_KEY(S) configured');
     this.clients = keys.map((k) => new GoogleGenerativeAI(k));
+    this.defaultModel = this.configService.get<string>('GEMINI_MODEL') || 'gemini-flash-latest';
     this.logger.log(`Gemini initialized with ${keys.length} API key(s)`);
   }
 
@@ -295,7 +297,7 @@ ${JSON.stringify(products.map(p => ({
     try {
       this.logger.log('Generating AI response...');
       const text = await this.callWithRotation(
-        'gemini-3.6-flash',
+        this.defaultModel,
         prompt,
         'SALES_CHAT',
         ctx,
@@ -519,7 +521,7 @@ IMPORTANT: Read the conversation history carefully. If the customer has already 
         const { agentTools } = await import('./gemini.tools');
 
         const response = await this.callWithRotationRaw(
-          'gemini-3.6-flash',
+          this.defaultModel,
           { contents, systemInstruction },
           'SALES_CHAT',
           ctx,
@@ -1145,7 +1147,7 @@ Is there anything else I can help you with?
 Generate the confirmation message now:`;
 
       const confirmationMessage = await this.callWithRotation(
-        'gemini-3.6-flash',
+        this.defaultModel,
         prompt,
         'ORDER_CONFIRMATION',
         ctx,
@@ -1198,7 +1200,7 @@ Return only the language code:`;
 
       const languageCode = (
         await this.callWithRotation(
-          'gemini-3.6-flash',
+          this.defaultModel,
           prompt,
           'LANGUAGE_DETECTION',
           ctx,
@@ -1272,7 +1274,7 @@ ${message}
 
 Translated message:`;
 
-      return (await this.callWithRotation('gemini-3.6-flash', prompt, 'TRANSLATION', ctx)).trim();
+      return (await this.callWithRotation(this.defaultModel, prompt, 'TRANSLATION', ctx)).trim();
     } catch (error) {
       this.logger.warn(`Translation failed: ${error.message}`);
       return message; // Return original message if translation fails
@@ -1320,7 +1322,7 @@ INSTRUCTIONS:
 
 Generate a natural, friendly response:`;
 
-      return (await this.callWithRotation('gemini-3.6-flash', prompt, 'ORDERS_LIST', ctx)).trim();
+      return (await this.callWithRotation(this.defaultModel, prompt, 'ORDERS_LIST', ctx)).trim();
     } catch (error) {
       this.logger.warn(
         `Failed to generate orders list response: ${error.message}`,
@@ -1375,7 +1377,7 @@ INSTRUCTIONS:
 
 Generate a natural, friendly response:`;
 
-      return (await this.callWithRotation('gemini-3.6-flash', prompt, 'ORDER_CANCELLATION', ctx)).trim();
+      return (await this.callWithRotation(this.defaultModel, prompt, 'ORDER_CANCELLATION', ctx)).trim();
     } catch (error) {
       this.logger.warn(
         `Failed to generate cancellation response: ${error.message}`,
@@ -1518,7 +1520,7 @@ priceSensitivity rules:
 Return only valid JSON, no other text.`;
 
     return this.callWithRotation(
-      'gemini-3.6-flash',
+      this.defaultModel,
       prompt,
       'CUSTOMER_INSIGHTS',
       ctx,
@@ -1598,7 +1600,7 @@ Message:`;
     try {
       const text = (
         await this.callWithRotation(
-          'gemini-3.6-flash',
+          this.defaultModel,
           prompt,
           'WIN_BACK',
           ctx,
@@ -1663,7 +1665,7 @@ Message:`;
     try {
       return (
         await this.callWithRotation(
-          'gemini-3.6-flash',
+          this.defaultModel,
           prompt,
           'CAMPAIGN_BROADCAST',
           ctx,
@@ -1691,7 +1693,7 @@ Message:`;
       'Output ONLY the transcription with no quotes, labels or commentary. ' +
       'If there is no intelligible speech, output nothing.';
     try {
-      const text = await this.callWithRotation('gemini-3.6-flash', [
+      const text = await this.callWithRotation(this.defaultModel, [
         { text: prompt },
         { inlineData: { mimeType, data: base64 } },
       ], 'AUDIO_TRANSCRIPTION', ctx);
@@ -1740,7 +1742,7 @@ JSON only:`;
     try {
       const raw = this.stripJson(
         await this.callWithRotation(
-          'gemini-3.6-flash',
+          this.defaultModel,
           prompt,
           'CONSUMABLE_CLASSIFICATION',
           ctx,
@@ -1788,7 +1790,7 @@ Only report values actually implied by the text. JSON only:`;
     try {
       const raw = this.stripJson(
         await this.callWithRotation(
-          'gemini-3.6-flash',
+          this.defaultModel,
           prompt,
           'USAGE_RATE_EXTRACTION',
           ctx,
@@ -1849,7 +1851,7 @@ Message:`;
     try {
       const text = (
         await this.callWithRotation(
-          'gemini-3.6-flash',
+          this.defaultModel,
           prompt,
           'REPLENISHMENT_REMINDER',
           ctx,
@@ -1932,7 +1934,7 @@ Only match products from the list above. Never suggest outside items.
 JSON only:`;
 
       const rawResponse = await this.callWithRotation(
-        'gemini-3.6-flash',
+        this.defaultModel,
         prompt,
         'PRODUCT_MATCHING',
         ctx,
