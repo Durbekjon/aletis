@@ -38,6 +38,7 @@ export interface BackendItemSpec {
 export interface BackendProduct {
   id: number
   name: string
+  barcode?: string
   price: number
   currency: "USD" | "EUR" | "UZS" | "RUB" | "KZT" | "GBP" | "JPY"
   categoryId: number | null

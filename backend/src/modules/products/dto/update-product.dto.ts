@@ -55,6 +55,14 @@ export class UpdateProductDto {
   name?: string;
 
   @ApiPropertyOptional({
+    description: 'The barcode of the product',
+    example: '9789910701504',
+  })
+  @IsOptional()
+  @IsString()
+  barcode?: string;
+
+  @ApiPropertyOptional({
     description: 'The price of the product',
     example: 1199.99,
   })

@@ -30,6 +30,7 @@ export default function EditProductPage() {
     })
     return {
       name: p.name,
+      barcode: p.barcode,
       price: p.price,
       quantity: p.quantity,
       images: [], // we store IDs here; for previews we will pass URLs separately
@@ -50,6 +51,7 @@ export default function EditProductPage() {
     const changedPayload: Record<string, unknown> = {}
 
     if (data.name !== original.name) changedPayload.name = data.name
+    if (data.barcode !== original.barcode) changedPayload.barcode = data.barcode
     if (data.price !== original.price) changedPayload.price = data.price
     if (data.quantity !== original.quantity) changedPayload.quantity = data.quantity
     if (data.categoryId !== original.categoryId) changedPayload.categoryId = data.categoryId

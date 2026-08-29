@@ -5,6 +5,7 @@ import {
   Logger,
   InternalServerErrorException,
   Optional,
+  OnModuleInit,
 } from '@nestjs/common';
 import { PrismaService } from '@/core/prisma/prisma.service';
 import {
@@ -33,8 +34,34 @@ import { Queue } from 'bullmq';
 import { EMBEDDING_QUEUE } from '@core/queue/queue.module';
 
 @Injectable()
-export class ProductsService {
+export class ProductsService implements OnModuleInit {
   private readonly logger = new Logger(ProductsService.name);
+
+  async onModuleInit() {
+    this.logger.log('Running orphan barcode mapper...');
+    try {
+      const manualEntries = await this.prisma.barcodeCatalogEntry.findMany({
+        where: { source: 'MANUAL' },
+        include: { translations: true },
+      });
+
+      let mappedCount = 0;
+      for (const entry of manualEntries) {
+        if (!entry.translations || entry.translations.length === 0) continue;
+        const productName = entry.translations[0].productName;
+        if (!productName) continue;
+
+        const updateResult = await this.prisma.product.updateMany({
+          where: { name: productName, barcode: null },
+          data: { barcode: entry.barcode }
+        });
+        mappedCount += updateResult.count;
+      }
+      this.logger.log(`Mapped ${mappedCount} orphan manual barcodes to products.`);
+    } catch (error) {
+      this.logger.error('Failed to run orphan barcode mapper', error);
+    }
+  }
 
   // Cache key patterns for consistent naming
   private readonly CACHE_KEYS = {
@@ -462,12 +489,19 @@ export class ProductsService {
         }
       }
 
+      // Validate and collect initial posts to create
+      const postsToConnect = await this.validateAndConnectPosts(
+        createProductDto.postIds,
+        organizationId,
+      );
+
       // Create product with field values in a transaction
       const result = await this.prisma.$transaction(async (tx) => {
         // Create the product
         const product = await tx.product.create({
           data: {
             name: createProductDto.name,
+            barcode: createProductDto.barcode,
             price: createProductDto.price,
             quantity: createProductDto.quantity,
             status: createProductDto.status,
@@ -655,6 +689,7 @@ export class ProductsService {
           where: { id: productId },
           data: {
             ...(updateProductDto.name && { name: updateProductDto.name }),
+            ...(updateProductDto.barcode !== undefined && { barcode: updateProductDto.barcode }),
             ...(updateProductDto.price !== undefined && {
               price: updateProductDto.price,
             }),
@@ -1067,6 +1102,12 @@ export class ProductsService {
             where.OR = [
               {
                 name: {
+                  contains: searchTerm,
+                  mode: 'insensitive',
+                },
+              },
+              {
+                barcode: {
                   contains: searchTerm,
                   mode: 'insensitive',
                 },
