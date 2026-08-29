@@ -497,6 +497,7 @@ export class PostsService {
       const res = await this.telegram.sendRequest(token, 'sendMediaGroup', {
         chat_id: post.channel.telegramId,
         media,
+        disable_notification: true,
       });
 
       if (!res.ok) {
@@ -514,6 +515,7 @@ export class PostsService {
         chat_id: post.channel.telegramId,
         text: '👉',
         reply_markup: replyMarkup,
+        disable_notification: true,
         ...(first?.message_id
           ? { reply_to_message_id: first.message_id }
           : {}),
@@ -530,6 +532,7 @@ export class PostsService {
         caption,
         parse_mode: 'HTML',
         reply_markup: replyMarkup,
+        disable_notification: true,
       });
 
       if (!res.ok) {
@@ -544,6 +547,7 @@ export class PostsService {
         text: caption,
         parse_mode: 'HTML',
         reply_markup: replyMarkup,
+        disable_notification: true,
       });
 
       if (!res.ok) {
