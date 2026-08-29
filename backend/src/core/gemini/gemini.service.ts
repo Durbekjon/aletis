@@ -295,7 +295,7 @@ ${JSON.stringify(products.map(p => ({
     try {
       this.logger.log('Generating AI response...');
       const text = await this.callWithRotation(
-        'gemini-3.6-flash',
+        'gemini-1.5-flash',
         prompt,
         'SALES_CHAT',
         ctx,
@@ -519,7 +519,7 @@ IMPORTANT: Read the conversation history carefully. If the customer has already 
         const { agentTools } = await import('./gemini.tools');
 
         const response = await this.callWithRotationRaw(
-          'gemini-3.6-flash',
+          'gemini-1.5-flash',
           { contents, systemInstruction },
           'SALES_CHAT',
           ctx,
@@ -1145,7 +1145,7 @@ Is there anything else I can help you with?
 Generate the confirmation message now:`;
 
       const confirmationMessage = await this.callWithRotation(
-        'gemini-3.6-flash',
+        'gemini-1.5-flash',
         prompt,
         'ORDER_CONFIRMATION',
         ctx,
@@ -1198,7 +1198,7 @@ Return only the language code:`;
 
       const languageCode = (
         await this.callWithRotation(
-          'gemini-3.6-flash',
+          'gemini-1.5-flash',
           prompt,
           'LANGUAGE_DETECTION',
           ctx,
@@ -1272,7 +1272,7 @@ ${message}
 
 Translated message:`;
 
-      return (await this.callWithRotation('gemini-3.6-flash', prompt, 'TRANSLATION', ctx)).trim();
+      return (await this.callWithRotation('gemini-1.5-flash', prompt, 'TRANSLATION', ctx)).trim();
     } catch (error) {
       this.logger.warn(`Translation failed: ${error.message}`);
       return message; // Return original message if translation fails
@@ -1320,7 +1320,7 @@ INSTRUCTIONS:
 
 Generate a natural, friendly response:`;
 
-      return (await this.callWithRotation('gemini-3.6-flash', prompt, 'ORDERS_LIST', ctx)).trim();
+      return (await this.callWithRotation('gemini-1.5-flash', prompt, 'ORDERS_LIST', ctx)).trim();
     } catch (error) {
       this.logger.warn(
         `Failed to generate orders list response: ${error.message}`,
@@ -1375,7 +1375,7 @@ INSTRUCTIONS:
 
 Generate a natural, friendly response:`;
 
-      return (await this.callWithRotation('gemini-3.6-flash', prompt, 'ORDER_CANCELLATION', ctx)).trim();
+      return (await this.callWithRotation('gemini-1.5-flash', prompt, 'ORDER_CANCELLATION', ctx)).trim();
     } catch (error) {
       this.logger.warn(
         `Failed to generate cancellation response: ${error.message}`,
@@ -1518,7 +1518,7 @@ priceSensitivity rules:
 Return only valid JSON, no other text.`;
 
     return this.callWithRotation(
-      'gemini-3.6-flash',
+      'gemini-1.5-flash',
       prompt,
       'CUSTOMER_INSIGHTS',
       ctx,
@@ -1598,7 +1598,7 @@ Message:`;
     try {
       const text = (
         await this.callWithRotation(
-          'gemini-3.6-flash',
+          'gemini-1.5-flash',
           prompt,
           'WIN_BACK',
           ctx,
@@ -1663,7 +1663,7 @@ Message:`;
     try {
       return (
         await this.callWithRotation(
-          'gemini-3.6-flash',
+          'gemini-1.5-flash',
           prompt,
           'CAMPAIGN_BROADCAST',
           ctx,
@@ -1691,7 +1691,7 @@ Message:`;
       'Output ONLY the transcription with no quotes, labels or commentary. ' +
       'If there is no intelligible speech, output nothing.';
     try {
-      const text = await this.callWithRotation('gemini-3.6-flash', [
+      const text = await this.callWithRotation('gemini-1.5-flash', [
         { text: prompt },
         { inlineData: { mimeType, data: base64 } },
       ], 'AUDIO_TRANSCRIPTION', ctx);
@@ -1740,7 +1740,7 @@ JSON only:`;
     try {
       const raw = this.stripJson(
         await this.callWithRotation(
-          'gemini-3.6-flash',
+          'gemini-1.5-flash',
           prompt,
           'CONSUMABLE_CLASSIFICATION',
           ctx,
@@ -1788,7 +1788,7 @@ Only report values actually implied by the text. JSON only:`;
     try {
       const raw = this.stripJson(
         await this.callWithRotation(
-          'gemini-3.6-flash',
+          'gemini-1.5-flash',
           prompt,
           'USAGE_RATE_EXTRACTION',
           ctx,
@@ -1849,7 +1849,7 @@ Message:`;
     try {
       const text = (
         await this.callWithRotation(
-          'gemini-3.6-flash',
+          'gemini-1.5-flash',
           prompt,
           'REPLENISHMENT_REMINDER',
           ctx,
@@ -1932,7 +1932,7 @@ Only match products from the list above. Never suggest outside items.
 JSON only:`;
 
       const rawResponse = await this.callWithRotation(
-        'gemini-3.6-flash',
+        'gemini-1.5-flash',
         prompt,
         'PRODUCT_MATCHING',
         ctx,
