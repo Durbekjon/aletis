@@ -117,6 +117,7 @@ export default function ProductDetailPage() {
         onSubmitImpl={handleUpdate}
         onSuccess={() => router.push("/products")}
         hideSubmitUntilDirty
+        isEditMode={true}
       />
     </div>
   )

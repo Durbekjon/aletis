@@ -50,9 +50,10 @@ interface DynamicProductFormProps {
   onSuccess?: () => void
   onCancel?: () => void
   hideSubmitUntilDirty?: boolean
+  isEditMode?: boolean
 }
 
-export function DynamicProductForm({ initialValues, initialCategoryId, onSubmitImpl, existingImageUrls, onSuccess, onCancel, hideSubmitUntilDirty }: DynamicProductFormProps) {
+export function DynamicProductForm({ initialValues, initialCategoryId, onSubmitImpl, existingImageUrls, onSuccess, onCancel, hideSubmitUntilDirty, isEditMode }: DynamicProductFormProps) {
   const { t, language } = useTranslation()
   const { form, onSubmit, isLoading: formLoading } = useDynamicProductForm({ initialValues, onSubmitImpl })
   const uploadFilesMutation = useUploadManyFilesMutation()
@@ -507,7 +508,7 @@ export function DynamicProductForm({ initialValues, initialCategoryId, onSubmitI
               <CardTitle>{t('productForm.info')}</CardTitle>
               <CardDescription>{t('productForm.infoDesc')}</CardDescription>
             </div>
-            {!initialValues && (
+            {!isEditMode && (
               <Button type="button" variant="outline" size="sm" onClick={() => setScanDialogOpen(true)}>
                 <ScanBarcode className="h-4 w-4 mr-2" />
                 {t('productForm.scanBarcode')}
