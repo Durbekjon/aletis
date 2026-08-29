@@ -4,6 +4,7 @@ import { toast } from "sonner"
 
 export interface FormData {
   name: string
+  barcode?: string
   price: number
   currency: "USD" | "EUR" | "UZS" | "RUB" | "KZT" | "GBP" | "JPY"
   quantity: number
