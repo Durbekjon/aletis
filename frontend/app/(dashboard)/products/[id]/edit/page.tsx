@@ -52,6 +52,7 @@ export default function EditProductPage() {
     if (data.name !== original.name) changedPayload.name = data.name
     if (data.price !== original.price) changedPayload.price = data.price
     if (data.quantity !== original.quantity) changedPayload.quantity = data.quantity
+    if (data.categoryId !== original.categoryId) changedPayload.categoryId = data.categoryId
     if (data.status && data.status.toLowerCase() !== original.status.toUpperCase()) changedPayload.status = data.status.toUpperCase()
     // images are numeric IDs in payload; when editing we may not change images
     if (Array.isArray(data.images) && data.images.length > 0) {
