@@ -33,12 +33,14 @@ import { CampaignsModule } from './campaigns/campaigns.module';
 import { HealthModule } from '@core/health/health.module';
 import { AiUsageModule } from './ai-usage/ai-usage.module';
 import { AdminModule } from './admin/admin.module';
+import { PosModule } from './pos/pos.module';
 
 @Module({
   imports: [
     AuthModule,
     OrganizationsModule,
     CategoriesModule,
+    PosModule,
     
     FileModule,
     ProductsModule,
