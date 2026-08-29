@@ -330,9 +330,13 @@ export class ProductSearchService {
     productIds: number[],
   ): Promise<void> {
     try {
+      const existing = await this.getRecentlyShown(customerId);
+      // Prepend new ids, remove duplicates, keep up to 5
+      const combined = [...new Set([...productIds, ...existing])].slice(0, 5);
+      
       await this.redisService.set(
         this.recentlyShownKey(customerId),
-        productIds,
+        combined,
         RECENTLY_SHOWN_TTL_SECONDS,
       );
     } catch (error: any) {

@@ -141,6 +141,7 @@ export default function EditProductPage() {
         existingImageUrls={existingImageUrls}
         onSubmitImpl={handleUpdate}
         onSuccess={() => router.push("/products")}
+        isEditMode={true}
       />
     </div>
   )
